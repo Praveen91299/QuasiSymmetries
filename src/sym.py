@@ -83,5 +83,5 @@ def find_approx_symm(H, n_sym=None, num_intervals=100, eps_max=None, verbose=Tru
         if len(basis_add) == n_sym:
             return op_add, add_epsilon
     
-    print("Error: No symmetries found!!")
-    return False
+    print("Error: Did not find {} symmetries, only {} found!!".format(n_sym, len(op_add)))
+    return op_add, add_epsilon
