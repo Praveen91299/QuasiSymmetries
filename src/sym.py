@@ -180,7 +180,7 @@ def hct_mod(HQ, n_sym=None, sym_metric_func = None, use_coeffs_eps=False, num_in
                 return Symmetries, add_epsilon
             
             #check of c is independent of current S (can become dependent after addition of previous symmetries at same eps)
-            if gf2_rank(concatenate_matrices(S, np.array([c]))) > gf2_rank(S):
+            if gf2_rank(concatenate_matrices(S, np.array([c]))) > gf2_rank(S) and gf2_check_commuting(np.array([c]), S, n_qubits):
                 S = concatenate_matrices(S, np.array([c]))
                 Symmetries.append(sym)
                 add_epsilon.append(eps)
