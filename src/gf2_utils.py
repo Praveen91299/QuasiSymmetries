@@ -1,4 +1,5 @@
 
+### AI code, verified
 import numpy as np
 from openfermion import count_qubits
 
@@ -18,6 +19,8 @@ def gf2_rref(A):
     pivots : list
         List of pivot column indices.
     """
+    if len(A) == 0:
+        return A, []
     R = (A.copy() & 1).astype(np.uint8)
     m, n = R.shape
     pivots = []
@@ -327,3 +330,87 @@ def gf2_find_commuting_basis(G, n_qubits):
 
 def gf2_check_commuting(A, B, n_qubits):
     return gf2_check_in_nullspace(exchange_Gx_Gz(A, n_qubits), B)
+
+#new
+def gf2_symp_nullspace(G, n_qubits, verify=True):
+    """
+    Returns symplectic nullspace of G
+    
+    """
+    H = gf2_nullspace(exchange_Gx_Gz(G, n_qubits))
+    if verify:
+        gf2_check_commuting(G, H, n_qubits)
+
+    return H
+
+def concatenate_matrices(A, B):
+    """
+    Stack matrices
+    [ A ]
+    [ - ]
+    [ B ]
+
+    """
+    assert np.shape(A)[1] == np.shape(B)[1], "Incompatible matrix dimensions {} and {} for stacking! ".format(np.shape(A), np.shape(B))
+    
+    return np.vstack((A, B)).astype(np.int8)
+
+def gf2_get_basis(A):
+    if gf2_rank(A) < len(A):
+        print("Get Basis: Matrix not generating set, reducing to a minimal basis...")
+    return gf2_nullspace(gf2_nullspace(A))
+
+def gf2_intersection(A, B, n_qubits, verify=True):
+    """
+    Finds generating set for common space spanned by rows of A and B
+    
+    """
+
+    #reduce to basis
+    A = gf2_get_basis(A)
+    B = gf2_get_basis(B)
+
+    AB = np.transpose(concatenate_matrices(A, B)) #columns are the basis
+    n_A  =len(A)
+    H =  np.transpose(gf2_nullspace(AB))
+
+    x = H[:n_A]
+
+    y = np.transpose(x) @ A % 2 # solutions in rows
+
+    # TODO reduce y to basis
+    y  = gf2_get_basis(y)
+
+    if verify:
+        assert gf2_rank(A) == gf2_rank(concatenate_matrices(A, y)) and gf2_rank(B) == gf2_rank(concatenate_matrices(B, y)), "Invalid Intersection."
+
+    return y
+
+def gf2_complement(A, B, verify=True):
+    """
+    Returns generating set for span(A)\span(B)
+    
+    Notes:
+    NOT the same as (A \int NULL(B)) since (B \int NULL(B) \neq null) for GF2
+    A\B may have linearly independent generators that can represent some elements of B, for example:
+        g1, g2 \in A\B, but g1+g2 \in B
+
+    """
+    A = gf2_get_basis(A)
+    B = gf2_get_basis(B)
+
+    C = []
+    for a in A:
+        if gf2_rank(concatenate_matrices(B, [a])) > gf2_rank(B):
+            C.append(a)
+    C = np.array(C, dtype=np.uint8)
+
+    if verify:
+        
+        for c in C:
+            #in A
+            assert gf2_rank(concatenate_matrices(A, [c])) == gf2_rank(A), "Basis not in A"
+            #not in B
+            assert gf2_rank(concatenate_matrices(B, [c])) > gf2_rank(B), "Basis not in A"
+
+    return C

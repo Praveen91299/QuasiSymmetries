@@ -71,3 +71,4 @@ def truncate_qubitop(H, eps):
                 coeff = coeff.real
             out += QubitOperator(term, coeff)
     return out
+

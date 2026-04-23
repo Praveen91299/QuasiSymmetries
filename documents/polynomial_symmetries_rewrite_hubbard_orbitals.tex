@@ -1,0 +1,1078 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools,bm}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{physics}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\F}{\mathbb{F}_2}
+\newcommand{\I}{\mathbf{1}}
+\newcommand{\odd}{\mathrm{odd}}
+\newcommand{\even}{\mathrm{even}}
+\newcommand{\Comm}{\mathrm{Comm}}
+\newcommand{\spanC}{\mathrm{span}}
+\newcommand{\JW}{\mathrm{JW}}
+\newcommand{\modtwo}{\; (\mathrm{mod}\; 2)}
+\newcommand{\Om}{\Omega}
+\newcommand{\Piodd}{\Pi_{\odd}}
+\newcommand{\Pieven}{\Pi_{\even}}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{proposition}[theorem]{Proposition}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+\title{Diagonal Occupation Polynomials on Small Fermionic Blocks:\
+Commutants, Maximizers, and Overlapping Symmetry Constraints}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We study diagonal occupation-number polynomials on small sets of fermionic modes and the operator algebras that commute with them. The basic mechanism is simple: for a diagonal operator, the size of its commutant is determined entirely by degeneracies of its spectrum on the occupation basis. This viewpoint explains why certain polynomials on two, three, and four modes are distinguished. In particular, the odd-parity projector
+\[
+\Pi^{(m)}_{\odd}=\frac{1-\prod_{r=1}^m(1-2n_r)}{2}
+\]
+maximizes the parity-even commutant among nontrivial polynomials involving all $m$ occupations. For $m=2$ this is exactly orbital seniority. We then turn to many-mode constructions: given a family of local diagonal symmetry generators, we characterize the part $H_0$ of a generic one- plus two-body Hamiltonian that commutes with all of them, and we formulate the design problem of maximizing $H_0$ by choosing the polynomial type and the overlap pattern of the supports. Among fixed-support choices, parity-type polynomials are optimal. For four-mode generators built from whole opposite-spin pairs, the natural cyclic overlap pattern is essentially the unique optimal local balanced construction. We also compare overlapping four-mode constraints with independent pair seniorities and write the distinguished polynomials in Jordan--Wigner qubit form.
+\end{abstract}
+
+\section{Introduction and motivation}
+Consider a fermionic Hamiltonian on $2N$ spin-orbitals,
+\begin{equation}
+H
+=
+\sum_{pq} h_{pq}\,a_p^\dagger a_q
++
+\frac14\sum_{pqrs} v_{pqrs}\,a_p^\dagger a_q^\dagger a_s a_r.
+\end{equation}
+We are interested in local diagonal occupation-space symmetry generators
+\begin{equation}
+\mathcal Q=\{Q_1,\dots,Q_N\},
+\end{equation}
+with each $Q_a$ a polynomial in occupation projectors $n_p=a_p^\dagger a_p$ supported on a small set of modes.
+
+Given such a family, we decompose
+\begin{equation}
+H=H_0+V,
+\qquad
+[H_0,Q_a]=0
+\quad \forall a,
+\end{equation}
+where $H_0$ is the part of the Hamiltonian compatible with the chosen symmetries and $V$ is the remainder. The central design problem is to choose the local diagonal symmetries so that $H_0$ is as large as possible while the generators remain local and physically meaningful.
+
+There are two motivations for this problem. First, a larger $H_0$ means that a larger fraction of the Hamiltonian is captured by the symmetry-adapted structure. Second, locality of the symmetry generators limits the entanglement allowed inside each symmetry subsector. Increasing the number of modes in each local polynomial enlarges the local block used to partition the Hilbert space, which may enlarge $H_0$, but it also coarsens the fragmentation. Thus the question is not merely which polynomials have large commutants in isolation, but which local symmetry systems are most effective for generic one- and two-body fermionic Hamiltonians.
+
+The main message of this note is that diagonal occupation polynomials are controlled by a very simple principle: \emph{their commutants are determined entirely by degeneracy patterns on the occupation basis}. From this principle one obtains both a classification of distinguished small-block polynomials and a practical framework for constructing local symmetry families on many modes.
+
+\section{General framework for diagonal occupation polynomials}
+Let $a_i,a_i^\dagger$ be fermionic annihilation and creation operators, and let $n_i=a_i^\dagger a_i$ be the occupation projector on mode $i$. On $m$ modes, consider a diagonal occupation polynomial
+\begin{equation}
+  p(n_1,\dots,n_m)=\sum_{\emptyset\neq A\subseteq \{1,\dots,m\}} c_A \prod_{i\in A} n_i.
+\end{equation}
+Since $p$ is diagonal in the occupation basis $\{\ket{x}:x\in\{0,1\}^m\}$, its eigenvalue on configuration $x=(x_1,\dots,x_m)$ is
+\begin{equation}
+  \lambda(x)=p(x_1,\dots,x_m).
+\end{equation}
+
+\begin{theorem}[Full commutant of a diagonal occupation polynomial]
+Let $m_\lambda$ denote the multiplicity of eigenvalue $\lambda$ of $p$. Then
+\begin{equation}
+  \dim \Comm(p)=\sum_\lambda m_\lambda^2.
+\end{equation}
+Equivalently, an operator $X$ commutes with $p$ if and only if it is block-diagonal with respect to the eigenspace decomposition of $p$, with arbitrary action inside each degenerate block.
+\end{theorem}
+
+If one restricts to parity-even operators, then even and odd occupation sectors cannot mix.
+
+\begin{theorem}[Parity-even commutant]
+Let $m_\lambda^{(\even)}$ and $m_\lambda^{(\odd)}$ be the multiplicities of eigenvalue $\lambda$ inside the even and odd particle-number sectors. Then
+\begin{equation}
+  \dim \Comm_{\even}(p)
+  =
+  \sum_\lambda \bigl(m_\lambda^{(\even)}\bigr)^2
+  +
+  \sum_\lambda \bigl(m_\lambda^{(\odd)}\bigr)^2.
+\end{equation}
+Thus the parity-even commutant is maximal when $p$ is constant on all even states and constant on all odd states.
+\end{theorem}
+
+This observation singles out a universal family.
+
+\begin{definition}[Odd-parity projector on $m$ modes]
+\begin{equation}
+  \Pi^{(m)}_{\odd}
+  :=
+  \frac{1-\prod_{r=1}^m(1-2n_r)}{2}
+  =
+  \sum_{s=1}^m (-2)^{s-1}
+  \sum_{|A|=s}\prod_{i\in A}n_i.
+\end{equation}
+It has eigenvalue $0$ on even occupations and $1$ on odd occupations.
+\end{definition}
+
+\begin{corollary}
+Among nonconstant diagonal polynomials that genuinely involve all $m$ occupations, $\Pi^{(m)}_{\odd}$ maximizes the parity-even commutant. In fact every parity-even operator on the $m$ modes commutes with $\Pi^{(m)}_{\odd}$.
+\end{corollary}
+
+\subsection{Two optimization criteria}
+There are two natural but distinct notions of a ``best'' polynomial.
+\begin{enumerate}[leftmargin=2em]
+  \item \textbf{Largest full commutant.} This counts all operators, including odd ones.
+  \item \textbf{Largest physical commutant.} This restricts to parity-even operators, or more narrowly to the class of one- and two-body Hamiltonian terms relevant in electronic structure.
+\end{enumerate}
+These optimization criteria do not always select the same polynomial. This distinction will recur throughout the examples below.
+
+\section{Two-mode polynomials}
+Consider
+\begin{equation}
+  p_{(2)}=a\,n_1+b\,n_2+c\,n_1n_2,
+\end{equation}
+with eigenvalues on $\ket{00},\ket{10},\ket{01},\ket{11}$ given by
+\begin{equation}
+  \lambda_{00}=0,
+  \qquad
+  \lambda_{10}=a,
+  \qquad
+  \lambda_{01}=b,
+  \qquad
+  \lambda_{11}=a+b+c.
+\end{equation}
+
+\subsection{Degeneracy patterns and special points}
+Three cases are especially important.
+\begin{itemize}[leftmargin=2em]
+  \item \textbf{Generic point.} If the four eigenvalues are distinct, then
+  \begin{equation}
+    \dim \Comm(p_{(2)})=4,
+  \end{equation}
+  and only diagonal operators commute.
+
+  \item \textbf{Projector-type points.} Examples such as $n_1n_2$, $n_1(1-n_2)$, and $(1-n_1)(1-n_2)$ have a $3+1$ degeneracy pattern. Their full commutant therefore has dimension
+  \begin{equation}
+    3^2+1^2=10.
+  \end{equation}
+
+  \item \textbf{Orbital seniority.} The polynomial
+  \begin{equation}
+    \Omega_{12}=n_1+n_2-2n_1n_2
+  \end{equation}
+  has spectrum $(0,1,1,0)$, that is, a $2+2$ degeneracy pattern. Hence
+  \begin{equation}
+    \dim \Comm(\Omega_{12})=8.
+  \end{equation}
+  Its full commutant is smaller than that of the projector-type examples, but its parity-even commutant is maximal among nontrivial two-mode polynomials involving both occupations.
+\end{itemize}
+
+\subsection{Why orbital seniority is physically special}
+The local even and odd sectors are
+\begin{equation}
+  \mathcal H_{\even}=\spanC\{\ket{00},\ket{11}\},
+  \qquad
+  \mathcal H_{\odd}=\spanC\{\ket{10},\ket{01}\}.
+\end{equation}
+The two-mode odd-parity projector is exactly the orbital-seniority polynomial,
+\begin{equation}
+  \Omega_{12}=\Pi^{(2)}_{\odd}=n_1+n_2-2n_1n_2.
+\end{equation}
+Therefore it allows both canonical parity-even off-diagonal channels:
+\begin{align}
+  a_1^\dagger a_2,\ a_2^\dagger a_1
+  &\qquad \text{mix the odd block},
+  \\
+  a_1^\dagger a_2^\dagger,\ a_2a_1
+  &\qquad \text{mix the even block}.
+\end{align}
+This is the structural reason orbital seniority is the distinguished two-mode symmetry for parity-preserving dynamics.
+
+\subsection{Commuting two-body Hamiltonians and the spin--pair decomposition}
+For a spatial orbital $I$ with opposite-spin modes $(I\alpha,I\beta)$, define the physical spin operators and pair (pseudospin) operators
+\begin{align}
+  S_I^+ &= a_{I\alpha}^\dagger a_{I\beta},
+  &
+  S_I^- &= a_{I\beta}^\dagger a_{I\alpha},
+  &
+  S_I^z &= \tfrac12\bigl(n_{I\alpha}-n_{I\beta}\bigr),
+  \\
+  K_I^+ &= a_{I\alpha}^\dagger a_{I\beta}^\dagger,
+  &
+  K_I^- &= a_{I\beta}a_{I\alpha},
+  &
+  K_I^z &= \tfrac12\bigl(1-n_{I\alpha}-n_{I\beta}\bigr).
+\end{align}
+If $H$ is parity-even, at most two-body, and satisfies $[H,\Omega_I]=0$ for every spatial orbital $I$, then the surviving nontrivial local channels are generated by
+\begin{equation}
+  \{S_I^\pm,S_I^z,K_I^\pm,K_I^z\}_{I=1}^N,
+\end{equation}
+subject to the restriction that $H$ remain at most two-body. Concretely, the commuting Hamiltonian sector contains
+\begin{itemize}[leftmargin=2em]
+  \item diagonal density and density--density terms,
+  \item spin-exchange structures built from $S_I^\pm,S_I^z$,
+  \item pair-hopping and pair-density structures built from $K_I^\pm,K_I^z$.
+\end{itemize}
+This is the familiar seniority-preserving sector.
+
+\section{Three-mode polynomials}
+The odd-parity projector on three modes is
+\begin{equation}
+  \Pi^{(3)}_{\odd}
+  = n_1+n_2+n_3
+  -2(n_1n_2+n_1n_3+n_2n_3)
+  +4n_1n_2n_3.
+\end{equation}
+It is constant on the four even occupation states and constant on the four odd occupation states. Hence every parity-even operator on the three modes commutes with it.
+
+\subsection{Maximizers on three modes}
+Among nonconstant polynomials depending on all three occupations, $\Pi^{(3)}_{\odd}$ is the unique maximizer of the parity-even commutant up to affine rescaling.
+
+For the narrower problem of maximizing the space of commuting one- and two-body Hamiltonian terms, there are again two useful notions of optimality.
+\begin{itemize}[leftmargin=2em]
+  \item \textbf{Absolute winner.} A one-variable polynomial such as $p=n_1$ leaves two modes in the block completely unconstrained and therefore maximizes the unrestricted commuting one- and two-body sector.
+  \item \textbf{Best all-variables polynomial.} If one insists that all three occupations appear nontrivially, the winner is $\Pi^{(3)}_{\odd}$.
+\end{itemize}
+The difference between these two notions is already visible at three modes: the parity projector is optimal among genuinely three-variable constraints, but not among all possible diagonal polynomials.
+
+\section{Four-mode polynomials}
+The odd-parity projector on four modes is
+\begin{equation}
+  \Pi^{(4)}_{\odd}
+  = \sum_{i=1}^4 n_i
+  -2\sum_{1\le i<j\le 4} n_in_j
+  +4\sum_{1\le i<j<k\le 4} n_in_jn_k
+  -8 n_1n_2n_3n_4.
+\end{equation}
+As before, this polynomial is constant on all even occupations and constant on all odd occupations. Therefore it maximizes the parity-even commutant among nonconstant polynomials involving all four occupations.
+
+\subsection{Relation to two orbital seniorities}
+Let
+\begin{equation}
+  \Omega_{12}=n_1+n_2-2n_1n_2,
+  \qquad
+  \Omega_{34}=n_3+n_4-2n_3n_4.
+\end{equation}
+Then
+\begin{equation}
+  \Pi^{(4)}_{\odd} = \Omega_{12}+\Omega_{34}-2\Omega_{12}\Omega_{34}.
+\end{equation}
+Thus the four-mode parity polynomial is the XOR of the two two-mode seniorities: the four-mode block has odd total occupancy if and only if exactly one of the two pairs has odd occupancy.
+
+This identity implies
+\begin{equation}
+  \Comm(\Omega_{12},\Omega_{34}) \subseteq \Comm(\Pi^{(4)}_{\odd}),
+\end{equation}
+and the inclusion is strict, both on the full operator algebra and on the parity-even sector. In other words, two independent pair seniorities are more restrictive than a single four-mode parity projector.
+
+\subsection{Maximizers on four modes}
+Once again there are two natural winners.
+\begin{itemize}[leftmargin=2em]
+  \item \textbf{Absolute winner.} A one-variable polynomial such as $p=n_1$ leaves three modes in the block fully active and therefore maximizes the unrestricted commuting one- and two-body Hamiltonian class.
+  \item \textbf{Best all-variables polynomial.} If all four occupations must appear, then $\Pi^{(4)}_{\odd}$ is the optimal choice.
+\end{itemize}
+
+\section{Local symmetry families and the commuting part of a many-mode Hamiltonian}
+We now return to the many-mode design problem. Let $B_1,\dots,B_N\subseteq\{1,\dots,2N\}$ be the supports of $N$ local symmetry generators. For a fixed support $B$, the optimal physical choice is not a detailed occupation projector but an affine function of the block-parity operator
+\begin{equation}
+  G_B = \prod_{p\in B}(1-2n_p) = (-1)^{\sum_{p\in B} n_p},
+\end{equation}
+or equivalently of the odd-parity projector
+\begin{equation}
+  Q_B=\alpha_B+\beta_B\,\Pi_{\odd}(B),
+  \qquad
+  \Pi_{\odd}(B)=\frac{1-G_B}{2}.
+\end{equation}
+This choice is optimal because it maximizes the degeneracy within the parity-even and parity-odd local sectors, and therefore maximizes the parity-even commutant on the given support.
+
+\subsection{Projection formula for the commuting Hamiltonian sector}
+Let
+\begin{equation}
+  G_a=\prod_{p\in B_a}(1-2n_p),
+  \qquad a=1,\dots,N.
+\end{equation}
+Then the part of $H$ commuting with all $G_a$ is obtained by averaging over the Abelian symmetry group they generate:
+\begin{equation}
+  H_0
+  =
+  2^{-N}
+  \sum_{\eta\in\{0,1\}^N}
+  \left(\prod_{a=1}^N G_a^{\eta_a}\right)
+  H
+  \left(\prod_{a=1}^N G_a^{\eta_a}\right).
+\end{equation}
+The remainder is $V=H-H_0$.
+
+Introduce the binary incidence matrix $A\in \F^{N\times 2N}$,
+\begin{equation}
+  A_{ap}
+  =
+  \begin{cases}
+    1,& p\in B_a,\\[2pt]
+    0,& p\notin B_a,
+  \end{cases}
+\end{equation}
+and let $c_p\in\F^N$ denote its $p$th column,
+\begin{equation}
+  c_p=(A_{1p},\dots,A_{Np}).
+\end{equation}
+Then the commuting conditions for one- and two-body monomials are especially simple:
+\begin{align}
+  a_p^\dagger a_q \in H_0
+  &\iff c_p=c_q,
+  \\
+  a_p^\dagger a_q^\dagger a_s a_r \in H_0
+  &\iff c_p+c_q=c_r+c_s \modtwo.
+\end{align}
+Hence the size of $H_0$ is controlled entirely by repeated columns $c_p$ and repeated pair-sums $c_p+c_q$. This turns the search for good local symmetries into a binary combinatorial design problem on the support-overlap matrix.
+
+\subsection{Comparison of locality classes}
+This general framework leads to a natural hierarchy.
+\begin{enumerate}[leftmargin=2em]
+  \item \textbf{One-mode symmetries.} If one chooses $Q_p=n_p$ for all modes, then the columns $c_p$ are all distinct. As a result, only diagonal one-body terms and density--density interactions survive in $H_0$. This is the smallest commuting sector.
+
+  \item \textbf{Two-mode symmetries on opposite-spin pairs.} If one groups the two spin-orbitals of each spatial orbital into a block,
+  \begin{equation}
+    B_I=\{I\alpha,I\beta\},
+    \qquad I=1,\dots,N,
+  \end{equation}
+  then the two modes in each pair have identical incidence labels. This preserves intra-pair one-body channels, spin exchange, pair hopping, and the usual seniority-preserving two-body structure.
+
+  \item \textbf{Three-mode overlapping symmetries.} For overlapping three-mode blocks such as
+  \begin{equation}
+    (1,2,3),\ (3,4,5),\ (5,6,7),\dots,
+  \end{equation}
+  the columns are typically distinct in the bulk and pair-sums are much less degenerate than in the two-mode case. Consequently most off-diagonal one-body channels and many pair-hopping or exchange channels are removed. Three-mode overlapping parity blocks are therefore too restrictive if the goal is to maximize $H_0$.
+
+  \item \textbf{Four-mode overlapping symmetries.} Four-mode parity blocks aligned with whole opposite-spin pairs are especially promising. They preserve the natural pair structure, remain local, and can allow a larger family of one- and two-body channels than pure two-mode seniority while still imposing a nontrivial local fragmentation.
+\end{enumerate}
+
+The design principle is therefore clear:
+\begin{equation}
+  \boxed{\text{For a fixed support, parity-type occupation polynomials maximize } H_0.}
+\end{equation}
+What remains is to choose an overlap pattern for the supports that creates as many repeated incidence labels and pair-sums as possible without introducing redundancy.
+
+\subsection{Optimal overlap pattern for four-mode symmetries}
+We now specialize to four-mode symmetry generators on $2N$ spin-orbitals, with the natural physical requirement that each block contain two full opposite-spin pairs. Thus each block has the form
+\begin{equation}
+  B=\{\mu\uparrow,\mu\downarrow,\nu\uparrow,\nu\downarrow\},
+\end{equation}
+or in spin-orbital labels,
+\begin{equation}
+  B=\{2\mu-1,2\mu,2\nu-1,2\nu\}.
+\end{equation}
+The optimal local generator on this support is
+\begin{equation}
+  Q_B \propto \Pi_{\odd}(B)=\frac12\left(1-\prod_{p\in B}(1-2n_p)\right).
+\end{equation}
+
+The overlap problem can now be reformulated as a graph problem on the $N$ spatial orbitals: each orbital is a vertex, and each four-mode block connecting two spatial orbitals is an edge. A family of $N$ four-mode symmetry generators therefore corresponds to a graph with $N$ vertices and $N$ edges.
+
+The most natural pattern is the cycle
+\begin{equation}
+  (1,2),\ (2,3),\ (3,4),\dots,(N,1),
+\end{equation}
+which in spin-orbital notation becomes
+\begin{equation}
+  (1,2,3,4),\ (3,4,5,6),\dots,(2N-1,2N,1,2).
+\end{equation}
+Equivalently,
+\begin{equation}
+  B_\mu=
+  \{\mu\uparrow,\mu\downarrow,(\mu+1)\uparrow,(\mu+1)\downarrow\},
+  \qquad \mu=1,\dots,N,
+\end{equation}
+with $\mu+1$ understood modulo $N$.
+
+This cyclic overlap is essentially optimal. Indeed, a balanced local construction with $N$ four-mode generators on $N$ spatial orbitals has average graph degree $2$. If one also requires uniformity, so that every spatial orbital is treated equally, then every vertex must have degree exactly $2$. A connected simple graph in which every vertex has degree $2$ is necessarily a cycle. Hence, under the natural requirements of locality, connectedness, nonredundancy, and uniform treatment of the orbitals, the cyclic pattern is forced up to relabeling.
+
+Equivalently,
+\begin{equation}
+  \boxed{
+  B_\mu
+  =
+  \{\mu\uparrow,\mu\downarrow,(\mu+1)\uparrow,(\mu+1)\downarrow\},
+  \qquad
+  \mu=1,\dots,N,
+  }
+\end{equation}
+is the unique optimal local balanced overlap pattern, up to relabeling.
+
+There are only two apparent ways to ``improve'' on the cycle.
+\begin{enumerate}[leftmargin=2em]
+  \item \textbf{Relabelings.} Replacing nearest-neighbor blocks by
+  \begin{equation}
+    B_\mu=\{\mu\uparrow,\mu\downarrow,(\mu+r)\uparrow,(\mu+r)\downarrow\},
+  \end{equation}
+  with $\gcd(r,N)=1$, merely relabels the same cycle.
+
+  \item \textbf{Nonuniform or redundant constructions.} One may repeat blocks, disconnect the graph, or overconstrain part of the system while leaving the rest weakly constrained. Such constructions can increase the raw size of $H_0$ numerically, but they are not genuine improvements because the symmetry family becomes redundant or spatially unbalanced.
+\end{enumerate}
+Thus the cyclic pair-overlap pattern is the appropriate benchmark for four-mode local parity symmetries.
+
+\section{Overlapping four-mode constraints versus independent seniorities}
+We now compare cyclic overlapping four-mode parity constraints with independent pair seniorities.
+
+\subsection{Six modes: three seniorities versus three overlapping four-mode constraints}
+Let the pair seniorities be
+\begin{equation}
+  \Omega_{12},\ \Omega_{34},\ \Omega_{56},
+\end{equation}
+and the overlapping four-mode parity polynomials be
+\begin{equation}
+  Q_{1234}=\Pi^{(4)}_{\odd}(1,2,3,4),
+  \qquad
+  Q_{3456}=\Pi^{(4)}_{\odd}(3,4,5,6),
+  \qquad
+  Q_{5612}=\Pi^{(4)}_{\odd}(5,6,1,2).
+\end{equation}
+Write
+\begin{equation}
+  x_1=\nu_1+\nu_2,
+  \qquad
+  x_2=\nu_3+\nu_4,
+  \qquad
+  x_3=\nu_5+\nu_6 \modtwo,
+\end{equation}
+for the pair parities induced by a fermionic monomial $M$. Then
+\begin{align}
+  [M,\Omega_{12}]=[M,\Omega_{34}]=[M,\Omega_{56}]=0
+  &\iff x_1=x_2=x_3=0,
+  \\
+  [M,Q_{1234}]=[M,Q_{3456}]=[M,Q_{5612}]=0
+  &\iff x_1=x_2=x_3.
+\end{align}
+The overlapping four-mode set has an additional branch $x_1=x_2=x_3=1$, but this branch has odd total parity and therefore disappears from the parity-even sector. Consequently,
+\begin{equation}
+  \Comm_{\even}(\Omega_{12},\Omega_{34},\Omega_{56})
+  =
+  \Comm_{\even}(Q_{1234},Q_{3456},Q_{5612}).
+\end{equation}
+Thus on six modes the two constructions are equivalent for parity-even operators and hence for number-conserving one- and two-body Hamiltonians.
+
+\subsection{Eight modes: four seniorities versus four overlapping four-mode constraints}
+Now take four pair seniorities
+\begin{equation}
+  \Omega_{12},\ \Omega_{34},\ \Omega_{56},\ \Omega_{78},
+\end{equation}
+and four overlapping four-mode parity polynomials
+\begin{equation}
+  Q_{1234},\ Q_{3456},\ Q_{5678},\ Q_{7812}.
+\end{equation}
+Define pair parities
+\begin{equation}
+  x_1=\nu_1+\nu_2,
+  \quad
+  x_2=\nu_3+\nu_4,
+  \quad
+  x_3=\nu_5+\nu_6,
+  \quad
+  x_4=\nu_7+\nu_8 \modtwo.
+\end{equation}
+Then
+\begin{align}
+  [M,\Omega_{12}]=\cdots=[M,\Omega_{78}]=0
+  &\iff x_1=x_2=x_3=x_4=0,
+  \\
+  [M,Q_{1234}]=\cdots=[M,Q_{7812}]=0
+  &\iff x_1=x_2=x_3=x_4.
+\end{align}
+Again there is an extra branch $x_1=x_2=x_3=x_4=1$, but now its total parity is even. Therefore the overlapping four-mode set is strictly less restrictive even on the physical sector:
+\begin{equation}
+  \Comm_{\even}(\Omega_{12},\Omega_{34},\Omega_{56},\Omega_{78})
+  \subsetneq
+  \Comm_{\even}(Q_{1234},Q_{3456},Q_{5678},Q_{7812}).
+\end{equation}
+The additional parity-even operators are precisely quartic operators with one fermionic leg on each pair, for example
+\begin{equation}
+  a_1^\dagger a_3^\dagger a_5 a_7,
+  \qquad
+  a_2^\dagger a_4 a_6^\dagger a_8,
+  \qquad
+  a_1^\dagger a_4^\dagger a_5 a_8,
+  \qquad \text{etc.}
+\end{equation}
+These commute with all four overlapping four-mode parity constraints but not with the four independent seniorities.
+
+\section{Jordan--Wigner qubit forms}
+Under the Jordan--Wigner map,
+\begin{equation}
+  n_i \xmapsto{\JW} \frac{\I-Z_i}{2},
+  \qquad
+  1-2n_i \xmapsto{\JW} Z_i.
+\end{equation}
+Therefore every occupation polynomial becomes a polynomial in mutually commuting Pauli-$Z$ operators.
+
+For a general occupation polynomial
+\begin{equation}
+  p(n_1,\dots,n_m)=\sum_{\emptyset\neq A} c_A \prod_{i\in A}n_i,
+\end{equation}
+one obtains
+\begin{equation}
+  p \xmapsto{\JW}
+  \sum_{\emptyset\neq A} c_A\,2^{-|A|}\prod_{i\in A}(\I-Z_i).
+\end{equation}
+Expanding this yields a linear combination of Pauli-$Z$ strings.
+
+The distinguished parity-projector family collapses to particularly simple forms:
+\begin{align}
+  n_1
+  &\xmapsto{\JW}
+  \frac{\I-Z_1}{2},
+  \\
+  \Omega_{12}=\Pi^{(2)}_{\odd}
+  &\xmapsto{\JW}
+  \frac{\I-Z_1Z_2}{2},
+  \\
+  \Pi^{(3)}_{\odd}
+  &\xmapsto{\JW}
+  \frac{\I-Z_1Z_2Z_3}{2},
+  \\
+  \Pi^{(4)}_{\odd}
+  &\xmapsto{\JW}
+  \frac{\I-Z_1Z_2Z_3Z_4}{2}.
+\end{align}
+So the $m$-mode odd-parity projector is simply the projector onto the $-1$ eigenspace of the $m$-qubit $Z$-parity string.
+
+\subsection{Binary incidence formulation of the commutant problem}
+
+For many-mode symmetry families, the question of whether a given set of local diagonal generators
+has a larger one- and two-body commutant than independent orbital seniorities can be reduced to
+a linear system over $\F=\mathbb F_2$.
+
+Let
+\begin{equation}
+  P_i=(2i-1,2i),
+  \qquad
+  i=1,\dots,m,
+\end{equation}
+be the $m$ opposite-spin orbital pairs, so that the total number of spin-orbitals is $2m$.
+For a fermionic monomial
+\begin{equation}
+  M
+  =
+  a_{p_1}^\dagger\cdots a_{p_r}^\dagger
+  a_{q_1}\cdots a_{q_s},
+\end{equation}
+define its pair-parity vector
+\begin{equation}
+  x(M)=(x_1(M),\dots,x_m(M))\in \F^m
+\end{equation}
+by
+\begin{equation}
+  x_i(M)
+  :=
+  \#\{\text{legs of }M\text{ on }P_i\}
+  \modtwo .
+\end{equation}
+Thus $x_i(M)=1$ if and only if $M$ acts on pair $P_i$ an odd number of times.
+
+\begin{remark}
+For a number-conserving one-body term $a_p^\dagger a_q$, the vector $x(M)$ has weight at most $2$.
+For a number-conserving two-body term $a_p^\dagger a_q^\dagger a_s a_r$, the vector $x(M)$ has weight at most $4$.
+More generally, a $k$-body number-conserving monomial has pair-parity weight at most $2k$.
+\end{remark}
+
+\begin{proposition}[Linear commutation test]
+Let $\Omega_i=\Pi^{(2)}_{\odd}(P_i)$ be the orbital seniority on pair $P_i$, and let
+\begin{equation}
+  Q_S=\Pi_{\odd}(S)
+\end{equation}
+be the odd-parity projector on a block $S\subseteq \{1,\dots,m\}$ of pairs. Then for any fermionic monomial $M$,
+\begin{align}
+  [M,\Omega_i]=0
+  &\iff
+  x_i(M)=0,
+  \\
+  [M,Q_S]=0
+  &\iff
+  \sum_{i\in S} x_i(M)=0 \modtwo.
+\end{align}
+\end{proposition}
+
+\begin{proof}
+The seniority $\Omega_i$ distinguishes even and odd occupancy on the pair $P_i$, so a monomial commutes with it
+exactly when it preserves the pair parity, i.e.\ when $x_i(M)=0$.
+Likewise, $Q_S$ depends only on the total parity of the block $S$, so a monomial commutes with it exactly when it changes the parity of that block by an even amount, namely
+\[
+\sum_{i\in S}x_i(M)=0 \modtwo .
+\qedhere
+\]
+\end{proof}
+
+\paragraph{Incidence matrix.}
+Now let
+\begin{equation}
+  \mathcal Q=\{Q_{S_1},\dots,Q_{S_L}\}
+\end{equation}
+be a family of local parity-type generators, where each $S_a\subseteq \{1,\dots,m\}$ is a subset of pair labels.
+Define the binary incidence matrix
+\begin{equation}
+  A\in \F^{L\times m}
+\end{equation}
+by
+\begin{equation}
+  A_{ai}
+  =
+  \begin{cases}
+    1, & i\in S_a,\\
+    0, & i\notin S_a.
+  \end{cases}
+\end{equation}
+Then a fermionic monomial $M$ commutes with the full family $\mathcal Q$ if and only if
+\begin{equation}
+  A\,x(M)=0
+  \qquad \text{in } \F^m .
+\end{equation}
+
+Thus the problem of identifying the commuting part of a Hamiltonian is reduced to a binary linear-algebra problem:
+the allowed parity patterns are precisely the vectors in $\ker_{\F}(A)$.
+
+\begin{proposition}[Criterion for a larger two-body commutant]
+Let $\mathcal Q$ be a family of local parity-type generators with incidence matrix $A$.
+Then $\mathcal Q$ has a strictly larger number-conserving two-body commutant than the full set of independent orbital seniorities
+if and only if $\ker_{\F}(A)$ contains a nonzero vector of Hamming weight at most $4$.
+Equivalently,
+\begin{equation}
+  \exists\, x\in \ker_{\F}(A)\setminus\{0\}
+  \quad \text{with} \quad
+  |x|\le 4.
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+Independent orbital seniorities impose $x_i=0$ for every pair $i$, so their allowed parity space is only $x=0$.
+A number-conserving two-body monomial has four fermionic legs and therefore can act oddly on at most four pairs.
+Hence there is an additional commuting quartic channel precisely when $\ker_{\F}(A)$ contains a nonzero vector of weight at most $4$.
+\end{proof}
+
+\paragraph{Recovering an explicit commuting term from a binary solution.}
+If
+\begin{equation}
+  x=e_{i_1}+e_{i_2}+e_{i_3}+e_{i_4}\in \ker_{\F}(A),
+\end{equation}
+then one may realize this pattern by a quartic monomial with one leg on each of the four pairs, for example
+\begin{equation}
+  a_{2i_1-1}^\dagger a_{2i_2-1}^\dagger a_{2i_3} a_{2i_4}
+\end{equation}
+or its Hermitian combination with the adjoint.
+Similarly, a weight-$2$ solution yields an additional one-body commuting channel.
+
+\subsubsection{Baseline: independent orbital seniorities}
+
+For the full family of independent pair seniorities
+\begin{equation}
+  \{\Omega_1,\dots,\Omega_m\},
+\end{equation}
+the incidence matrix is simply
+\begin{equation}
+  A_{\mathrm{sen}}=I_m.
+\end{equation}
+Hence
+\begin{equation}
+  \ker_{\F}(A_{\mathrm{sen}})=\{0\}.
+\end{equation}
+Therefore independent orbital seniorities have no extra parity branch: every commuting monomial must preserve the parity of every pair separately.
+
+\subsubsection{Example: six overlapping $6$-mode polynomials on $12$ spin-orbitals}
+
+Now take $m=6$ pairs,
+\begin{equation}
+  P_1=(1,2),\quad
+  P_2=(3,4),\quad
+  P_3=(5,6),\quad
+  P_4=(7,8),\quad
+  P_5=(9,10),\quad
+  P_6=(11,12),
+\end{equation}
+and impose the cyclic family of $6$-mode parity generators on three adjacent pairs,
+\begin{equation}
+  S_1=\{1,2,3\},\quad
+  S_2=\{2,3,4\},\quad
+  S_3=\{3,4,5\},\quad
+  S_4=\{4,5,6\},\quad
+  S_5=\{5,6,1\},\quad
+  S_6=\{6,1,2\}.
+\end{equation}
+The incidence matrix is
+\begin{equation}
+  A_{(6\text{-mode},\,12\text{ SO})}
+  =
+  \begin{pmatrix}
+    1&1&1&0&0&0\\
+    0&1&1&1&0&0\\
+    0&0&1&1&1&0\\
+    0&0&0&1&1&1\\
+    1&0&0&0&1&1\\
+    1&1&0&0&0&1
+  \end{pmatrix}.
+\end{equation}
+Solving
+\begin{equation}
+  A_{(6\text{-mode},\,12\text{ SO})}\,x=0
+\end{equation}
+over $\F$ gives
+\begin{equation}
+  x=(a,b,a+b,a,b,a+b),
+  \qquad
+  a,b\in \F.
+\end{equation}
+Hence
+\begin{equation}
+  \ker_{\F}(A_{(6\text{-mode},\,12\text{ SO})})
+  =
+  \left\{
+  000000,\;
+  011011,\;
+  101101,\;
+  110110
+  \right\}.
+\end{equation}
+The three nonzero solutions all have weight $4$. Therefore this symmetry family has a strictly larger
+number-conserving two-body commutant than the six independent orbital seniorities.
+
+For instance, the solution
+\begin{equation}
+  x=011011
+\end{equation}
+is realized by any quartic term with one fermionic leg on each of the pairs $P_2,P_3,P_5,P_6$, for example
+\begin{equation}
+  a_3^\dagger a_5^\dagger a_{10} a_{12}+\mathrm{h.c.}
+\end{equation}
+This term commutes with all six overlapping $6$-mode parity generators, but not with the six individual pair seniorities.
+
+\subsubsection{Interpretation}
+
+The linear system
+\begin{equation}
+  A x = 0 \qquad \text{over }\F
+\end{equation}
+contains exactly the information needed to decide whether a proposed family of local parity-type symmetries
+improves on independent seniorities at the one- or two-body level.
+
+\begin{itemize}[leftmargin=2em]
+  \item If $\ker_{\F}(A)=\{0\}$, then the physical commutant is no larger than that of independent orbital seniorities.
+  \item If $\ker_{\F}(A)$ contains a nonzero vector of weight $2$, then the family admits extra one-body commuting channels.
+  \item If $\ker_{\F}(A)$ contains a nonzero vector of weight $4$, then the family admits extra two-body commuting channels.
+  \item More generally, if the minimum nonzero weight in $\ker_{\F}(A)$ is $d$, then the first additional commuting channels can appear only at body rank $d/2$.
+\end{itemize}
+
+In this sense the design problem for overlapping local parity constraints is a binary code problem:
+one seeks incidence matrices $A$ whose kernel is nontrivial, but whose minimum nonzero weight is as small as possible subject to the desired locality and overlap pattern.
+
+\section{Application to the $2$D Fermi--Hubbard model}
+
+We now specialize the general discussion to the square-lattice Fermi--Hubbard Hamiltonian,
+\begin{equation}
+  H_{\mathrm{Hub}}
+  =
+  -t\sum_{\langle ij\rangle,\sigma}
+  \left(c_{i\sigma}^\dagger c_{j\sigma}+c_{j\sigma}^\dagger c_{i\sigma}\right)
+  +U\sum_i n_{i\uparrow}n_{i\downarrow},
+  \label{eq:hubbard-main}
+\end{equation}
+where $i,j$ label lattice sites, $\sigma\in\{\uparrow,\downarrow\}$, and $\langle ij\rangle$ denotes nearest-neighbour bonds. In contrast with a generic molecular two-electron Hamiltonian, the quartic sector here is exceptionally sparse: the only interaction term is the on-site density product $n_{i\uparrow}n_{i\downarrow}$, which is already diagonal in the occupation basis. As a result, the analogue of the optimization problem studied above simplifies substantially in the site basis.
+
+\subsection{Local diagonal symmetries on lattice-site supports}
+Let $B_1,\dots,B_M\subseteq \Lambda$ be a family of subsets of lattice sites, where $\Lambda$ is the square lattice. For each support $B_a$, define the site-parity operator
+\begin{equation}
+  G_{B_a}
+  =
+  \prod_{i\in B_a}(1-2n_{i\uparrow})(1-2n_{i\downarrow})
+  =(-1)^{\sum_{i\in B_a}(n_{i\uparrow}+n_{i\downarrow})},
+\end{equation}
+and equivalently the odd-parity projector
+\begin{equation}
+  Q_{B_a}=\Pi_{\odd}(B_a)=\frac{1-G_{B_a}}{2}.
+\end{equation}
+As in the molecular setting, parity-type occupation polynomials maximize the local parity-even commutant on a fixed support. However, because the Hubbard interaction is already diagonal, the only nontrivial selection rule comes from the hopping term.
+
+For each site $i\in\Lambda$, introduce the binary incidence label
+\begin{equation}
+  c_i
+  =
+  (\mathbf 1_{i\in B_1},\dots,\mathbf 1_{i\in B_M})\in \mathbb F_2^M.
+\end{equation}
+Since the two spin orbitals on a given site always enter together, the condition for a nearest-neighbour hopping term to commute with all the $G_{B_a}$ is simply
+\begin{equation}
+  c_{i\sigma}^\dagger c_{j\sigma}\in H_0
+  \iff
+  c_i=c_j.
+\end{equation}
+Therefore the part of the Hubbard Hamiltonian that commutes with the full family $\{G_{B_a}\}_{a=1}^M$ is
+\begin{equation}
+  H_0
+  =
+  U\sum_i n_{i\uparrow}n_{i\downarrow}
+  -t\sum_{\substack{\langle ij\rangle,\sigma\\ c_i=c_j}}
+  \left(c_{i\sigma}^\dagger c_{j\sigma}+c_{j\sigma}^\dagger c_{i\sigma}\right).
+  \label{eq:hubbard-H0}
+\end{equation}
+Thus the Hubbard design problem is not a ``pair-sum'' optimization as in the generic two-body molecular case. Instead it becomes a graph-partition problem:
+\begin{equation}
+  \boxed{\text{Choose local supports so as to preserve as many nearest-neighbour bonds as possible.}}
+\end{equation}
+The on-site interaction always survives; only hopping is removed.
+
+\subsection{Dependence on the ratio $U/t$}
+Algebraically, the commuting sector \eqref{eq:hubbard-H0} is independent of the numerical value of $U/t$. The support pattern alone determines which bonds survive in $H_0$. Nevertheless, the \emph{quality} of the resulting approximate symmetry strongly depends on $U/t$.
+
+Write
+\begin{equation}
+  H_{\mathrm{Hub}} = U D + t K,
+\end{equation}
+with
+\begin{equation}
+  D=\sum_i n_{i\uparrow}n_{i\downarrow},
+  \qquad
+  K=-\sum_{\langle ij\rangle,\sigma}
+  \left(c_{i\sigma}^\dagger c_{j\sigma}+c_{j\sigma}^\dagger c_{i\sigma}\right).
+\end{equation}
+Every diagonal occupation polynomial commutes with $D$. Hence all symmetry breaking comes entirely from the kinetic term,
+\begin{equation}
+  [H_{\mathrm{Hub}},Q_a]=t[K,Q_a].
+\end{equation}
+Consequently,
+\begin{equation}
+  \frac{\|[H_{\mathrm{Hub}},Q_a]\|}{\|H_{\mathrm{Hub}}\|}
+  =O\!\left(\frac{t}{U+t}\right),
+\end{equation}
+so the approximate symmetries improve as $U/t$ increases.
+
+This statement should be interpreted with some care. At strong coupling and near half filling, the low-energy effective theory is a Heisenberg antiferromagnet with exchange scale $J\sim 4t^2/U$. Thus a symmetry family that removes a hopping bond from $H_0$ also removes the corresponding superexchange bond in the low-energy sector. Therefore, while large $U/t$ improves the bare commutator estimate, the retained bond geometry still matters at order $t^2/U$.
+
+\subsection{A useful commutator bound}
+For a site set $B\subseteq \Lambda$, let $\partial B$ denote the set of nearest-neighbour bonds with one endpoint in $B$ and the other in $\Lambda\setminus B$. Since $G_B$ commutes with every on-site term and with every hopping term whose bond does not cross the boundary, one finds
+\begin{equation}
+  [H_{\mathrm{Hub}},G_B]
+  =
+  -t\sum_{\substack{\langle ij\rangle\in \partial B\\ \sigma}}
+  [c_{i\sigma}^\dagger c_{j\sigma}+c_{j\sigma}^\dagger c_{i\sigma},G_B].
+\end{equation}
+Using $\|c_{i\sigma}^\dagger c_{j\sigma}+c_{j\sigma}^\dagger c_{i\sigma}\|\le 1$, we obtain the simple estimate
+\begin{equation}
+  \|[H_{\mathrm{Hub}},G_B]\|
+  \le 4t\,|\partial B|.
+  \label{eq:boundary-bound}
+\end{equation}
+Hence, at fixed support size, the best approximate symmetry is obtained by minimizing the number of boundary bonds. This is the Hubbard analogue of the commutant-maximization principle: on a fixed support one should choose the parity projector, and among shapes with the same size one should choose the support with the smallest boundary.
+
+\subsection{A $4\times 4$ example with $16$ approximate symmetries}
+We now consider a $4\times 4$ square lattice. There are two natural interpretations of the phrase ``$16$ approximate symmetries.'' The first gives $16$ \emph{independent} local generators. The second gives $16$ \emph{translation-covariant nearest-neighbour} generators on the torus. Since the second is geometrically closer to the nearest-neighbour optimization problem, we record both constructions.
+
+\subsubsection{Independent on-site generators}
+Label the sites by $(x,y)$ with $x,y\in\{0,1,2,3\}$. Define
+\begin{equation}
+  G_{x,y}^{\mathrm{site}}
+  =(1-2n_{x,y,\uparrow})(1-2n_{x,y,\downarrow}),
+  \qquad
+  Q_{x,y}^{\mathrm{site}}=\frac{1-G_{x,y}^{\mathrm{site}}}{2}.
+\end{equation}
+Equivalently,
+\begin{equation}
+  Q_{x,y}^{\mathrm{site}}
+  =n_{x,y,\uparrow}+n_{x,y,\downarrow}-2n_{x,y,\uparrow}n_{x,y,\downarrow}.
+\end{equation}
+These are exactly the on-site odd-parity projectors. They form a set of $16$ independent commuting diagonal polynomials. For the full family,
+\begin{equation}
+  H_0^{\mathrm{site}}=U\sum_{x,y}n_{x,y,\uparrow}n_{x,y,\downarrow},
+\end{equation}
+because a nearest-neighbour hopping term always changes the occupation parity on its two endpoint sites and therefore fails to commute with at least two generators.
+
+The symmetry-breaking scale of a single on-site generator is controlled only by the bonds incident on that site. On the open $4\times 4$ lattice,
+\begin{equation}
+  \|[H_{\mathrm{Hub}},G_{x,y}^{\mathrm{site}}]\|
+  \le 4t\,z_{x,y},
+\end{equation}
+where $z_{x,y}\in\{2,3,4\}$ is the local coordination number. Thus these $16$ generators are exact symmetries at $t=0$ and become increasingly good approximate symmetries as $U/t$ grows.
+
+This construction is the cleanest answer if one insists on having $16$ \emph{independent} local approximate symmetries.
+
+\subsubsection{Nearest-neighbour optimized plaquette generators on the periodic $4\times 4$ lattice}
+If one instead wants a genuinely nearest-neighbour local polynomial involving several sites, the natural optimized support of size four is the $2\times 2$ plaquette. Indeed, among connected four-site subsets of the square lattice, the plaquette uniquely minimizes the boundary size. On the periodic $4\times 4$ lattice, there are exactly $16$ translated plaquettes,
+\begin{equation}
+  B_{x,y}^{\square}
+  =
+  \{(x,y),(x+1,y),(x,y+1),(x+1,y+1)\},
+\end{equation}
+with all coordinates understood modulo $4$. The corresponding parity generators are
+\begin{equation}
+  G_{x,y}^{\square}
+  =
+  \prod_{(u,v)\in B_{x,y}^{\square}}
+  (1-2n_{u,v,\uparrow})(1-2n_{u,v,\downarrow}),
+  \qquad
+  Q_{x,y}^{\square}=\frac{1-G_{x,y}^{\square}}{2}.
+\end{equation}
+Each generator commutes exactly with the interaction term and fails to commute only with the hopping terms crossing the plaquette boundary. Since a $2\times 2$ plaquette on the square lattice has $|\partial B|=8$, the estimate \eqref{eq:boundary-bound} gives
+\begin{equation}
+  \|[H_{\mathrm{Hub}},G_{x,y}^{\square}]\|\le 32t.
+\end{equation}
+Thus each $G_{x,y}^{\square}$ is again an approximate symmetry whose quality improves with $U/t$.
+
+However, the full family $\{G_{x,y}^{\square}\}_{x,y=0}^3$ is much more restrictive than the on-site family. Distinct sites have different plaquette-incidence labels, so under the full set of plaquette generators essentially no nearest-neighbour hopping survives in $H_0$:
+\begin{equation}
+  H_0^{\square}=U\sum_{x,y}n_{x,y,\uparrow}n_{x,y,\downarrow}.
+\end{equation}
+Moreover, the $16$ plaquette generators are not independent over $\mathbb F_2$; on the $4\times 4$ torus their incidence matrix has rank $9$, so there are only $9$ independent binary generators.
+
+Therefore the plaquette construction is best viewed as the natural \emph{nearest-neighbour geometric} analogue of the local parity idea, whereas the on-site construction is the natural answer if one wants exactly $16$ independent approximate symmetries.
+
+\subsection{Orbital rotations and the weak-coupling regime}
+The site basis is natural at strong coupling because the interaction term is diagonal there. In the opposite regime $U/t\ll 1$, it is natural to first diagonalize the kinetic term by an orbital rotation. Let
+\begin{equation}
+  a_{\alpha\sigma}^\dagger=\sum_i R_{i\alpha}\,c_{i\sigma}^\dagger,
+  \qquad
+  m_{\alpha\sigma}=a_{\alpha\sigma}^\dagger a_{\alpha\sigma},
+\end{equation}
+where $R$ is a unitary matrix chosen so that
+\begin{equation}
+  H_t
+  =
+  -t\sum_{\langle ij\rangle,\sigma}
+  \left(c_{i\sigma}^\dagger c_{j\sigma}+c_{j\sigma}^\dagger c_{i\sigma}\right)
+  =
+  \sum_{\alpha,\sigma}\varepsilon_\alpha\,m_{\alpha\sigma}.
+\end{equation}
+In this rotated basis, the interaction becomes
+\begin{equation}
+  H_U
+  =
+  U\sum_{\alpha\beta\gamma\delta}
+  V_{\alpha\beta\gamma\delta}
+  \,a_{\alpha\uparrow}^\dagger a_{\beta\uparrow}
+  a_{\gamma\downarrow}^\dagger a_{\delta\downarrow},
+\end{equation}
+with
+\begin{equation}
+  V_{\alpha\beta\gamma\delta}
+  =
+  \sum_i R_{i\alpha}^*R_{i\beta}R_{i\gamma}^*R_{i\delta}.
+  \label{eq:rotated-V}
+\end{equation}
+Thus the Hubbard Hamiltonian in the kinetic eigenbasis has the same broad structure as a molecular Hamiltonian: a diagonal one-body part plus a nontrivial quartic interaction. However, the quartic tensor \eqref{eq:rotated-V} is still highly structured and much more constrained than a generic molecular two-electron tensor.
+
+\subsubsection{Optimal diagonal polynomials when $U/t\ll 1$}
+At $U=0$, every diagonal polynomial in the rotated occupations $m_{\alpha\sigma}$ is an exact symmetry. Once $U$ is turned on, the symmetry breaking comes entirely from the quartic term in the rotated basis. Therefore, if one fixes a support $B$ of rotated spin-orbitals and asks for the nontrivial diagonal polynomial with largest parity-even commutant, the same answer as before applies:
+\begin{equation}
+  \Pi_{\odd}^{\mathrm{rot}}(B)
+  =
+  \frac{1-\prod_{(\alpha,\sigma)\in B}(1-2m_{\alpha\sigma})}{2}
+\end{equation}
+is optimal among nonconstant diagonal polynomials involving all occupations in $B$.
+
+In particular, for a single rotated spatial orbital $\alpha$ one obtains the weak-coupling analogue of orbital seniority,
+\begin{equation}
+  \Omega_{\alpha}^{\mathrm{rot}}
+  =m_{\alpha\uparrow}+m_{\alpha\downarrow}-2m_{\alpha\uparrow}m_{\alpha\downarrow}.
+\end{equation}
+This is the odd-parity projector on the two spin states of the kinetic eigenmode $\alpha$. Among nontrivial diagonal polynomials on that pair of modes, it maximizes the parity-even commutant.
+
+More generally, suppose one chooses a family of rotated-orbital supports and uses the corresponding parity generators. Let $c_\alpha\in \mathbb F_2^M$ denote the incidence label of orbital $\alpha$ under that support family, with the same label assigned to both spins of the same rotated spatial orbital. Then the part of the rotated Hamiltonian that commutes with all generators is
+\begin{equation}
+  H_0^{\mathrm{rot}}
+  =
+  \sum_{\alpha,\sigma}\varepsilon_\alpha m_{\alpha\sigma}
+  +U\sum_{\substack{\alpha\beta\gamma\delta\\ c_\alpha+c_\gamma=c_\beta+c_\delta}}
+  V_{\alpha\beta\gamma\delta}
+  \,a_{\alpha\uparrow}^\dagger a_{\beta\uparrow}
+  a_{\gamma\downarrow}^\dagger a_{\delta\downarrow}.
+  \label{eq:hubbard-rot-H0}
+\end{equation}
+Thus in the weak-coupling regime the previous molecular-style pair-sum condition reappears, but now with the structured tensor \eqref{eq:rotated-V}.
+
+This leads to a natural weak-coupling principle:
+\begin{equation}
+  \boxed{\text{For }U/t\ll 1, \,\text{the optimal local polynomials are parity projectors in the kinetic eigenbasis.}}
+\end{equation}
+The finest such generators are the rotated seniorities $\Omega_\alpha^{\mathrm{rot}}$ of individual kinetic modes. If one wants coarser but less restrictive generators, the optimal choices are odd-parity projectors on small groups of kinetic orbitals. In a translation-invariant lattice these groups are most naturally chosen as momentum patches, symmetry-related degenerate shells, or sets of orbitals connected by the dominant scattering processes in $V_{\alpha\beta\gamma\delta}$.
+
+\subsubsection{Remarks for the momentum basis}
+On a periodic lattice, the kinetic-diagonal basis is the momentum basis. Writing $a_{k\sigma}$ for the Fourier modes, one has
+\begin{equation}
+  H_t=\sum_{k,\sigma}\varepsilon_k\,n_{k\sigma},
+\end{equation}
+while the interaction takes the form
+\begin{equation}
+  H_U
+  =
+  \frac{U}{L}\sum_{k,k',q}
+  a_{k+q,\uparrow}^\dagger a_{k,\uparrow}
+  a_{k'-q,\downarrow}^\dagger a_{k',\downarrow}.
+\end{equation}
+Hence the weak-coupling rotated-orbital optimization is not completely generic: the surviving quartic channels are constrained by exact momentum conservation. This suggests that the most natural local weak-coupling supports are not arbitrary subsets of orbitals, but rather subsets adapted to the momentum-transfer structure, such as $(k,-k)$ pairs, small Fermi-surface patches, or symmetry-related shells.
+
+\subsection{The crossover regime and joint optimization of basis and polynomial}
+Between the site basis and the kinetic eigenbasis there is no reason to expect a universal closed-form answer. Nevertheless, the general principle still survives. Choose an arbitrary orbital rotation $R$, and write the rotated Hamiltonian as
+\begin{equation}
+  H(R)
+  =
+  \sum_{\alpha\beta,\sigma}\widetilde h_{\alpha\beta}(R)
+  a_{\alpha\sigma}^\dagger a_{\beta\sigma}
+  +U\sum_{\alpha\beta\gamma\delta}
+  \widetilde V_{\alpha\beta\gamma\delta}(R)
+  \,a_{\alpha\uparrow}^\dagger a_{\beta\uparrow}
+  a_{\gamma\downarrow}^\dagger a_{\delta\downarrow}.
+\end{equation}
+For a family of parity-type generators specified by orbital labels $c_\alpha\in\mathbb F_2^M$, the commuting part is
+\begin{equation}
+  H_0(R)
+  =
+  \sum_{\substack{\alpha\beta,\sigma\\ c_\alpha=c_\beta}}
+  \widetilde h_{\alpha\beta}(R)
+  a_{\alpha\sigma}^\dagger a_{\beta\sigma}
+  +U\sum_{\substack{\alpha\beta\gamma\delta\\ c_\alpha+c_\gamma=c_\beta+c_\delta}}
+  \widetilde V_{\alpha\beta\gamma\delta}(R)
+  \,a_{\alpha\uparrow}^\dagger a_{\beta\uparrow}
+  a_{\gamma\downarrow}^\dagger a_{\delta\downarrow}.
+  \label{eq:cross-H0}
+\end{equation}
+Thus the crossover problem naturally becomes a \emph{joint variational optimization} over the orbital basis and the local polynomial supports.
+
+A convenient heuristic objective is to minimize the symmetry-breaking weight
+\begin{equation}
+  \mathcal J(R,\{c_\alpha\})
+  =
+  \sum_{\substack{\alpha\beta,\sigma\\ c_\alpha\neq c_\beta}}
+  \left|\widetilde h_{\alpha\beta}(R)\right|^2
+  +U^2
+  \sum_{\substack{\alpha\beta\gamma\delta\\ c_\alpha+c_\gamma\neq c_\beta+c_\delta}}
+  \left|\widetilde V_{\alpha\beta\gamma\delta}(R)\right|^2.
+  \label{eq:J-functional}
+\end{equation}
+The first term penalizes one-body matrix elements destroyed by the symmetry family, while the second penalizes quartic scattering channels destroyed by that family. The weak-coupling regime drives the minimum of \eqref{eq:J-functional} toward a basis that diagonalizes $\widetilde h$, whereas the strong-coupling regime drives it toward a basis that makes the interaction as diagonal and local as possible, namely the site basis.
+
+This suggests the following qualitative picture.
+\begin{itemize}[leftmargin=2em]
+  \item For $U/t\ll 1$, the optimal basis is close to the kinetic eigenbasis, and the optimal local diagonal polynomials are parity projectors in the rotated occupations, with rotated seniority as the two-mode building block.
+  \item For $U/t\gg 1$, the optimal basis is close to the site basis, and the optimal local diagonal polynomials are parity projectors in the site occupations.
+  \item In the crossover region, parity-type polynomials remain locally optimal on fixed supports, but the globally best basis and support geometry depend on the relative weights of the one-body and quartic terms. There is no reason to expect a universal basis-independent optimal polynomial.
+\end{itemize}
+In this sense, the Hubbard model interpolates between two natural symmetry descriptions: site-occupation symmetries at strong coupling and orbital-occupation symmetries at weak coupling.
+
+\subsection{Conclusion for the Hubbard case}
+The main conclusion is that the Hubbard optimization problem is basis-dependent in an especially transparent way. In the site basis, the interaction is already diagonal, and the nontrivial design problem is to preserve as much nearest-neighbour hopping as possible. In the kinetic eigenbasis, the hopping is already diagonal, and the nontrivial design problem is to preserve as much of the structured quartic interaction as possible. In both descriptions, parity-type diagonal polynomials are optimal on fixed supports, but the preferred basis shifts from site occupations at strong coupling to rotated orbital occupations at weak coupling.
+
+\section{Conclusion}
+The main structural point of this note is that diagonal occupation polynomials are governed by degeneracy patterns on the occupation basis. This immediately determines both the full commutant and the parity-even commutant.
+
+For individual blocks of size two, three, and four, the distinguished all-variables maximizers of the parity-even commutant are the odd-parity projectors $\Pi^{(m)}_{\odd}$. For two modes this is exactly orbital seniority. Projector-type polynomials can have larger full commutants, but they do not maximize the physically relevant parity-even sector.
+
+For many-mode symmetry systems, the optimal polynomial type on a fixed support is therefore parity-type. The commuting part $H_0$ of a generic one- plus two-body Hamiltonian is controlled by a binary incidence matrix built from the supports of the local generators: repeated columns determine the surviving one-body channels, and repeated pair-sums determine the surviving two-body channels. This turns the search for useful local symmetry systems into a combinatorial design problem.
+
+Within this framework, one-mode constraints are the most restrictive, two-mode pair seniorities give a large and physically natural commuting sector, three-mode overlapping blocks are typically too restrictive, and four-mode parity blocks aligned with whole opposite-spin pairs are especially promising. For four-mode generators, the cyclic pair-overlap pattern is essentially the unique optimal local balanced construction. Finally, cyclic overlapping four-mode parity constraints can be strictly weaker than independent pair seniorities on the physical sector, as already visible in the eight-mode example.
+
+These observations suggest a practical hierarchy of local diagonal symmetries for constructing approximate block-diagonal decompositions $H=H_0+V$: parity projectors are optimal on fixed supports, while the overlap geometry of those supports controls how much one- and two-body structure survives in $H_0$.
+
+\end{document}
