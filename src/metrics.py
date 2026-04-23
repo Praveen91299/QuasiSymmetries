@@ -171,3 +171,58 @@ def comm_sq_exp_fast(sym_ops, H, state, n_qubits):
         total += np.vdot(delta, delta)
 
     return np.real_if_close(total)
+
+from src.clifford import *
+def get_entropies_at_cuts(state, n_qubits):
+    entropies = []
+    for k in range(1, n_qubits):
+        u, d, v = np.linalg.svd(np.reshape(state, (1<<k, 1<<(n_qubits-k))))
+
+        entropies.append(entropy(np.abs(d)**2))
+    return entropies
+
+def get_ent(symmetries, HQ, n_qubits, verbose=False):
+    """
+    Get bi-partite entanglement across all partitions after diagonalizing symmetries and localizing them to qubits 0, 1, 2, ... in order
+
+    """
+    res = build_symmetry_block_structure_with_packed_qubits(
+        hamiltonian=HQ,
+        symmetries=symmetries,
+        n_qubits=n_qubits,
+    )
+
+    #permute symmetries to the start
+    H_trans = res.transformed_hamiltonian
+    sym_mapped_qubits = res.original_mapped_qubits
+
+    #syms to start + rest in order
+    if verbose: print("Symmetries rotated to Z on qubits: ", sym_mapped_qubits)
+    n_sym = len(sym_mapped_qubits) #locations of symmetry qubits - should go to the beginning
+    perm = []
+    ns=0
+    nns =0
+    for i in range(n_qubits): #qubit count
+        if i in sym_mapped_qubits: 
+            assert ns < n_sym, "Too many symmetry indices!"
+            perm.append(sym_mapped_qubits.index(i))
+            ns +=1
+        else:
+            perm.append(n_sym + nns)
+            nns += 1
+
+    if verbose:
+        print("Qubits permuted as:")
+        for i, p in enumerate(perm):
+            print(i, "->", p)
+
+    H_perm = permute_qubits_in_qubit_operator(H_trans, perm)
+    e_p, gs = get_ground_state(get_sparse_operator(H_perm, n_qubits))
+
+    ents = get_entropies_at_cuts(gs, n_qubits)
+    if verbose:
+        print("Entropy of cuts (bits):")
+        for i, e in enumerate(ents):
+            print("{} | {} : {}".format(i+1, i+2, e))
+    
+    return ents, H_perm

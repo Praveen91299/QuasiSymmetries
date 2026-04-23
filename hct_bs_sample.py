@@ -7,13 +7,14 @@ from openfermion import FermionOperator
 from copy import deepcopy
 from openfermion import commutator
 from src.state_utils import get_cisd_gs, get_fci_state_openfermion
-from src.sym import get_quartic_symmetries, get_seniority_symmetries, find_approx_symm
+from src.op_utils import build_H_chain_for_R
+from src.sym import get_quartic_symmetries, get_seniority_symmetries, hct_mod
 
 from src.bs.utils import *
 from src.bs.beam import *
 
 # hct
-from src.metrics import variance
+from src.metrics import variance, comm_sq_exp_fast, find_commuting_paulis, universal_grading
 from src.state_utils import get_hf_occ, get_hf_wfn
 
 def h2o_geometry(bond_length, bond_angle_deg):
@@ -39,9 +40,6 @@ def h2o_geometry(bond_length, bond_angle_deg):
 #     ('N', (0.0, 0.0, bl/2))
 # ]
 
-# n_H = 4
-# H, molecule =  build_H_chain_for_R(1.0, n_H)
-
 geometry = h2o_geometry(2.1, 104.5) 
 
 basis = 'sto-3g'
@@ -66,6 +64,9 @@ molecule = run_pyscf(
     run_fci=True
 )
 
+n_H = 4
+H, molecule =  build_H_chain_for_R(1.0, n_H)
+
 # Get second-quantized electronic Hamiltonian and wavefunctions
 H = get_fermion_operator(molecule.get_molecular_hamiltonian())
 n_qubits = count_qubits(H)
@@ -77,9 +78,17 @@ gs = gs.toarray()
 hf_occ = get_hf_occ(molecule.n_electrons, molecule.n_orbitals, as_str=True)
 cisd_e, cisd_wfn= get_cisd_gs(hf_occ, HQ, n_qubits, 'wfs', tf='jw')
 
+#pick your favorite metric functions (to lower):
+comm_sq_exp_cisd = lambda s_list: comm_sq_exp_fast(s_list, Hs, cisd_wfn, n_qubits)
+comm_sq_exp_fci = lambda s_list: comm_sq_exp_fast(s_list, Hs, gs, n_qubits)
+var_cisd = lambda s_list: variance(s_list, cisd_wfn, n_qubits)
+var_fci = lambda s_list: variance(s_list, gs, n_qubits)
+
+sym_group_score_func = lambda s_list: (-1)*comm_sq_exp_cisd(s_list) # BS score maximized
+sym_metric_func = lambda s: (-1)*sym_group_score_func([s]) # HCT minimized
 
 n_sym = n_qubits//2
-sym_hct, eps = find_approx_symm(jordan_wigner(H), n_sym)#, sym_metric_func=lambda s: variance([s], gs, n_qubits))
+sym_hct, eps = hct_mod(HQ, n_sym, use_coeffs_eps=True, num_intervals=5000, sym_metric_func=sym_metric_func)
 sym_sen = get_seniority_symmetries(n_qubits)
 sym_quar = get_quartic_symmetries(n_qubits)
 
@@ -92,16 +101,13 @@ sym_bs = find_commuting_symmetry_generators(
     include_pairwise_products=True,
     pairwise_seed_terms=12,
     seed_with_exact_symmetries=True,
-    score_func=lambda s: -variance(s, cisd_wfn, n_qubits) # comm_sq_exp_fast(s, Hs, gs, n_qubits)# Change or remove as needed
+    score_func= sym_group_score_func # this function maximizes the cost function TODO invert this
 )
 for s in sym_bs:
     print("  ", s)
 
-print("\nValidation:")
-print(validate_symmetry_generators(HQ, sym_bs))
-
-#evaluate non-commutativity for each symmetry
-from src.metrics import universal_grading, entropy_pauli_syms, find_commuting_paulis
+# evaluate metrics
+from src.metrics import universal_grading, entropy_pauli_syms, find_commuting_paulis, get_ent
 
 print("Non-commutativity")
 print("HCT:{}".format(universal_grading(sym_hct, HQ)))
@@ -115,9 +121,18 @@ print("Seniority: ", entropy_pauli_syms(sym_sen, gs, n_qubits))
 print("Quartic: ", entropy_pauli_syms(sym_quar, gs, n_qubits))
 print("BS: ", entropy_pauli_syms(sym_bs, gs, n_qubits))
 
-
 print("HCT, SEN, QUARTIC, BS (non commuting terms)")
 _ = find_commuting_paulis(HQ, sym_hct)
 _ = find_commuting_paulis(HQ, sym_sen)
 _ = find_commuting_paulis(HQ, sym_quar)
 _ = find_commuting_paulis(HQ, sym_bs)
+
+# bi-partite entanglement
+print("Sen")
+sen_ent, H_perm_sen = get_ent(sym_sen, HQ, n_qubits, verbose=True)
+
+print("HCT N/2 syms")
+hct_ent, H_perm_hct = get_ent(sym_hct, HQ, n_qubits, verbose=True)
+
+print("BS N/2 syms")
+bs_ent, H_perm_bs = get_ent(sym_bs, HQ, n_qubits, verbose=True)

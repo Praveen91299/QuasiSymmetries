@@ -124,9 +124,11 @@ def get_quartic_symmetries(n_qubits):
 
     return quar_syms
 
-def hct_mod(HQ, n_sym=None, sym_metric_func = None, num_intervals=100, eps_max=None, verbose=True, add_gen_type='rref'):
+def hct_mod(HQ, n_sym=None, sym_metric_func = None, use_coeffs_eps=False, num_intervals=100, eps_max=None, verbose=True, add_gen_type='rref', tol=1e-5):
     """
     HCT, _Praveen's version_ (slightly distinct from HCT paper)
+
+    use_coeffs_eps - if set True - then use all non-negligible coefficients as thresholds
 
     """
 
@@ -141,7 +143,11 @@ def hct_mod(HQ, n_sym=None, sym_metric_func = None, num_intervals=100, eps_max=N
     #input checks
     assert n_sym <= n_qubits, "Invalid number of symmetries {} requested for {} qubit Hamiltonian".format(n_sym, n_qubits)
 
-    eps_grid = np.linspace(0.0, eps_max, num_intervals)
+    if use_coeffs_eps:
+        eps_grid = [0.0]
+        eps_grid.extend(sorted([np.abs(c) for c in truncate_qubitop(HQ, tol).terms.values()]))
+    else:
+        eps_grid = np.linspace(0.0, eps_max, num_intervals)
     
     S = np.zeros((0, 2 * n_qubits), dtype=np.uint8)
     Symmetries = [] #QubitOperator representations of added S
