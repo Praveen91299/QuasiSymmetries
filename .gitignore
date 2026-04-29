@@ -5,3 +5,4 @@ __pycache__/
 *.fls
 *.out
 *.fdb_latexmk
+tmp_block2_pauli/

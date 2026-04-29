@@ -181,10 +181,10 @@ def get_entropies_at_cuts(state, n_qubits):
         entropies.append(entropy(np.abs(d)**2))
     return entropies
 
-def get_ent(symmetries, HQ, n_qubits, verbose=False):
+def permute_sym_to_start(HQ, symmetries, n_qubits, verbose=False):
     """
-    Get bi-partite entanglement across all partitions after diagonalizing symmetries and localizing them to qubits 0, 1, 2, ... in order
-
+    Move qubits to the start
+    
     """
     res = build_symmetry_block_structure_with_packed_qubits(
         hamiltonian=HQ,
@@ -217,6 +217,14 @@ def get_ent(symmetries, HQ, n_qubits, verbose=False):
             print(i, "->", p)
 
     H_perm = permute_qubits_in_qubit_operator(H_trans, perm)
+    return H_perm
+
+def get_ent(symmetries, HQ, n_qubits, verbose=False, return_state=False):
+    """
+    Get bi-partite entanglement across all partitions after diagonalizing symmetries and localizing them to qubits 0, 1, 2, ... in order
+
+    """
+    H_perm = permute_sym_to_start(HQ, symmetries, n_qubits, verbose=verbose)
     e_p, gs = get_ground_state(get_sparse_operator(H_perm, n_qubits))
 
     ents = get_entropies_at_cuts(gs, n_qubits)
@@ -225,4 +233,56 @@ def get_ent(symmetries, HQ, n_qubits, verbose=False):
         for i, e in enumerate(ents):
             print("{} | {} : {}".format(i+1, i+2, e))
     
-    return ents, H_perm
+    if return_state:
+        return ents, H_perm, gs
+    else:
+        return ents, H_perm
+    
+def int_to_binary_list(x: int, n: int, MSB_first=True) -> list[int]:
+    """
+    Convert a nonnegative integer x to a length-n list of binary digits.
+
+    The most significant bit comes first.
+
+    Example:
+        int_to_binary_list(6, 4) -> [0, 1, 1, 0]
+    """
+    if x < 0:
+        raise ValueError("x must be nonnegative")
+    if n < 0:
+        raise ValueError("n must be nonnegative")
+    if x >= (1 << n):
+        raise ValueError(f"x={x} cannot be represented with {n} bits")
+
+    b = [(x >> i) & 1 for i in reversed(range(n))]
+
+    if MSB_first:
+        return b
+    else:
+        return list(reversed(b))
+
+def get_BO_energies(HQ, list_sym, n_qubits):
+    """
+    Find ground state in symmetry sectors
+
+    Rotates Hamiltonian and then freezes qubits, following with it solves for ground state energy
+
+    """
+
+    n_sym = len(list_sym)
+    n_qubits_red = n_qubits - n_sym
+    #all combinations
+
+    H_perm = permute_sym_to_start(HQ, list_sym, n_qubits,False)
+    frozen_qubits = list(range(n_sym))
+
+    gs_e_list = []
+    for i in range(1<<n_sym):
+        sec_label = int_to_binary_list(i, n_sym, MSB_first=False)
+        sec_dict = {s: v for s, v in zip(frozen_qubits, sec_label)}
+        H_red_sec = freeze_qubits(H_perm, sec_dict)
+
+        gs_e, gs = get_ground_state(get_sparse_operator(H_red_sec, n_qubits_red))
+        gs_e_list.append(gs_e)
+    
+    return gs_e_list
