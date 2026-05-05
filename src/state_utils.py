@@ -343,7 +343,7 @@ def create_hamiltonian_in_subspace(indices, Hq, n_qubits):
     H_mat_elements = []
 
     #print(len(Hq.terms))
-    elements_sum = np.zeros((len(indices),len(indices)))
+    elements_sum = np.zeros((len(indices),len(indices)), dtype =complex)
     op_sum = of.QubitOperator.zero()
     for prog, op in enumerate(Hq):
         op_sum += op

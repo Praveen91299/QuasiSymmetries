@@ -2,6 +2,7 @@
 from openfermion import MolecularData, QubitOperator
 from openfermionpyscf import run_pyscf
 from openfermion.transforms import get_fermion_operator
+import numpy as np
 
 BASIS_NAME = "sto-3g"
 MULTIPLICITY = 1
@@ -52,12 +53,34 @@ def build_H_chain_for_R(R, n_H=4):
     mol : MolecularData
         OpenFermion molecule object with computed properties.
     """
-    geom = build_geometry(R, n_H)
+    geom = linear_h4_geometry(R, n_H)
     mol = MolecularData(geom, BASIS_NAME, MULTIPLICITY, CHARGE)
     mol = run_pyscf(mol, run_scf=1, run_fci=1)
     H_mol = mol.get_molecular_hamiltonian()
     H_ferm = get_fermion_operator(H_mol)
     return H_ferm, mol
+
+def lih_geometry(bl):
+    return [
+    ('Li', (0.0, 0.0, -bl/2)),
+    ('H', (0.0, 0.0, bl/2))
+]
+
+def h4_sq_geometry(bl):
+    return [
+        ('H', (-bl/2, -bl/2, 0.0)),
+        ('H', (-bl/2, bl/2, 0.0)),
+        ('H', (bl/2, -bl/2, 0.0)),
+        ('H', (bl/2, bl/2, 0.0))
+    ]
+
+def h4_chain_geometry(bl):
+    return [
+        ('H', (-1.5*bl, 0.0, 0.0)),
+        ('H', (-0.5*bl, 0.0, 0.0)),
+        ('H', (0.5*bl, 0.0, 0.0)),
+        ('H', (1.5*bl, 0.0, 0.0))
+    ]
 
 def truncate_qubitop(H, eps):
     """
@@ -145,3 +168,31 @@ def freeze_qubits(op: QubitOperator, frozen: dict[int, int]) -> QubitOperator:
             reduced += QubitOperator(tuple(new_term), new_coeff)
 
     return reduced
+
+def has_complex_entries(HQ: QubitOperator, tol: float = 1e-12) -> bool:
+    """
+    Return True if QubitOperator H has complex-valued matrix entries
+    in the computational basis.
+
+    A Pauli term is imaginary-valued if it has an odd number of Y operators.
+    Therefore:
+      - odd # of Y with real coeff -> complex entries
+      - even # of Y with complex coeff -> complex entries
+      - odd # of Y with imaginary coeff -> real entries, up to phase
+    """
+    for term, coeff in HQ.terms.items():
+        num_y = sum(pauli == "Y" for _, pauli in term)
+
+        coeff_real = abs(coeff.real) > tol
+        coeff_imag = abs(coeff.imag) > tol
+
+        if num_y % 2 == 0:
+            # Pauli string is real, so imaginary coeff gives complex entries
+            if coeff_imag:
+                return True
+        else:
+            # Pauli string is imaginary, so real coeff gives complex entries
+            if coeff_real:
+                return True
+
+    return False

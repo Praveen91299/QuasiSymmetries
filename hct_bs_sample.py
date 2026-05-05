@@ -28,11 +28,11 @@ def h2o_geometry(bond_length, bond_angle_deg):
     ]
     return geometry
 
-# bl = 1.6
-# geometry = [
-#     ('Li', (0.0, 0.0, -bl/2)),
-#     ('H', (0.0, 0.0, bl/2))
-# ]
+bl = 1.6
+geometry = [
+    ('Li', (0.0, 0.0, -bl/2)),
+    ('H', (0.0, 0.0, bl/2))
+]
 
 # bl = 2.0
 # geometry = [
@@ -40,7 +40,7 @@ def h2o_geometry(bond_length, bond_angle_deg):
 #     ('N', (0.0, 0.0, bl/2))
 # ]
 
-geometry = h2o_geometry(2.1, 104.5) 
+#geometry = h2o_geometry(2.1, 104.5) 
 
 basis = 'sto-3g'
 multiplicity = 1  # singlet
@@ -64,8 +64,8 @@ molecule = run_pyscf(
     run_fci=True
 )
 
-n_H = 4
-H, molecule =  build_H_chain_for_R(1.0, n_H)
+# n_H = 4
+# H, molecule =  build_H_chain_for_R(1.0, n_H)
 
 # Get second-quantized electronic Hamiltonian and wavefunctions
 H = get_fermion_operator(molecule.get_molecular_hamiltonian())
@@ -127,12 +127,25 @@ _ = find_commuting_paulis(HQ, sym_sen)
 _ = find_commuting_paulis(HQ, sym_quar)
 _ = find_commuting_paulis(HQ, sym_bs)
 
+from src.tn import find_dmrg_conv_bd
+
+max_bd=20
+og_bd = find_dmrg_conv_bd(HQ, n_qubits, e, max_bd=max_bd, n_sweeps=50, reps=10)
+print("DMRG bd for convergence for original Hamiltonian: ", og_bd)
+
 # bi-partite entanglement
 print("Sen")
-sen_ent, H_perm_sen = get_ent(sym_sen, HQ, n_qubits, verbose=True)
+sen_ent, H_perm_sen, gs_sen = get_ent(sym_sen, HQ, n_qubits, verbose=True, return_state=True)
+sen_bd = find_dmrg_conv_bd(H_perm_sen, n_qubits, e, max_bd=max_bd, n_sweeps=50, reps=10)
+print("DMRG bd for convergence: ", sen_bd)
+
 
 print("HCT N/2 syms")
-hct_ent, H_perm_hct = get_ent(sym_hct, HQ, n_qubits, verbose=True)
+hct_ent, H_perm_hct, gs_hct = get_ent(sym_hct, HQ, n_qubits, verbose=True, return_state=True)
+hct_bd = find_dmrg_conv_bd(H_perm_hct, n_qubits, e, max_bd=max_bd, n_sweeps=50, reps=10)
+print("DMRG bd for convergence: ", hct_bd)
 
 print("BS N/2 syms")
-bs_ent, H_perm_bs = get_ent(sym_bs, HQ, n_qubits, verbose=True)
+bs_ent, H_perm_bs, gs_bs = get_ent(sym_bs, HQ, n_qubits, verbose=True, return_state=True)
+bs_bd = find_dmrg_conv_bd(H_perm_bs, n_qubits, e, max_bd=max_bd, n_sweeps=50, reps=10)
+print("DMRG bd for convergence: ", bs_bd)

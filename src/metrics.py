@@ -3,6 +3,7 @@ from openfermion import commutator, get_sparse_operator, expectation, get_ground
 import numpy as np
 from scipy.sparse import identity as sparse_id
 from copy import deepcopy
+from src.op_utils import freeze_qubits
 
 def construct_projectors(sym_list: list[QubitOperator]):
     """
@@ -61,11 +62,12 @@ def entropy(probs, tol=1e-5):
 def entropy_pauli_sym(projectors_sparse, state, n_qubits):
     return entropy([expectation(proj, state) for proj in projectors_sparse])
 
-def entropy_pauli_syms(sym_ops, state, n_qubits):
+def entropy_pauli_syms(sym_ops, state, n_qubits, verbose=False):
     sym_sparse = [get_sparse_operator(sym, n_qubits) for sym in sym_ops]
     projs = construct_projectors_sparse(sym_sparse, n_qubits)
-
-    return entropy_pauli_sym(projs, state, n_qubits)
+    ent = entropy_pauli_sym(projs, state, n_qubits)
+    if verbose: print("Cut entropy: ", ent)
+    return ent
     
 def l1norm(op: QubitOperator):
     """
@@ -74,17 +76,21 @@ def l1norm(op: QubitOperator):
     """
     return np.sum(np.abs(list(op.terms.values())))
 
-def universal_grading(sym_ops, H):
+def universal_grading(sym_ops, H, verbose=False):
     """
     Returns sum of Paulil1 of [S_i, H]
 
     """
-    return sum([l1norm(commutator(sym, H)) for sym in sym_ops])
+    nc = sum([l1norm(commutator(sym, H)) for sym in sym_ops])
+    if verbose: print("Non commutative l1: ", nc)
+    return nc
 
-def variance(sym_ops, state, n_qubits):
-    return np.sum([1 - expectation(get_sparse_operator(sym_op, n_qubits), state)**2 for sym_op in sym_ops])
+def variance(sym_ops, state, n_qubits, verbose=False):
+    v = np.sum([1 - expectation(get_sparse_operator(sym_op, n_qubits), state)**2 for sym_op in sym_ops])
+    if verbose: print("Variance: ", v)
+    return v
 
-def find_commuting_paulis(H, sym_ops):
+def find_commuting_paulis(H, sym_ops, verbose=False):
     """
     Finds Pauli products in H that commute with all sym_ops
     """
@@ -106,11 +112,11 @@ def find_commuting_paulis(H, sym_ops):
         if all([is_commuting(sym_op, Pauli, 1e-5) for sym_op in sym_ops]):
             commuting_terms.append(Pauli)
     
-    print("{}/{} Terms in H found to commute with all symmetries.".format(len(commuting_terms), n_total_pauli))
+    if verbose: print("{}/{} Terms in H found to commute with all symmetries.".format(len(commuting_terms), n_total_pauli))
 
     return commuting_terms
 
-def find_commuting_terms(H, sym_ops):
+def find_commuting_terms(H, sym_ops, verbose=False):
     """
     Finds Fermion strings in H that commute with all sym_ops
     """
@@ -132,11 +138,11 @@ def find_commuting_terms(H, sym_ops):
         if all([is_commuting(sym_op, jordan_wigner(t), 1e-5) for sym_op in sym_ops]):
             commuting_terms.append(t)
     
-    print("{}/{} Terms in H found to commuting with all symmetries.".format(len(commuting_terms), n_total))
+    if verbose: print("{}/{} Terms in H found to commuting with all symmetries.".format(len(commuting_terms), n_total))
 
     return commuting_terms
 
-def comm_sq_exp_fast(sym_ops, H, state, n_qubits):
+def comm_sq_exp_fast(sym_ops, H, state, n_qubits, verbose=False):
     """
     Compute sum_k <state| ( i[H, S_k] )^2 |state> efficiently.
 
@@ -170,7 +176,9 @@ def comm_sq_exp_fast(sym_ops, H, state, n_qubits):
         # <psi| (i[H,S])^2 |psi> = || delta ||^2
         total += np.vdot(delta, delta)
 
-    return np.real_if_close(total)
+    nc_exp = np.real_if_close(total)
+    if verbose: print("Exp(non-commutator^2): ", nc_exp)
+    return nc_exp
 
 from src.clifford import *
 def get_entropies_at_cuts(state, n_qubits):
@@ -261,7 +269,7 @@ def int_to_binary_list(x: int, n: int, MSB_first=True) -> list[int]:
     else:
         return list(reversed(b))
 
-def get_BO_energies(HQ, list_sym, n_qubits):
+def get_single_sector_energies(HQ, list_sym, n_qubits, verbose=False):
     """
     Find ground state in symmetry sectors
 
@@ -285,4 +293,5 @@ def get_BO_energies(HQ, list_sym, n_qubits):
         gs_e, gs = get_ground_state(get_sparse_operator(H_red_sec, n_qubits_red))
         gs_e_list.append(gs_e)
     
+    if verbose: print("Minimum single sector energy: ", np.min(gs_e_list))
     return gs_e_list
