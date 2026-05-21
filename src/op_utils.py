@@ -1,6 +1,6 @@
 
 from openfermion import MolecularData, QubitOperator
-from openfermionpyscf import run_pyscf
+#from openfermionpyscf import run_pyscf
 from openfermion.transforms import get_fermion_operator
 import numpy as np
 
