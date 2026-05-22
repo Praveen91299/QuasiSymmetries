@@ -2,13 +2,13 @@
 
 import numpy as np
 from scipy.sparse import csr_matrix
-from pyscf.fci import cistring
+#from pyscf.fci import cistring
 import openfermion as of
 from openfermion import MolecularData
 from scipy.linalg import eigh
 import scipy as sp
 import math
-from pyscf import fci
+#from pyscf import fci
 
 def to_str(occ_list):
     st = ''
