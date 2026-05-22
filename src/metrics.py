@@ -4,6 +4,8 @@ import numpy as np
 from scipy.sparse import identity as sparse_id
 from copy import deepcopy
 from src.op_utils import freeze_qubits
+from src.tn import *
+from src.clifford_symmetry_optimized import build_symmetry_block_structure_with_packed_qubits, permute_qubits_in_qubit_operator, sparse_qubit_permutation_unitary, sparse_clifford_unitary
 
 def construct_projectors(sym_list: list[QubitOperator]):
     """
@@ -35,6 +37,28 @@ def construct_projectors_sparse(sym_list_sparse: list, n_qubits):
         projectors.append(0.5 * (sparse_id(1<<n_qubits) - sym_sparse)@proj)
     return projectors
 
+def get_sector_projectors(list_sym, sectors, n_qubits):
+    """
+    
+    
+    """
+
+    n_sym = len(list_sym)
+    list_sym_sparse = [get_sparse_operator(sym, n_qubits) for sym in list_sym]
+    proj = []
+
+    for sec in sectors:
+        sec_proj = sparse_id(1<<n_qubits)
+        assert len(sec) == n_sym
+
+        for i, s in enumerate(sec):
+            assert s == 1 or s == -1, "Invalid sector label {}".format(s)
+            sec_proj = sec_proj @ (0.5*(sparse_id(1<<n_qubits) + s*list_sym_sparse[i]))
+
+        proj.append(sec_proj)
+    
+    return proj
+
 def find_overlaps(sym_ops, state, n_qubits):
     """
     Find coefficients of state in different symmetry subspaces
@@ -45,7 +69,7 @@ def find_overlaps(sym_ops, state, n_qubits):
     projectors = construct_projectors(sym_ops)
     return [expectation(get_sparse_operator(proj, n_qubits), state) for proj in projectors]
 
-def entropy(probs, tol=1e-5):
+def entropy(probs, tol=1e-5, log_base='2'):
     """
     Entropy (bits) of given probability distribution, truncates to entries >= tol
 
@@ -57,7 +81,10 @@ def entropy(probs, tol=1e-5):
             probs_trunc.append(p)
 
     probs_trunc = np.array(probs_trunc)
-    return np.sum(probs_trunc * np.log2(1/probs_trunc))
+    if log_base == '2':
+        return np.sum(probs_trunc * np.log2(1/probs_trunc))
+    elif log_base == 'e':
+        return np.sum(probs_trunc * np.log(1/probs_trunc))
 
 def entropy_pauli_sym(projectors_sparse, state, n_qubits):
     return entropy([expectation(proj, state) for proj in projectors_sparse])
@@ -69,12 +96,15 @@ def entropy_pauli_syms(sym_ops, state, n_qubits, verbose=False):
     if verbose: print("Cut entropy: ", ent)
     return ent
     
-def l1norm(op: QubitOperator):
+def l1norm(op: QubitOperator, remove_const=False):
     """
     Returns Pauli L1
 
     """
-    return np.sum(np.abs(list(op.terms.values())))
+    l1= np.sum(np.abs(list(op.terms.values())))
+    if not remove_const:
+        return l1
+    return l1 - np.abs(op.constant)
 
 def universal_grading(sym_ops, H, verbose=False):
     """
@@ -180,16 +210,22 @@ def comm_sq_exp_fast(sym_ops, H, state, n_qubits, verbose=False):
     if verbose: print("Exp(non-commutator^2): ", nc_exp)
     return nc_exp
 
-from src.clifford import *
-def get_entropies_at_cuts(state, n_qubits):
+
+def get_entropies_at_cuts(state, n_qubits, log_base='2'):
+    """
+    Get bi-partite entanglement across all partitions of qubits
+
+    state: np.array - state
+    log_base: str - '2' or 'e'
+    """
     entropies = []
     for k in range(1, n_qubits):
         u, d, v = np.linalg.svd(np.reshape(state, (1<<k, 1<<(n_qubits-k))))
 
-        entropies.append(entropy(np.abs(d)**2))
+        entropies.append(entropy(np.abs(d)**2, log_base=log_base))
     return entropies
 
-def permute_sym_to_start(HQ, symmetries, n_qubits, verbose=False):
+def permute_sym_to_start(HQ, symmetries, n_qubits, verbose=False, return_clifford_perm=False):
     """
     Move qubits to the start
     
@@ -225,17 +261,24 @@ def permute_sym_to_start(HQ, symmetries, n_qubits, verbose=False):
             print(i, "->", p)
 
     H_perm = permute_qubits_in_qubit_operator(H_trans, perm)
-    return H_perm
+    if return_clifford_perm:
+        return H_perm, res, perm
+    else:
+        return H_perm
 
-def get_ent(symmetries, HQ, n_qubits, verbose=False, return_state=False):
+def get_ent(symmetries, HQ, n_qubits, verbose=False, return_state=False, return_sparse_clifford=False, log_base='2'):
     """
     Get bi-partite entanglement across all partitions after diagonalizing symmetries and localizing them to qubits 0, 1, 2, ... in order
 
     """
-    H_perm = permute_sym_to_start(HQ, symmetries, n_qubits, verbose=verbose)
+    if len(symmetries) > 0:
+        H_perm = permute_sym_to_start(HQ, symmetries, n_qubits, verbose=verbose)
+    else:
+        if verbose: print("No symmetries passed, returning original bond entanglements.")
+        H_perm = HQ
     e_p, gs = get_ground_state(get_sparse_operator(H_perm, n_qubits))
 
-    ents = get_entropies_at_cuts(gs, n_qubits)
+    ents = get_entropies_at_cuts(gs, n_qubits, log_base=log_base)
     if verbose:
         print("Entropy of cuts (bits):")
         for i, e in enumerate(ents):
@@ -295,3 +338,83 @@ def get_single_sector_energies(HQ, list_sym, n_qubits, verbose=False):
     
     if verbose: print("Minimum single sector energy: ", np.min(gs_e_list))
     return gs_e_list
+
+def get_bipartite_mps(HQ, n_qubits, target_energy=None, bd=100, n_sweeps=100, tol=1.6e-3):
+    """
+    Uses pyblock2 to solve and calculate the bipartite entanglement
+
+    """
+    np.random.seed(0)
+    
+    mpo, driver = QO_to_block2_MPO(HQ, n_qubits)
+    ket = driver.get_random_mps(tag="KET", bond_dim=bd, nroots=1)
+
+    energy = driver.dmrg(
+        mpo,
+        ket,
+        n_sweeps=n_sweeps,
+        bond_dims=None,
+        noises=[1e-4, 1e-4, 1e-5, 1e-5, 1e-6, 1e-6] + [0.0]*(n_sweeps - 6),
+        thrds=[1e-10] * n_sweeps,
+        dav_max_iter=50,
+        iprint=0
+    )
+
+    if target_energy is not None:
+
+        if np.abs(energy - target_energy) < tol:
+            print("Bipartite entanglement: Warning dmrg not converged to reference energy...")
+
+    return driver.get_bipartite_entanglement(ket), ket
+
+def get_permuted_bipartite_entanglement(symmetries, HQ, n_qubits, fci_energy=None, fci_gs=None, verbose=False, return_state=False, return_U=False, log_base='e', use_dmrg=False):
+    """
+    Get bi-partite entanglement across all partitions after diagonalizing symmetries and localizing them to qubits 0, 1, 2, ... in order
+    *Modified version of get_ent with dmrg calculations for speed.*
+
+    """
+    #permute
+    if len(symmetries) > 0:
+        H_perm, clifford, perm = permute_sym_to_start(HQ, symmetries, n_qubits, verbose=verbose, return_clifford_perm=True)
+    else:
+        if verbose: print("No symmetries passed, returning original bond entanglements.")
+        H_perm = HQ
+    
+    #construct U
+    if verbose: print("Constructing unitary from factors and permutations...")
+    Ucliff_sparse = sparse_clifford_unitary(clifford.clifford_result, n_qubits)
+    Uperm_sparse = sparse_qubit_permutation_unitary(perm, True)
+    U = Uperm_sparse @ Ucliff_sparse
+
+    #solve
+    if use_dmrg:
+        ents, gs = get_bipartite_mps(H_perm, n_qubits, target_energy=fci_energy)
+
+        if log_base == '2':
+            ents = ents / np.log(2)
+    else:
+        if fci_gs is not None:
+            #transform state directly
+            gs = U @ fci_gs
+        else:
+            e_p, gs = get_ground_state(get_sparse_operator(H_perm, n_qubits))
+            if fci_energy is not None: assert np.isclose(fci_energy, e_p, atol=1e-5), "Permuted Hamiltonian ground state differs from fci by {}".format(fci_energy - e_p)
+        ents = get_entropies_at_cuts(gs, n_qubits, log_base=log_base)
+    
+    if verbose:
+        print("Entropy of cuts (log base = {}):".format(log_base))
+        for i, e in enumerate(ents):
+            print("{} | {} : {}".format(i+1, i+2, e))
+
+    #construct clifford
+    if return_U:
+
+        if return_state:
+            return ents, H_perm, U, gs
+        else:
+            return ents, H_perm, U
+    else:
+        if return_state:
+            return ents, H_perm, gs
+        else:
+            return ents, H_perm
