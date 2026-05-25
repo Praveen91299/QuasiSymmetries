@@ -137,6 +137,12 @@ def qubit_operator_terms(
 
     return n_qubits, terms
 
+def terms_to_HQ(terms):
+    "Takes in weighted turns it into HQ: note that this doesnt get the same H rather it destroys sign and all I paulis"
+    op = QubitOperator()
+    for t in terms:
+        op += QubitOperator(t.term, t.abs_coeff)
+    return op
 
 def heavy_core(terms: Sequence[WeightedTerm], fraction: float) -> List[WeightedTerm]:
     """
