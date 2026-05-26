@@ -306,9 +306,9 @@ def get_coeffs_and_ops(of_op, n_qubits):
     return coeffs, ops_list
 
 
-def find_dmrg_conv_bd_quimb(Hq, n_qubits, exact_energy, max_bd, tol=1e-3, n_sweeps=10, 
+def find_dmrg_conv_bd_quimb(Hq, n_qubits, exact_energy, bd_list = None, tol=1.6e-3, n_sweeps=10, 
                             reps=1, verbose=False, compress_cutoff = 1e-10, sweep_tol = 1e-6,
-                            noise = 1e-2):
+                            noise = 1e-3, bsz = 2, guess_mps = None):
 
     mpo = MPO_from_QubitOperator(Hq, max_bond = None, mpo_cutoff = compress_cutoff, 
                                  verbose = verbose, compression_freq = 20)
@@ -318,52 +318,30 @@ def find_dmrg_conv_bd_quimb(Hq, n_qubits, exact_energy, max_bd, tol=1e-3, n_swee
     else:
         verbosity = 0
 
-    for bd in range(1,max_bd+1):
-        if verbose: print(f'Starting bd = {bd}')
-        if bd == 1:
-            current_energy = 0.0
-            for r in range(reps):
+    if bd_list is None:
+        bd_list = [i for i in range(1,11,1)] + [i for i in range(12,21,2)] + [i for i in range(30,101,10)]
+
+    for bd in bd_list:
+        if verbose: print(f'Starting max bd = {bd}')
+        for r in range(reps):
+            if guess_mps is None:
                 guess_mps = qtn.MPS_rand_state(n_qubits, 1)
-                dmrg = qtn.DMRG(mpo, bd, bsz = 1, cutoffs = compress_cutoff, p0 = guess_mps)
-                dmrg.opts['local_eig_tol'] = 1e-3
-                dmrg.opts['pempsriodic_compress_ham_eps'] = compress_cutoff
-                dmrg.opts['periodic_compress_norm_eps'] = compress_cutoff
-                dmrg_conv = dmrg.solve(tol=sweep_tol, bond_dims=bd , max_sweeps = n_sweeps, 
-                                sweep_sequence = 'RL', verbosity = verbosity, 
-                                suppress_warnings = False, cutoffs = compress_cutoff)
-
-                if dmrg.energy < current_energy:
-                        current_energy = dmrg.energy.copy()
-                        current_ket = dmrg.state.copy()
-
-                if abs(dmrg.energy - exact_energy) <= tol:
-                    print("DMRG converged at bond dimension: {}".format(bd))
-                    
-                    return bd
-                
-        else:
-            #Use mps from previous bd as a guess
-            guess_mps = current_ket 
-            #can also add small random component
-            #guess_mps = current_ket + 0.1*qtn.MPS_rand_state(n_qubits, bond_dim=bd)
-            #guess_mps.compress(max_bond = bd)
-
-            dmrg = qtn.DMRG(mpo, bd, bsz = 1, cutoffs = compress_cutoff, p0 = guess_mps)
+            else:
+                guess_mps += noise*qtn.MPS_rand_state(n_qubits, bond_dim=1)
+                guess_mps.normalize() 
+            dmrg = qtn.DMRG(mpo, bd, bsz = bsz, cutoffs = compress_cutoff, p0 = guess_mps)
+            dmrg.opts['local_eig_tol'] = 1e-3
             dmrg.opts['pempsriodic_compress_ham_eps'] = compress_cutoff
             dmrg.opts['periodic_compress_norm_eps'] = compress_cutoff
-            dmrg.opts['bond_expand_rand_strength'] = noise
             dmrg_conv = dmrg.solve(tol=sweep_tol, bond_dims=bd , max_sweeps = n_sweeps, 
                             sweep_sequence = 'RL', verbosity = verbosity, 
                             suppress_warnings = False, cutoffs = compress_cutoff)
 
-            if dmrg.energy < current_energy:
-                    current_energy = dmrg.energy.copy()
-                    current_ket = dmrg.state.copy()
-
             if abs(dmrg.energy - exact_energy) <= tol:
                 print("DMRG converged at bond dimension: {}".format(bd))
-                return bd
+                
+                return bd, dmrg.energy
             
-    print(f'DMRG not converged at bd = {max_bd}')
+    print(f'DMRG not converged at bd = {bd_list[-1]}')
 
-    return    
+    return bd_list[-1], dmrg.energy

@@ -11,7 +11,7 @@ from openfermion import commutator, QubitOperator
 #from src.state_utils import get_cisd_gs, get_fci_state_openfermion
 #from src.op_utils import build_H_chain_for_R, h2o_geometry
 from src.sym import get_quartic_symmetries, get_seniority_symmetries, hct_mod, bs_hct
-
+import quimb.tensor as qtn
 from src.bs.utils import *
 from src.bs.beam import *
 
@@ -97,7 +97,8 @@ class BenchmarkData:
 
         return fig
 
-def benchmark_syms(list_syms, HQ, fci, fci_e, n_qubits, N_2_sym=False, verbose=True, print_to_file=None, tag=""):
+def benchmark_syms(list_syms, HQ, fci, fci_e, n_qubits, N_2_sym=False, verbose=True, print_to_file=None, tag="",
+                   compress_cutoff = 1e-10):
     """
     Run all benchmarks for symmetries
 
@@ -106,7 +107,10 @@ def benchmark_syms(list_syms, HQ, fci, fci_e, n_qubits, N_2_sym=False, verbose=T
     nc_l1 = universal_grading(list_syms, HQ, verbose=verbose)
     c = len(find_commuting_paulis(HQ, list_syms, verbose=verbose))
     ent, H_perm, gs_rot = get_ent(list_syms, HQ, n_qubits, verbose=verbose, return_state=True)
-    dmrg_bd = find_dmrg_conv_bd(H_perm, n_qubits, fci_e, max_bd=30, tol=1.6e-3, n_sweeps=50, reps=20, verbose=verbose)    
+    gs_rot_mps = qtn.MatrixProductState.from_dense(gs_rot, cutoff = compress_cutoff)     
+    dmrg_bd, _ = find_dmrg_conv_bd_quimb(H_perm, n_qubits, fci_e, bd_list = None, tol=1.6e-3, n_sweeps=100, 
+                            reps=1, verbose=verbose, compress_cutoff = compress_cutoff, sweep_tol = 1e-6,
+                            noise = 1e0, bsz=2, guess_mps = gs_rot_mps)  
 
     #ent and dmrg
     if N_2_sym:
@@ -127,8 +131,11 @@ def benchmark_syms(list_syms, HQ, fci, fci_e, n_qubits, N_2_sym=False, verbose=T
 directory = "./saved/hamiltonians/"
 
 systems = [
-    'H4chain_eqm']
+    'N2frozen_eqm',
+    'N2frozen_corr',
+    'N2frozen_diss']
 '''
+    'H4chain_eqm',
     'H4chain_corr',
     'H4chain_diss',
     'H4rect_corr',
@@ -137,11 +144,8 @@ systems = [
     'LiH_corr',
     'H2O_eqm',
     'H2O_corr',
-    'H2O_diss',
-    'N2frozen_eqm',
-    'N2frozen_corr',
-    'N2frozen_diss'
-]
+    'H2O_diss'
+    ]
 '''
 bd_rows = []
 
@@ -149,7 +153,7 @@ for system in systems:
     print(f'Starting system: {system}')
     filename= system
 
-    date="_MAY18" #to keep track of outputs
+    date="_MAY22" #to keep track of outputs
     cost_func_tag = '_nc_exp_cisd'
     output_filename = "./saved/" + cost_func_tag + date
     with open(output_filename, 'a') as f:
@@ -225,11 +229,11 @@ for system in systems:
 
         datasets.append(benchmark_syms(sym_bs_N_2, HQ, fci_gs, fci_e, 
                                        n_qubits, N_2_sym=True, print_to_file=output_filename, 
-                                       tag="BS N/2" + f" {cost_function}"))
+                                       tag="BS N/2" + f" {cost_function}", verbose = False))
         
-        datasets.append(benchmark_syms(sym_bs_N_2, HQ, fci_gs, fci_e, 
-                                       n_qubits, N_2_sym=True, print_to_file=output_filename, 
-                                       tag="BS N" + f" {cost_function}"))
+        datasets.append(benchmark_syms(sym_bs_N, HQ, fci_gs, fci_e, 
+                                       n_qubits, N_2_sym=False, print_to_file=output_filename, 
+                                       tag="BS N" + f" {cost_function}",verbose = False))
 
     #diagonostics
     #to do k for BO energy within chemical accuracy
