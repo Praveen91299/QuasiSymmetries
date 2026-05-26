@@ -22,7 +22,8 @@ from orb_rot_opt import (
     sparse_hamiltonian_from_rotated_tensors,
 )
 from src.ferm_utils import build_sparse_basis, rotate_chem_obt, rotate_chem_tbt
-from src.metrics import comm_sq_exp_fast, prepare_pauli_actions, prepare_pauli_sum_action
+from src.metrics import comm_sq_exp_fast
+from src.op_utils import prepare_pauli_actions, prepare_pauli_sum_action
 from src.orbital_rotation import (
     RealOrbitalRotation,
     apply_givens_product_to_sparse_operator,

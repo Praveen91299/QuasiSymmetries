@@ -210,6 +210,70 @@ def comm_sq_exp_fast(sym_ops, H, state, n_qubits, verbose=False):
     if verbose: print("Exp(non-commutator^2): ", nc_exp)
     return nc_exp
 
+def comm_sq_exp_pauli_actions(pauli_actions, H, state, verbose=False, weights=None, Hpsi=None):
+    """
+    comm_sq_exp using direct Pauli-product permutation/phase actions.
+
+    This avoids sparse S_k matvecs.  It is only valid when each symmetry is a
+    single Pauli product.
+    """
+    psi = np.asarray(state).reshape(-1)
+    H = H.tocsr()
+    if Hpsi is None:
+        Hpsi = H @ psi
+    else:
+        Hpsi = np.asarray(Hpsi).reshape(-1)
+
+    if weights is None:
+        weights = np.ones(len(pauli_actions))
+
+    total = 0.0 + 0.0j
+    for weight, action in zip(weights, pauli_actions):
+        if weight == 0:
+            continue
+        Spsi = action.apply(psi)
+        SHpsi = action.apply(Hpsi)
+        delta = 1j * ((H @ Spsi) - SHpsi)
+        total += weight * np.vdot(delta, delta)
+
+    nc_exp = np.real_if_close(total)
+    if verbose: print("Exp(non-commutator^2): ", nc_exp)
+    return nc_exp
+
+def prepare_sparse_symmetries(sym_ops, n_qubits):
+    """
+    Convert symmetry QubitOperators to CSR matrices once for repeated metrics.
+    """
+    return [get_sparse_operator(sym, n_qubits).tocsr() for sym in sym_ops]
+
+def comm_sq_exp_sparse_syms(sym_ops_sparse, H, state, verbose=False, weights=None):
+    """
+    Repeated-evaluation version of comm_sq_exp_fast.
+
+    sym_ops_sparse should be the output of prepare_sparse_symmetries.  Avoiding
+    get_sparse_operator inside every objective call matters during orbital
+    optimization.
+    """
+    psi = np.asarray(state).reshape(-1)
+    H = H.tocsr()
+    Hpsi = H @ psi
+
+    if weights is None:
+        weights = np.ones(len(sym_ops_sparse))
+
+    total = 0.0 + 0.0j
+    for weight, S in zip(weights, sym_ops_sparse):
+        if weight == 0:
+            continue
+
+        Spsi = S @ psi
+        delta = 1j * ((H @ Spsi) - (S @ Hpsi))
+        total += weight * np.vdot(delta, delta)
+
+    nc_exp = np.real_if_close(total)
+    if verbose: print("Exp(non-commutator^2): ", nc_exp)
+    return nc_exp
+
 
 def get_entropies_at_cuts(state, n_qubits, log_base='2'):
     """

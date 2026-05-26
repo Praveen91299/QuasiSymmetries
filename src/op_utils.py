@@ -196,3 +196,134 @@ def has_complex_entries(HQ: QubitOperator, tol: float = 1e-12) -> bool:
                 return True
 
     return False
+
+def split_diagonal_paulis(op: QubitOperator) -> tuple[QubitOperator, QubitOperator]:
+    """
+    Split a QubitOperator into computational-basis diagonal and non-diagonal parts.
+
+    The diagonal part contains only identity and Pauli strings made entirely of Z
+    operators. Any term containing X or Y is placed in the non-diagonal part.
+
+    Args:
+        op:
+            OpenFermion QubitOperator to split.
+
+    Returns:
+        (diagonal, non_diagonal), both QubitOperator objects.
+    """
+    diagonal = QubitOperator.zero()
+    non_diagonal = QubitOperator.zero()
+
+    for term, coeff in op.terms.items():
+        if all(pauli == "Z" for _, pauli in term):
+            diagonal += QubitOperator(term, coeff)
+        else:
+            non_diagonal += QubitOperator(term, coeff)
+
+    return diagonal, non_diagonal
+
+class PauliStringAction:
+    """
+    Fast action of a single QubitOperator Pauli product on state vectors.
+
+    OpenFermion's sparse convention maps qubit 0 to the most significant bit of
+    the computational-basis index, so the masks use bit n_qubits - 1 - q.
+    """
+    def __init__(self, sym, n_qubits):
+        if len(sym.terms) != 1:
+            raise ValueError("PauliStringAction expects a single Pauli product.")
+
+        (term, coeff), = sym.terms.items()
+        self.n_qubits = n_qubits
+        self.coeff = coeff
+        self.term = term
+
+        dim = 1 << n_qubits
+        indices = np.arange(dim)
+        targets = indices.copy()
+        phases = np.full(dim, coeff, dtype=complex)
+
+        for q, pauli in term:
+            bit = n_qubits - 1 - q
+            mask = 1 << bit
+            bits = (indices & mask) != 0
+
+            if pauli == "X":
+                targets ^= mask
+            elif pauli == "Y":
+                targets ^= mask
+                phases *= np.where(bits, -1.0j, 1.0j)
+            elif pauli == "Z":
+                phases *= np.where(bits, -1.0, 1.0)
+            else:
+                raise ValueError("Unknown Pauli operator {}".format(pauli))
+
+        self.targets = targets
+        self.phases = phases
+
+    def apply(self, state, out=None):
+        psi = np.asarray(state).reshape(-1)
+        if out is None:
+            out = np.empty_like(psi, dtype=complex)
+        out[self.targets] = self.phases * psi
+        return out
+
+def prepare_pauli_actions(sym_ops, n_qubits):
+    return [PauliStringAction(sym, n_qubits) for sym in sym_ops]
+
+class PauliSumAction:
+    """
+    Apply a QubitOperator Pauli sum to state vectors without building a sparse matrix.
+
+    If sparse_input=True, only nonzero input amplitudes are propagated.  This is
+    useful for CI-like states with few determinants.
+    """
+    def __init__(self, op, n_qubits):
+        self.n_qubits = n_qubits
+        self.terms = []
+        for term, coeff in op.terms.items():
+            flip_mask = 0
+            sign_mask = 0
+            n_y = 0
+            for q, pauli in term:
+                bit_mask = 1 << (n_qubits - 1 - q)
+                if pauli == "X":
+                    flip_mask ^= bit_mask
+                elif pauli == "Y":
+                    flip_mask ^= bit_mask
+                    sign_mask ^= bit_mask
+                    n_y += 1
+                elif pauli == "Z":
+                    sign_mask ^= bit_mask
+                else:
+                    raise ValueError("Unknown Pauli operator {}".format(pauli))
+            self.terms.append((coeff * (1.0j ** n_y), flip_mask, sign_mask))
+
+    @staticmethod
+    def _parity(values):
+        return np.array([bin(int(v)).count("1") & 1 for v in values], dtype=bool)
+
+    def apply(self, state, out=None, sparse_input=False, tol=1e-12):
+        psi = np.asarray(state).reshape(-1)
+        if out is None:
+            out = np.zeros_like(psi, dtype=complex)
+        else:
+            out.fill(0.0)
+
+        if sparse_input:
+            nz = np.flatnonzero(np.abs(psi) > tol)
+            for coeff, flip_mask, sign_mask in self.terms:
+                targets = nz ^ flip_mask
+                phases = np.full(len(nz), coeff, dtype=complex)
+                phases[self._parity(nz & sign_mask)] *= -1.0
+                out[targets] += phases * psi[nz]
+        else:
+            indices = np.arange(len(psi))
+            for coeff, flip_mask, sign_mask in self.terms:
+                phases = np.full(len(psi), coeff, dtype=complex)
+                phases[self._parity(indices & sign_mask)] *= -1.0
+                out[indices ^ flip_mask] += phases * psi
+        return out
+
+def prepare_pauli_sum_action(op, n_qubits):
+    return PauliSumAction(op, n_qubits)
