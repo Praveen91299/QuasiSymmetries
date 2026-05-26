@@ -1,4 +1,5 @@
 __pycache__/
+.QS_venv/
 *.aux
 *.gz
 *.log
