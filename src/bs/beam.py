@@ -59,6 +59,75 @@ def build_candidate_pool(
     return list(pool.keys())
 
 
+def build_candidate_pool_hct(
+    terms: Sequence[WeightedTerm],
+    n_qubits: int,
+    *,
+    max_candidates_from_terms: Optional[int] = 256,
+    include_pairwise_products: bool = False,
+    pairwise_seed_terms: int = 24,
+    max_pauli_weight: Optional[int] = None,
+    include_hct_symmetries: bool = True,
+    hct_n_sym: Optional[int] = None,
+    hct_use_coeffs_eps: bool = True,
+) -> List[PauliMask]:
+    """
+    Same as build_candidate_pool, plus HCT-derived approximate symmetries
+    as a 4th source. HCT candidates are inserted first so they take priority
+    in beam-search iteration order.
+
+    Extra options:
+      - include_hct_symmetries: toggle the HCT source
+      - hct_n_sym:              how many symmetries to request (default n_qubits // 2)
+      - hct_use_coeffs_eps:     forwarded to hct_mod
+    """
+    pool: Dict[PauliMask, None] = {}
+
+    if include_hct_symmetries:
+        from src.sym import hct_mod
+        from src.bs.utils import terms_to_HQ, qubitops_to_masks
+
+        HQ_rt = terms_to_HQ(terms)
+        n_sym = hct_n_sym if hct_n_sym is not None else n_qubits
+        try:
+            hct_syms, _ = hct_mod(
+                HQ_rt,
+                n_sym=n_sym,
+                use_coeffs_eps=hct_use_coeffs_eps,
+                verbose=False,
+            )
+        except Exception:
+            hct_syms = []
+
+        for op in hct_syms:
+            m = qubitops_to_masks([op], n_qubits)[0]
+            if max_pauli_weight is None or pauli_weight(m) <= max_pauli_weight:
+                pool[m] = None
+
+    ordered = sorted(terms, key=lambda t: t.abs_coeff, reverse=True)
+    base = ordered if max_candidates_from_terms is None else ordered[:max_candidates_from_terms]
+
+    for t in base:
+        if max_pauli_weight is None or pauli_weight(t.mask) <= max_pauli_weight:
+            pool[t.mask] = None
+
+    if include_pairwise_products:
+        seed = ordered[:pairwise_seed_terms]
+        for i in range(len(seed)):
+            for j in range(i + 1, len(seed)):
+                prod = pauli_product_mod_phase(seed[i].mask, seed[j].mask)
+                if prod != (0, 0):
+                    if max_pauli_weight is None or pauli_weight(prod) <= max_pauli_weight:
+                        pool[prod] = None
+
+    for q in range(n_qubits):
+        for p in ("X", "Y", "Z"):
+            pool[term_to_masks(((q, p),), n_qubits)] = None
+
+    return list(pool.keys())
+
+
+
 # ============================================================
 # Objective evaluation
 # ============================================================
