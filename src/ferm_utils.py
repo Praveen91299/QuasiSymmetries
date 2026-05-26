@@ -3,7 +3,10 @@ import numpy as np
 from scipy.sparse import csc_matrix, issparse
 from scipy.sparse.linalg import expm as sparse_expm
 import scipy
-from opt_einsum import contract
+try:
+    from opt_einsum import contract
+except ModuleNotFoundError:
+    contract = np.einsum
 
 
 #excitation
@@ -154,7 +157,7 @@ def promote_cartan_twobody(op):
     
     return op_new
 
-def build_sparse_basis(n_qubits):
+def build_sparse_basis(n_qubits, include_obt=False):
     """
     Builds dictionary of sparse versions of ferm op a_i^ a_j a_k^ a_l
 
@@ -165,6 +168,8 @@ def build_sparse_basis(n_qubits):
 
     for i in range(n_qubits):
         for j in range(n_qubits):
+            if include_obt:
+                basis_dict[(i, j)] = get_sparse_operator(jordan_wigner(FermionOperator('{}^ {}'.format(i, j), 1.0)), n_qubits)
             for k in range(n_qubits):
                 for l in range(n_qubits):
                     basis_dict[(i, j, k, l)] = get_sparse_operator(jordan_wigner(FermionOperator('{}^ {} {}^ {}'.format(i, j, k, l), 1.0)), n_qubits)

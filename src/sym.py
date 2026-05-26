@@ -315,12 +315,13 @@ def bs_hct(HQ, n_sym=None, beam_width=16, list_sym_metric_func = None, sym_metri
     directions = gf2_symp_nullspace(G, n_qubits, True)
     exact_syms = [QubitOperator(symplectic_to_pauli_string(c, n_qubits), 1.0) for c in directions]
     n_exact_syms = len(exact_syms)
-    init_candidate = SearchStateHCT(directions, exact_syms, list_sym_metric_func(exact_syms), [0]*n_exact_syms)
-
-    if n_exact_syms >= n_sym:
-        return init_candidate
+    n = min(n_sym, n_exact_syms)
+    init_candidate = SearchStateHCT(directions, exact_syms[:n], list_sym_metric_func(exact_syms[:n]), [0]*n)
 
     beams = {}
+    if n_exact_syms >= n_sym:
+        return init_candidate, beams
+    
     for num_syms in range(n_exact_syms, n_sym+1):
         beams[num_syms] = Beam(beam_width=beam_width)
     pruned = beams[n_exact_syms].add_candidate(init_candidate, prune=True)

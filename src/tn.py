@@ -88,7 +88,8 @@ def QO_to_block2_MPO_complex(HQ: QubitOperator, n_qubits: int):
     driver = DMRGDriver(
         scratch="./tmp_block2_pauli",
         symm_type=SymmetryTypes.SGB | SymmetryTypes.CPX,
-        n_threads=None,
+        n_threads=4,
+        n_mkl_threads=1
     )
 
     driver.initialize_system(n_sites=n_qubits, pauli_mode=True)
@@ -105,7 +106,8 @@ def QO_to_block2_MPO(HQ, n_qubits):
     driver = DMRGDriver(
         scratch="./tmp_block2_pauli",
         symm_type=SymmetryTypes.SGB,
-        n_threads=None,
+        n_threads=4,
+        n_mkl_threads=1
     )
 
     # In Pauli mode, only n_sites is required.
