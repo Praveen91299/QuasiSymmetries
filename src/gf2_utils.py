@@ -3,9 +3,145 @@
 import numpy as np
 from openfermion import count_qubits
 
+
+def gf2_int_msb_pos(x):
+    """
+    Leading bit position for a packed GF(2) row, counting from 0.
+    """
+    return x.bit_length() - 1
+
+
+def gf2_int_rref(rows, n_bits):
+    """
+    Reduced row echelon form over GF(2), represented as packed ints.
+
+    This is the canonical packed convention used by the beam-search helpers:
+    bit position i corresponds to vector coordinate i, and pivots are selected
+    from high bit to low bit.
+    """
+    rows = [int(r) for r in rows if int(r) != 0]
+    rows = rows[:]
+    pivots = {}
+    row = 0
+
+    for col in range(n_bits - 1, -1, -1):
+        pivot = None
+        for r in range(row, len(rows)):
+            if (rows[r] >> col) & 1:
+                pivot = r
+                break
+        if pivot is None:
+            continue
+
+        rows[row], rows[pivot] = rows[pivot], rows[row]
+
+        for r in range(len(rows)):
+            if r != row and ((rows[r] >> col) & 1):
+                rows[r] ^= rows[row]
+
+        pivots[col] = row
+        row += 1
+        if row == len(rows):
+            break
+
+    rows = [r for r in rows if r != 0]
+    rows.sort(reverse=True)
+
+    pivots = {}
+    for i, r in enumerate(rows):
+        pivots[gf2_int_msb_pos(r)] = i
+
+    return rows, pivots
+
+
+def gf2_int_reduce_by_rref(vec, rref_rows):
+    """
+    Reduce packed vector by packed RREF rows.
+    """
+    x = int(vec)
+    for r in rref_rows:
+        p = gf2_int_msb_pos(r)
+        if (x >> p) & 1:
+            x ^= r
+    return x
+
+
+def gf2_int_in_span(vec, rref_rows):
+    """
+    Return whether packed vector vec lies in the span of packed RREF rows.
+    """
+    return gf2_int_reduce_by_rref(vec, rref_rows) == 0
+
+
+def gf2_int_try_add_to_span(vec, rref_rows, n_bits):
+    """
+    Add packed vector vec to a packed RREF basis if independent.
+    """
+    if gf2_int_in_span(vec, rref_rows):
+        return None
+    new_rows, _ = gf2_int_rref(list(rref_rows) + [int(vec)], n_bits)
+    return new_rows
+
+
+def gf2_int_nullspace_basis(rows, n_bits):
+    """
+    Nullspace of the GF(2) matrix whose rows are packed ints.
+
+    Returns a basis as packed ints using the same high-bit-to-low-bit pivot
+    convention as gf2_int_rref.
+    """
+    rref_rows, pivots = gf2_int_rref(rows, n_bits)
+    pivot_cols = set(pivots.keys())
+    free_cols = [c for c in range(n_bits) if c not in pivot_cols]
+
+    basis = []
+    for free in free_cols:
+        x = 1 << free
+        for pcol in sorted(pivot_cols):
+            row = rref_rows[pivots[pcol]]
+            parity = bin(row & x).count("1") & 1
+            if parity:
+                x ^= 1 << pcol
+        basis.append(x)
+    return basis
+
+
+def gf2_matrix_to_int_rows(A):
+    """
+    Convert a binary matrix to packed integer rows with column i as bit i.
+    """
+    A = (np.asarray(A, dtype=np.uint8) & 1)
+    if A.ndim != 2:
+        raise ValueError("Expected a 2D GF(2) matrix.")
+
+    rows = []
+    for row in A:
+        packed = 0
+        for c, value in enumerate(row):
+            if value:
+                packed |= 1 << c
+        rows.append(packed)
+    return rows
+
+
+def gf2_int_rows_to_matrix(rows, n_bits):
+    """
+    Convert packed integer rows to a binary matrix with bit i as column i.
+    """
+    M = np.zeros((len(rows), n_bits), dtype=np.uint8)
+    for r, packed in enumerate(rows):
+        packed = int(packed)
+        for c in range(n_bits):
+            M[r, c] = (packed >> c) & 1
+    return M
+
+
 def gf2_rref(A):
     """
     Compute row-reduced echelon form over GF(2).
+
+    Uses the packed-int convention shared with src.bs.utils: matrix column i
+    maps to packed bit i, and pivots are chosen from high bit to low bit.
     
     Parameters
     ----------
@@ -21,7 +157,33 @@ def gf2_rref(A):
     """
     if len(A) == 0:
         return A, []
-    R = (A.copy() & 1).astype(np.uint8)
+    A = (np.asarray(A, dtype=np.uint8) & 1)
+    if A.ndim != 2:
+        raise ValueError("Expected a 2D GF(2) matrix.")
+
+    m, n = A.shape
+    rows = gf2_matrix_to_int_rows(A)
+    rref_rows, pivot_map = gf2_int_rref(rows, n)
+    R_nonzero = gf2_int_rows_to_matrix(rref_rows, n)
+
+    if len(rref_rows) < m:
+        zeros = np.zeros((m - len(rref_rows), n), dtype=np.uint8)
+        R = np.vstack([R_nonzero, zeros]) if len(rref_rows) else zeros
+    else:
+        R = R_nonzero
+
+    pivots = sorted(pivot_map.keys(), reverse=True)
+    return R, pivots
+
+
+def gf2_rref_left_to_right(A):
+    """
+    Compute row-reduced echelon form over GF(2) with the historical NumPy
+    left-to-right pivot convention.
+    """
+    if len(A) == 0:
+        return A, []
+    R = (np.asarray(A, dtype=np.uint8) & 1)
     m, n = R.shape
     pivots = []
     r = 0
@@ -75,6 +237,10 @@ def gf2_rank(M):
 def gf2_nullspace(A):
     """
     Compute basis for nullspace of A over GF(2): {x : Ax = 0 mod 2}.
+
+    Uses the packed-int nullspace convention shared with src.bs.utils:
+    matrix column i maps to packed bit i, and pivots are chosen from high bit
+    to low bit.
     
     Parameters
     ----------
@@ -86,30 +252,14 @@ def gf2_nullspace(A):
     basis : ndarray
         Shape (k, n) basis vectors (each row is a solution vector).
     """
-    R, pivots = gf2_rref(A)
-    m, n = R.shape
-    pivset = set(pivots)
-    free_cols = [c for c in range(n) if c not in pivset]
+    A = (np.asarray(A, dtype=np.uint8) & 1)
+    if A.ndim != 2:
+        raise ValueError("Expected a 2D GF(2) matrix.")
 
-    basis = []
-    for f in free_cols:
-        x = np.zeros(n, dtype=np.uint8)
-        x[f] = 1
-
-        for i, p in enumerate(pivots):
-            s = 0
-            row = R[i, :]
-            for j in range(n):
-                if j != p and row[j] == 1 and x[j] == 1:
-                    s ^= 1
-            x[p] = s
-
-        basis.append(x)
-
-    if len(basis) == 0:
-        return np.zeros((0, n), dtype=np.uint8)
-
-    return np.stack(basis, axis=0)
+    _, n = A.shape
+    rows = gf2_matrix_to_int_rows(A)
+    basis = gf2_int_nullspace_basis(rows, n)
+    return gf2_int_rows_to_matrix(basis, n)
 
 
 def gf2_check_in_nullspace(A, S):

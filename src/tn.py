@@ -1,10 +1,23 @@
 from openfermion import QubitOperator
 from openfermion.utils import count_qubits
 from copy import deepcopy
-from pyblock2.driver.core import DMRGDriver, SymmetryTypes
 from src.op_utils import has_complex_entries
 import quimb.tensor as qtn
 import numpy as np
+
+try:
+    from pyblock2.driver.core import DMRGDriver, SymmetryTypes
+except ImportError:
+    DMRGDriver = None
+    SymmetryTypes = None
+
+
+def _require_pyblock2():
+    if DMRGDriver is None or SymmetryTypes is None:
+        raise ImportError(
+            "pyblock2 is required for the block2 DMRG helpers in src.tn. "
+            "Use find_dmrg_conv_bd_quimb for the quimb-only DMRG path."
+        )
 
 def QO_to_block2_Pauli(Operator: QubitOperator, n_qubits, tol=1e-5):
     """
@@ -86,6 +99,7 @@ def QO_to_block2_MPO_complex(HQ: QubitOperator, n_qubits: int):
     """
     Build a complex-compatible pyblock2 MPO from an OpenFermion QubitOperator.
     """
+    _require_pyblock2()
     paulis, const = QO_to_block2_Pauli(HQ, n_qubits)
 
     driver = DMRGDriver(
@@ -104,6 +118,7 @@ def QO_to_block2_MPO(HQ, n_qubits):
     """
     
     """
+    _require_pyblock2()
     paulis, const = QO_to_block2_Pauli(HQ, n_qubits)
     
     driver = DMRGDriver(
@@ -308,7 +323,7 @@ def get_coeffs_and_ops(of_op, n_qubits):
 
 def find_dmrg_conv_bd_quimb(Hq, n_qubits, exact_energy, bd_list = None, tol=1.6e-3, n_sweeps=10, 
                             reps=1, verbose=False, compress_cutoff = 1e-10, sweep_tol = 1e-6,
-                            noise = 1e-3, bsz = 2, guess_mps = None):
+                            noise = 1e-3, bsz = 2, guess_mps = None, seed=None):
 
     mpo = MPO_from_QubitOperator(Hq, max_bond = None, mpo_cutoff = compress_cutoff, 
                                  verbose = verbose, compression_freq = 20)
@@ -317,6 +332,9 @@ def find_dmrg_conv_bd_quimb(Hq, n_qubits, exact_energy, bd_list = None, tol=1.6e
         verbosity = 2
     else:
         verbosity = 0
+
+    if seed is not None:
+        np.random.seed(seed)
 
     if bd_list is None:
         bd_list = [i for i in range(1,11,1)] + [i for i in range(12,21,2)] + [i for i in range(30,101,10)]

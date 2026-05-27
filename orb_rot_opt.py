@@ -24,11 +24,13 @@ from src.metrics import (
     get_permuted_bipartite_entanglement,
     get_entropies_at_cuts,
     prepare_sparse_symmetries,
-    prepare_pauli_actions,
-    prepare_pauli_sum_action,
     comm_sq_exp_sparse_syms,
     comm_sq_exp_pauli_actions,
     comm_sq_exp_fast
+)
+from src.op_utils import (
+    prepare_pauli_actions,
+    prepare_pauli_sum_action,
 )
 from src.ferm_utils import Eij, rotate_chem_tbt, rotate_chem_obt, get_chem_tensors, spatial_obt_to_spin_obt, spatial_tbt_to_spin_tbt, build_sparse_basis
 from openfermion import MolecularData, get_sparse_operator, jordan_wigner, count_qubits, FermionOperator, QubitOperator, commutator

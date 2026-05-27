@@ -78,12 +78,13 @@ def build_candidate_pool_hct(
 
     Extra options:
       - include_hct_symmetries: toggle the HCT source
-      - hct_n_sym:              how many symmetries to request (default n_qubits // 2)
+      - hct_n_sym:              how many symmetries to request (default n_qubits)
       - hct_use_coeffs_eps:     forwarded to hct_mod
     """
     pool: Dict[PauliMask, None] = {}
 
     if include_hct_symmetries:
+        print("Adding HCT symmetries to the pool:")
         from src.sym import hct_mod
         from src.bs.utils import terms_to_HQ, qubitops_to_masks
 
@@ -97,6 +98,7 @@ def build_candidate_pool_hct(
                 verbose=False,
             )
         except Exception:
+            print("Warning: HCT symmetries not included!")
             hct_syms = []
 
         for op in hct_syms:
@@ -180,15 +182,12 @@ def commuting_extension_candidates(
 
 def beam_search_symmetries(
     hamiltonian: QubitOperator,
+    candidate_pool: List[PauliMask],
     *,
     target_rank: int = None,
     n_qubits: Optional[int] = None,
     beam_width: int = 16,
     heavy_core_fraction: float = 0.95,
-    max_candidates_from_terms: Optional[int] = 256,
-    include_pairwise_products: bool = False,
-    pairwise_seed_terms: int = 24,
-    max_pauli_weight: Optional[int] = None,
     initial_generators: Optional[Sequence[QubitOperator]] = None,
     score_func = None
 ) -> List[QubitOperator]:
@@ -198,7 +197,7 @@ def beam_search_symmetries(
     Optionally starts from an initial commuting independent seed set.
     """
     n_qubits, terms = qubit_operator_terms(hamiltonian, n_qubits)
-    heavy_terms = heavy_core(terms, heavy_core_fraction)
+    heavy_terms = heavy_core(terms, heavy_core_fraction) #for non
 
     #set defaults
     if n_qubits % 2 != 0:
@@ -212,17 +211,7 @@ def beam_search_symmetries(
         score = lambda basis: retained_weight(basis, heavy_terms)
     else:
         score = lambda basis: score_func([mask_to_qubit_operator(m, n_qubits) for m in basis])
-
     
-    candidate_pool = build_candidate_pool(
-        terms,
-        n_qubits,
-        max_candidates_from_terms=max_candidates_from_terms,
-        include_pairwise_products=include_pairwise_products,
-        pairwise_seed_terms=pairwise_seed_terms,
-        max_pauli_weight=max_pauli_weight,
-    )
-
     seed_basis: List[PauliMask] = []
     seed_rows: List[int] = []
 
@@ -301,13 +290,10 @@ def beam_search_symmetries(
 def local_swap_refine(
     hamiltonian: QubitOperator,
     symmetries: Sequence[QubitOperator],
+    candidate_pool: List[PauliMask],
     *,
     n_qubits: Optional[int] = None,
     max_passes: int = 10,
-    max_candidates_from_terms: Optional[int] = 256,
-    include_pairwise_products: bool = False,
-    pairwise_seed_terms: int = 24,
-    max_pauli_weight: Optional[int] = None,
     score_func = None
 ) -> List[QubitOperator]:
     """
@@ -319,15 +305,6 @@ def local_swap_refine(
     target_rank = len(symmetries)
 
     current = qubitops_to_masks(symmetries, n_qubits)
-
-    candidate_pool = build_candidate_pool(
-        terms,
-        n_qubits,
-        max_candidates_from_terms=max_candidates_from_terms,
-        include_pairwise_products=include_pairwise_products,
-        pairwise_seed_terms=pairwise_seed_terms,
-        max_pauli_weight=max_pauli_weight,
-    )
 
     def score(basis: Sequence[PauliMask]) -> float:
         if score_func is not None:
@@ -399,6 +376,9 @@ def find_commuting_symmetry_generators(
     beam_width: int = 16,
     heavy_core_fraction: float = 0.95,
     max_candidates_from_terms: Optional[int] = 256,
+    include_hct_symmetries: bool = True,
+    hct_n_sym: Optional[int] = None,
+    hct_use_coeffs_eps: bool = True,
     include_pairwise_products: bool = False,
     pairwise_seed_terms: int = 24,
     max_pauli_weight: Optional[int] = None,
@@ -409,6 +389,8 @@ def find_commuting_symmetry_generators(
     score_func = None
 ) -> List[QubitOperator]:
     """
+    Beam search for exact and approximate symmetries
+
     Main workflow:
       1. Convert Hamiltonian to binary symplectic form
       2. Restrict candidate generator pool
@@ -427,16 +409,27 @@ def find_commuting_symmetry_generators(
             exact_syms = exact_syms[:max_exact_symmetry_seeds]
         seed_generators = exact_syms
 
-    syms = beam_search_symmetries(
-        hamiltonian,
-        target_rank=target_rank,
-        n_qubits=n_qubits,
-        beam_width=beam_width,
-        heavy_core_fraction=heavy_core_fraction,
+    #build candidate pool
+    n_qubits, terms = qubit_operator_terms(hamiltonian, n_qubits)
+    candidate_pool = build_candidate_pool_hct(
+        terms,
+        n_qubits,
         max_candidates_from_terms=max_candidates_from_terms,
         include_pairwise_products=include_pairwise_products,
         pairwise_seed_terms=pairwise_seed_terms,
         max_pauli_weight=max_pauli_weight,
+        include_hct_symmetries = include_hct_symmetries,
+        hct_n_sym = hct_n_sym,
+        hct_use_coeffs_eps = hct_use_coeffs_eps,
+    )
+
+    syms = beam_search_symmetries(
+        hamiltonian,
+        candidate_pool,
+        target_rank=target_rank,
+        n_qubits=n_qubits,
+        beam_width=beam_width,
+        heavy_core_fraction=heavy_core_fraction,
         initial_generators=seed_generators,
         score_func=score_func
     )
@@ -445,12 +438,9 @@ def find_commuting_symmetry_generators(
         syms = local_swap_refine(
             hamiltonian,
             syms,
+            candidate_pool,
             n_qubits=n_qubits,
             max_passes=local_refine_passes,
-            max_candidates_from_terms=max_candidates_from_terms,
-            include_pairwise_products=include_pairwise_products,
-            pairwise_seed_terms=pairwise_seed_terms,
-            max_pauli_weight=max_pauli_weight,
             score_func=score_func
         )
 

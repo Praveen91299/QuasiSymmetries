@@ -4,6 +4,14 @@ from dataclasses import dataclass
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 from openfermion import QubitOperator
+from src.gf2_utils import (
+    gf2_int_in_span,
+    gf2_int_msb_pos,
+    gf2_int_nullspace_basis,
+    gf2_int_reduce_by_rref,
+    gf2_int_rref,
+    gf2_int_try_add_to_span,
+)
 
 
 # ============================================================
@@ -190,7 +198,7 @@ def msb_pos(x: int) -> int:
     Leading bit position, starting count from 0
 
     """
-    return x.bit_length() - 1
+    return gf2_int_msb_pos(x)
 
 
 def rref(rows: Sequence[int], n_bits: int) -> Tuple[List[int], Dict[int, int]]:
@@ -199,39 +207,7 @@ def rref(rows: Sequence[int], n_bits: int) -> Tuple[List[int], Dict[int, int]]:
     Returns:
         (rref_rows, pivot_col_to_row_index)
     """
-    rows = [r for r in rows if r != 0]
-    rows = rows[:]
-    pivots: Dict[int, int] = {}
-    row = 0
-
-    for col in range(n_bits - 1, -1, -1):
-        pivot = None
-        for r in range(row, len(rows)):
-            if (rows[r] >> col) & 1:
-                pivot = r
-                break
-        if pivot is None:
-            continue
-
-        rows[row], rows[pivot] = rows[pivot], rows[row]
-
-        for r in range(len(rows)):
-            if r != row and ((rows[r] >> col) & 1):
-                rows[r] ^= rows[row]
-
-        pivots[col] = row
-        row += 1
-        if row == len(rows):
-            break
-
-    rows = [r for r in rows if r != 0]
-    rows.sort(reverse=True)
-
-    pivots = {}
-    for i, r in enumerate(rows):
-        pivots[msb_pos(r)] = i
-
-    return rows, pivots
+    return gf2_int_rref(rows, n_bits)
 
 
 def reduce_by_rref(vec: int, rref_rows: Sequence[int]) -> int:
@@ -239,23 +215,15 @@ def reduce_by_rref(vec: int, rref_rows: Sequence[int]) -> int:
     Remove support of rref_rows in vec, returns remainder
 
     """
-    x = vec
-    for r in rref_rows:
-        p = msb_pos(r)
-        if (x >> p) & 1:
-            x ^= r
-    return x
+    return gf2_int_reduce_by_rref(vec, rref_rows)
 
 
 def in_span(vec: int, rref_rows: Sequence[int]) -> bool:
-    return reduce_by_rref(vec, rref_rows) == 0
+    return gf2_int_in_span(vec, rref_rows)
 
 
 def try_add_to_span(vec: int, rref_rows: Sequence[int], n_bits: int) -> Optional[List[int]]:
-    if in_span(vec, rref_rows):
-        return None
-    new_rows, _ = rref(list(rref_rows) + [vec], n_bits)
-    return new_rows
+    return gf2_int_try_add_to_span(vec, rref_rows, n_bits)
 
 
 def nullspace_basis(rows: Sequence[int], n_bits: int) -> List[int]:
@@ -263,20 +231,7 @@ def nullspace_basis(rows: Sequence[int], n_bits: int) -> List[int]:
     Nullspace of the GF(2) matrix whose rows are `rows`, represented as ints.
     Returns a basis as a list of ints.
     """
-    rref_rows, pivots = rref(rows, n_bits)
-    pivot_cols = set(pivots.keys())
-    free_cols = [c for c in range(n_bits) if c not in pivot_cols]
-
-    basis: List[int] = []
-    for free in free_cols:
-        x = 1 << free
-        for pcol in sorted(pivot_cols):
-            row = rref_rows[pivots[pcol]]
-            parity = (popcount(row & x)) & 1
-            if parity:
-                x ^= 1 << pcol
-        basis.append(x)
-    return basis
+    return gf2_int_nullspace_basis(rows, n_bits)
 
 # ============================================================
 # Exact Pauli symmetries of the Hamiltonian
