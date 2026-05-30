@@ -5,6 +5,7 @@ from scipy.linalg import expm, expm_frechet
 import pickle
 import os
 import json
+from contextlib import nullcontext
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from src.orbital_rotation import (
     SpinRestrictedRealOrbitalRotation,
@@ -16,6 +17,8 @@ from src.orbital_rotation import (
     apply_givens_product_to_sparse_operator,
     givens_product_mat,
     givens_product_num_params,
+    givens_product_pairs,
+    sparse_real_givens_unitary,
 )
 from src.metrics import (
     l1norm,
@@ -33,11 +36,28 @@ from src.op_utils import (
     prepare_pauli_sum_action,
 )
 from src.ferm_utils import Eij, rotate_chem_tbt, rotate_chem_obt, get_chem_tensors, spatial_obt_to_spin_obt, spatial_tbt_to_spin_tbt, build_sparse_basis
-from openfermion import MolecularData, get_sparse_operator, jordan_wigner, count_qubits, FermionOperator, QubitOperator, commutator
+from openfermion import MolecularData, get_sparse_operator, jordan_wigner, count_qubits, FermionOperator, QubitOperator, commutator, get_ground_state
 import numpy as np
 from scipy.sparse import csr_matrix, identity as sparse_identity
 from src.sym import hct_mod, get_seniority_symmetries
 import time
+
+def threadpool_limit_context(num_threads):
+    """
+    Limit BLAS/OpenMP thread pools inside one optimization worker when possible.
+    """
+    if num_threads is None:
+        return nullcontext()
+    try:
+        from threadpoolctl import threadpool_limits
+    except ImportError:
+        print(
+            "threadpoolctl is not installed; cannot enforce {} threads per worker.".format(
+                num_threads
+            )
+        )
+        return nullcontext()
+    return threadpool_limits(limits=int(num_threads))
 
 def complex_to_jsonable(value, tol=1e-12):
     value = complex(value)
@@ -87,6 +107,14 @@ def save_optimized_orbital_data(
         payload["objective_backend"] = optimization_info.get("objective_backend")
         payload["initial_cost"] = complex_to_jsonable(optimization_info.get("initial_cost"))
         payload["final_cost"] = complex_to_jsonable(optimization_info.get("final_cost"))
+        if "initial_fci_cost" in optimization_info:
+            payload["initial_fci_cost"] = complex_to_jsonable(
+                optimization_info.get("initial_fci_cost")
+            )
+        if "final_fci_cost" in optimization_info:
+            payload["final_fci_cost"] = complex_to_jsonable(
+                optimization_info.get("final_fci_cost")
+            )
 
     with open(txt_path, "w") as f:
         json.dump(payload, f, indent=2)
@@ -143,6 +171,85 @@ def orbital_rotation_outputs(params, n_qubits, parameterization):
         return U, rotate_state
 
     raise ValueError("Unknown parameterization {}".format(parameterization))
+
+def explicit_fock_orbital_unitary(params, n_qubits, parameterization):
+    """
+    Build the explicit sparse Fock-space unitary for an optimized orbital frame.
+    """
+    if parameterization == "expm":
+        return RealOrbitalRotation(n_qubits, params).get_exp_rep().tocsr()
+
+    if parameterization == "givens_product":
+        u = sparse_identity(1 << n_qubits, dtype=complex, format="csr")
+        for theta, (i, j) in zip(params, givens_product_pairs(n_qubits)):
+            u = sparse_real_givens_unitary(n_qubits, i, j, theta) @ u
+        return u.tocsr()
+
+    raise ValueError("Unknown parameterization {}".format(parameterization))
+
+def verify_rotated_hamiltonian(
+    H_sparse,
+    H_rot_sparse,
+    fci_gs,
+    fci_e,
+    params,
+    n_qubits,
+    parameterization,
+    expected_rotated_state=None,
+    atol=1e-8,
+):
+    """
+    Check that H_rot is consistent with explicit orbital-frame conjugation.
+    """
+    u = explicit_fock_orbital_unitary(params, n_qubits, parameterization)
+    psi_rot_explicit = u @ fci_gs
+    state_action_error = None
+    if expected_rotated_state is not None:
+        state_action_error = np.linalg.norm(psi_rot_explicit - expected_rotated_state)
+    rotated_energy = np.vdot(psi_rot_explicit, H_rot_sparse @ psi_rot_explicit)
+    rotated_residual = np.linalg.norm(H_rot_sparse @ psi_rot_explicit - fci_e * psi_rot_explicit)
+
+    gs_e_rot, _ = get_ground_state(H_rot_sparse)
+    gs_e_unrot, _ = get_ground_state(H_sparse)
+    energy_shift = abs(gs_e_rot - gs_e_unrot)
+    reference_shift = abs(gs_e_rot - fci_e)
+
+    H_rot_explicit = (u @ H_sparse @ u.T.conjugate()).tocsr()
+    H_diff = (H_rot_sparse - H_rot_explicit).tocsr()
+    H_diff_norm = np.linalg.norm(H_diff.data)
+    H_rot_norm = max(1.0, np.linalg.norm(H_rot_sparse.data))
+    H_diff_rel = H_diff_norm / H_rot_norm
+
+    print("Rotated Hamiltonian verification:")
+    print("  original sparse ground energy:", gs_e_unrot)
+    print("  rotated sparse ground energy:", gs_e_rot)
+    print("  reference fci energy:", fci_e)
+    print("  |E_rot - E_original|:", energy_shift)
+    print("  |E_rot - E_reference|:", reference_shift)
+    print("  <U psi|H_rot|U psi>:", np.real_if_close(rotated_energy))
+    if state_action_error is not None:
+        print("  ||explicit U psi - fast U psi||:", state_action_error)
+    print("  ||H_rot U psi - E U psi||:", rotated_residual)
+    print("  ||H_rot - U H U^dagger|| / ||H_rot||:", H_diff_rel)
+
+    if energy_shift > atol or reference_shift > atol:
+        raise ValueError("Rotated Hamiltonian ground energy check failed.")
+    if rotated_residual > 100 * atol:
+        raise ValueError("Explicitly rotated FCI state is not an eigenstate of H_rot.")
+    if state_action_error is not None and state_action_error > 100 * atol:
+        raise ValueError("Fast state rotation does not match explicit Fock-space unitary.")
+    if H_diff_rel > 100 * atol:
+        raise ValueError("Rotated Hamiltonian does not match explicit U H U^dagger.")
+
+    return {
+        "original_ground_energy": gs_e_unrot,
+        "rotated_ground_energy": gs_e_rot,
+        "reference_fci_energy": fci_e,
+        "rotated_state_energy": rotated_energy,
+        "state_action_error": state_action_error,
+        "rotated_state_residual": rotated_residual,
+        "hamiltonian_relative_error": H_diff_rel,
+    }
 
 def build_nc_sparse_basis(basis_dict: dict, sym_ops_sparse):
     """
@@ -826,6 +933,40 @@ def build_comm_sq_evaluator(
         gradient = evaluator_gradient
     return evaluator, gradient, timings, values
 
+def build_matching_comm_sq_evaluator_for_state(
+    evaluator,
+    sym_ops,
+    obt,
+    tbt,
+    state,
+    n_qubits,
+    basis_dict,
+    H_sparse=None,
+    H_qubit=None,
+    use_analytic_gradient=False,
+):
+    backend_name = getattr(evaluator, "backend_name", None)
+    include_methods = (backend_name,) if backend_name is not None else ("simple",)
+    matched_evaluator, _, _, _ = build_comm_sq_evaluator(
+        sym_ops,
+        obt,
+        tbt,
+        state,
+        n_qubits,
+        basis_dict,
+        np.zeros(num_orbital_rotation_params(
+            n_qubits,
+            objective_method_parameterization(include_methods[0]),
+        )),
+        H_sparse=H_sparse,
+        H_qubit=H_qubit,
+        include_methods=include_methods,
+        benchmark_repeats=1,
+        use_analytic_gradient=use_analytic_gradient,
+        verbose=False,
+    )
+    return matched_evaluator
+
 def make_fast_cisd_comm_sq_cost(
     sym_ops,
     obt,
@@ -871,32 +1012,33 @@ def _minimize_with_fd_control(
     )
 
 def _run_minimize_trial_worker(payload):
-    evaluator, gradient, _, _ = build_comm_sq_evaluator(
-        payload["sym_ops"],
-        payload["obt"],
-        payload["tbt"],
-        payload["ref_gs"],
-        payload["n_qubits"],
-        payload["basis_dict"],
-        payload["x0"],
-        H_sparse=payload["H_sparse"],
-        H_qubit=payload["H_qubit"],
-        include_methods=payload["include_methods"],
-        benchmark_repeats=1,
-        use_analytic_gradient=payload["use_analytic_gradient"],
-        verbose=False,
-    )
+    with threadpool_limit_context(payload.get("threads_per_worker")):
+        evaluator, gradient, _, _ = build_comm_sq_evaluator(
+            payload["sym_ops"],
+            payload["obt"],
+            payload["tbt"],
+            payload["ref_gs"],
+            payload["n_qubits"],
+            payload["basis_dict"],
+            payload["x0"],
+            H_sparse=payload["H_sparse"],
+            H_qubit=payload["H_qubit"],
+            include_methods=payload["include_methods"],
+            benchmark_repeats=1,
+            use_analytic_gradient=payload["use_analytic_gradient"],
+            verbose=False,
+        )
 
-    return _minimize_with_fd_control(
-        evaluator.cost,
-        payload["x0"],
-        callback=None,
-        gradient=gradient,
-        optimizer_method=payload["optimizer_method"],
-        finite_diff_eps=payload["finite_diff_eps"],
-        finite_diff_jac=payload["finite_diff_jac"],
-        optimizer_options=payload["optimizer_options"],
-    )
+        return _minimize_with_fd_control(
+            evaluator.cost,
+            payload["x0"],
+            callback=None,
+            gradient=gradient,
+            optimizer_method=payload["optimizer_method"],
+            finite_diff_eps=payload["finite_diff_eps"],
+            finite_diff_jac=payload["finite_diff_jac"],
+            optimizer_options=payload["optimizer_options"],
+        )
 
 def num_orbital_rotation_params(n_qubits, parameterization):
     if parameterization == "expm":
@@ -1034,6 +1176,7 @@ def minimize_cisd_comm_sq(
     parallel=False,
     n_jobs=None,
     parallel_backend="process",
+    threads_per_worker=None,
     random_seed=None,
     verify=True,
     basis_dict=None,
@@ -1139,6 +1282,10 @@ def minimize_cisd_comm_sq(
             len(x0_list), n_jobs
         ))
         print("Parallel workers use backend: {}".format(backend_name))
+        if threads_per_worker is not None:
+            print("Each optimization worker may use up to {} compute threads.".format(
+                threads_per_worker
+            ))
 
         payload_base = {
             "sym_ops": sym_ops,
@@ -1155,6 +1302,7 @@ def minimize_cisd_comm_sq(
             "finite_diff_eps": finite_diff_eps,
             "finite_diff_jac": finite_diff_jac,
             "optimizer_options": optimizer_options,
+            "threads_per_worker": threads_per_worker,
         }
 
         results = []
@@ -1180,22 +1328,10 @@ def minimize_cisd_comm_sq(
         min_result = min(results, key=lambda result: abs(result.fun))
     else:
         print("Identity init optimization")
-        min_result = _minimize_with_fd_control(
-            cost,
-            x0,
-            call_back,
-            gradient=gradient,
-            optimizer_method=optimizer_method,
-            finite_diff_eps=finite_diff_eps,
-            finite_diff_jac=finite_diff_jac,
-            optimizer_options=optimizer_options,
-        )
-
-        for n, trial_x0 in enumerate(x0_list[1:]):
-            print("Random Trial {}:".format(n))
-            result = _minimize_with_fd_control(
+        with threadpool_limit_context(threads_per_worker):
+            min_result = _minimize_with_fd_control(
                 cost,
-                trial_x0,
+                x0,
                 call_back,
                 gradient=gradient,
                 optimizer_method=optimizer_method,
@@ -1204,10 +1340,51 @@ def minimize_cisd_comm_sq(
                 optimizer_options=optimizer_options,
             )
 
-            if abs(result.fun) < abs(min_result.fun):
-                min_result = result
+            for n, trial_x0 in enumerate(x0_list[1:]):
+                print("Random Trial {}:".format(n))
+                result = _minimize_with_fd_control(
+                    cost,
+                    trial_x0,
+                    call_back,
+                    gradient=gradient,
+                    optimizer_method=optimizer_method,
+                    finite_diff_eps=finite_diff_eps,
+                    finite_diff_jac=finite_diff_jac,
+                    optimizer_options=optimizer_options,
+                )
+
+                if abs(result.fun) < abs(min_result.fun):
+                    min_result = result
     
-    print("Optimization completed, \nInitial cost: {}\nFinal cost: {}\nEntropies:".format(cost(x0), cost(min_result.x)))
+    initial_ref_cost = cost(x0)
+    final_ref_cost = cost(min_result.x)
+    fci_evaluator = build_matching_comm_sq_evaluator_for_state(
+        evaluator,
+        sym_ops,
+        obt,
+        tbt,
+        fci_gs,
+        n_qubits,
+        basis_dict,
+        H_sparse=H_sparse,
+        H_qubit=H_qubit,
+        use_analytic_gradient=False,
+    )
+    initial_fci_cost = fci_evaluator.cost(x0)
+    final_fci_cost = fci_evaluator.cost(min_result.x)
+    print(
+        "Optimization completed, \n"
+        "Initial ref cost: {}\n"
+        "Final ref cost: {}\n"
+        "Initial FCI cost: {}\n"
+        "Final FCI cost: {}\n"
+        "Entropies:".format(
+            initial_ref_cost,
+            final_ref_cost,
+            initial_fci_cost,
+            final_fci_cost,
+        )
+    )
     HQ = jordan_wigner(chem_obt_tbt_to_chem_ferm(obt, tbt, constant))
     ents_initial, HQ_perm = get_permuted_bipartite_entanglement(sym_ops, HQ, n_qubits, fci_gs=fci_gs, verbose=True, return_state=False, return_U=False, log_base='e')
     print("Initial FCI cut entropies:", ents_initial)
@@ -1260,40 +1437,40 @@ def minimize_cisd_comm_sq(
             "orbital_rotation_matrix": U,
             "parameterization": parameterization,
             "objective_backend": getattr(evaluator, "backend_name", None),
-            "initial_cost": cost(x0),
-            "final_cost": cost(min_result.x),
+            "initial_cost": initial_ref_cost,
+            "final_cost": final_ref_cost,
+            "initial_fci_cost": initial_fci_cost,
+            "final_fci_cost": final_fci_cost,
             "optimizer_result": min_result,
         }
 
     return min_result.x
 
-if __name__ == "__main__":
-    directory = './saved/hamiltonians/'
-    system = 'LiH_corr'
+def run_orbital_optimization_benchmark(system, directory="./saved/hamiltonians/"):
+    print("\n" + "=" * 80)
+    print("Running orbital optimization benchmark for {}".format(system))
+    print("=" * 80)
 
-    with open(directory+system+".pkl", "rb") as f:
+    with open(directory + system + ".pkl", "rb") as f:
         data = pickle.load(f)
     H, fci_e, fci_gs, cisd_e, cisd_gs = data
-    molecule = MolecularData(filename=directory+system)
+    molecule = MolecularData(filename=directory + system)
     HQ = jordan_wigner(H)
 
     n_qubits = count_qubits(HQ)
     Hs = get_sparse_operator(HQ, n_qubits)
 
-    # make tbt for H
     constant, obt_spatial, tbt_chem_spatial = get_chem_tensors(molecule, True)
-    obt, tbt = spatial_obt_to_spin_obt(obt_spatial), spatial_tbt_to_spin_tbt(tbt_chem_spatial)
+    obt = spatial_obt_to_spin_obt(obt_spatial)
+    tbt = spatial_tbt_to_spin_tbt(tbt_chem_spatial)
 
     comm_sq_exp_cisd = lambda s_list: comm_sq_exp_fast(s_list, Hs, cisd_gs, n_qubits)
-    comm_sq_exp_fci = lambda s_list: comm_sq_exp_fast(s_list, Hs, fci_gs, n_qubits)
-    var_cisd = lambda s_list: variance(s_list, cisd_gs, n_qubits)
-    var_fci = lambda s_list: variance(s_list, fci_gs, n_qubits)
+    sym_group_score_func = lambda s_list: (-1) * comm_sq_exp_cisd(s_list)
+    sym_metric_func = lambda s: (-1) * sym_group_score_func([s])
 
-    sym_group_score_func = lambda s_list: (-1)*comm_sq_exp_cisd(s_list) # BS score maximized
-    sym_metric_func = lambda s: (-1)*sym_group_score_func([s]) # HCT minimized
-
-    list_sym = get_seniority_symmetries(n_qubits)
-    list_sym, _ = hct_mod(HQ, n_qubits//2, sym_metric_func=sym_metric_func, use_coeffs_eps=True)
+    list_sym, _ = hct_mod(
+        HQ, n_qubits, sym_metric_func=sym_metric_func, use_coeffs_eps=True
+    )
     basis_dict = build_sparse_basis(n_qubits, True)
     res = minimize_cisd_comm_sq(
         list_sym,
@@ -1309,8 +1486,14 @@ if __name__ == "__main__":
         objective_mode="auto",
         finite_diff_eps=1e-4,
         parameterization="auto_runtime",
-        n_trials=2,
+        benchmark_repeats=1,
+        n_trials=9,
+        parallel=True,
+        n_jobs=10,
+        parallel_backend="process",
+        threads_per_worker=2,
         random_seed=0,
+        optimizer_options={"maxiter": 50},
         return_info=True,
     )
 
@@ -1327,3 +1510,72 @@ if __name__ == "__main__":
     )
     print("Saved optimized orbital rotation matrix to:", orbital_npy_path)
     print("Saved optimized orbital metadata and symmetries to:", orbital_txt_path)
+
+    U_opt, rotate_state = orbital_rotation_outputs(
+        res["params"], n_qubits, res["parameterization"]
+    )
+    obt_rot = rotate_chem_obt(obt, U_opt)
+    tbt_rot = rotate_chem_tbt(tbt, U_opt)
+    HQ_rot = jordan_wigner(chem_obt_tbt_to_chem_ferm(obt_rot, tbt_rot, constant))
+    fci_gs_rot = rotate_state(fci_gs)
+    Hs_rot = get_sparse_operator(HQ_rot, n_qubits).tocsr()
+    _ = verify_rotated_hamiltonian(
+        Hs,
+        Hs_rot,
+        fci_gs,
+        fci_e,
+        res["params"],
+        n_qubits,
+        res["parameterization"],
+        expected_rotated_state=fci_gs_rot,
+    )
+
+    benchmark_txt_path = os.path.join(
+        optimized_orbital_dir, "{}_{}_benchmark.txt".format(system, orbital_tag)
+    )
+    with open(benchmark_txt_path, "w") as f:
+        print("{} {} benchmark datasets".format(system, orbital_tag), file=f)
+
+    from benchmark_all import BenchmarkData, benchmark_syms
+
+    benchmark_datasets = [
+        benchmark_syms(
+            list_sym,
+            HQ,
+            fci_gs,
+            fci_e,
+            n_qubits,
+            N_2_sym=(len(list_sym) == n_qubits // 2),
+            verbose=False,
+            print_to_file=benchmark_txt_path,
+            tag="unoptimized_orbitals",
+        ),
+        benchmark_syms(
+            list_sym,
+            HQ_rot,
+            fci_gs_rot,
+            fci_e,
+            n_qubits,
+            N_2_sym=(len(list_sym) == n_qubits // 2),
+            verbose=False,
+            print_to_file=benchmark_txt_path,
+            tag="optimized_orbitals",
+        ),
+    ]
+    benchmark_dataset_path = os.path.join(
+        optimized_orbital_dir, "{}_{}_benchmark_datasets".format(system, orbital_tag)
+    )
+    BenchmarkData.save_datasets(benchmark_datasets, benchmark_dataset_path)
+
+    print("Orbital-frame benchmark summary for {}:".format(system))
+    for data in benchmark_datasets:
+        print("{} cut entropies: {}".format(data.tag, data.cut_entropies))
+        print("{} DMRG convergence bond dimension: {}".format(data.tag, data.dmrg_bd))
+    print("Saved benchmark text report to:", benchmark_txt_path)
+    print("Saved benchmark datasets to:", benchmark_dataset_path + ".pkl")
+    return benchmark_datasets
+
+
+if __name__ == "__main__":
+    for system in ["H4chain_corr", "H2O_corr"]:
+        run_orbital_optimization_benchmark(system)
