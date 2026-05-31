@@ -105,6 +105,7 @@ def save_optimized_orbital_data(
     if optimization_info is not None:
         payload["parameterization"] = optimization_info.get("parameterization")
         payload["objective_backend"] = optimization_info.get("objective_backend")
+        payload["gradient_mode"] = optimization_info.get("gradient_mode")
         payload["initial_cost"] = complex_to_jsonable(optimization_info.get("initial_cost"))
         payload["final_cost"] = complex_to_jsonable(optimization_info.get("final_cost"))
         if "initial_fci_cost" in optimization_info:
@@ -775,6 +776,21 @@ def objective_method_parameterization(method):
         return "givens_product"
     return "expm"
 
+def normalize_gradient_mode(use_analytic_gradient=True, gradient_mode=None):
+    """
+    Normalize gradient selection.
+
+    gradient_mode:
+      - "analytic": use analytic gradients when available, finite-diff fallback
+      - "finite_diff": always use scipy finite differences
+      - "auto": time analytic versus estimated finite differences per backend
+    """
+    if gradient_mode is None:
+        return "analytic" if use_analytic_gradient else "finite_diff"
+    if gradient_mode not in ("analytic", "finite_diff", "auto", "cost"):
+        raise ValueError("Unknown gradient_mode {}".format(gradient_mode))
+    return gradient_mode
+
 def choose_fastest_comm_sq_evaluator(
     sym_ops,
     obt,
@@ -788,12 +804,16 @@ def choose_fastest_comm_sq_evaluator(
     include_methods=("simple", "givens", "symmetry", "tensor"),
     benchmark_repeats=1,
     weights=None,
-    select_for_gradient=False,
+    gradient_mode="cost",
+    select_for_gradient=None,
     verbose=True,
 ):
     """
     Build candidate objective evaluators, time them at x_probe, and return fastest.
     """
+    if select_for_gradient is not None:
+        gradient_mode = "analytic" if select_for_gradient else "cost"
+    gradient_mode = normalize_gradient_mode(gradient_mode=gradient_mode)
     sym_ops_sparse = prepare_sparse_symmetries(sym_ops, n_qubits)
     pauli_actions = prepare_pauli_actions(sym_ops, n_qubits)
     H_pauli_action = (
@@ -844,7 +864,9 @@ def choose_fastest_comm_sq_evaluator(
 
     timings = {}
     grad_timings = {}
+    fd_timings = {}
     selection_scores = {}
+    selected_gradient_modes = {}
     values = {}
     if not candidates:
         raise ValueError("No compatible objective backends were requested.")
@@ -852,16 +874,32 @@ def choose_fastest_comm_sq_evaluator(
         elapsed, value = time_cost_evaluator(evaluator, x_probe, benchmark_repeats)
         timings[name] = elapsed
         values[name] = value
+        fd_timings[name] = elapsed * (len(x_probe) + 1)
         gradient = getattr(evaluator, "gradient", None)
-        if select_for_gradient and callable(gradient):
+        if gradient_mode == "cost":
+            selection_scores[name] = elapsed
+            selected_gradient_modes[name] = "finite_diff"
+        elif gradient_mode == "analytic" and callable(gradient):
             start = time.perf_counter()
             gradient(x_probe)
             grad_timings[name] = time.perf_counter() - start
             selection_scores[name] = elapsed + grad_timings[name]
-        elif select_for_gradient:
-            selection_scores[name] = elapsed * (len(x_probe) + 1)
+            selected_gradient_modes[name] = "analytic"
+        elif gradient_mode == "auto" and callable(gradient):
+            start = time.perf_counter()
+            gradient(x_probe)
+            grad_timings[name] = time.perf_counter() - start
+            analytic_score = elapsed + grad_timings[name]
+            finite_diff_score = fd_timings[name]
+            if analytic_score <= finite_diff_score:
+                selection_scores[name] = analytic_score
+                selected_gradient_modes[name] = "analytic"
+            else:
+                selection_scores[name] = finite_diff_score
+                selected_gradient_modes[name] = "finite_diff"
         else:
-            selection_scores[name] = elapsed
+            selection_scores[name] = fd_timings[name]
+            selected_gradient_modes[name] = "finite_diff"
 
     names = list(values)
     ref = values[names[0]]
@@ -875,23 +913,33 @@ def choose_fastest_comm_sq_evaluator(
 
     winner = min(selection_scores, key=selection_scores.get)
     candidates[winner].backend_name = winner
+    candidates[winner].selected_gradient_mode = selected_gradient_modes[winner]
     if verbose:
         print("Objective backend timings at initial point:")
         for name, elapsed in sorted(timings.items(), key=lambda item: item[1]):
-            if select_for_gradient:
+            if gradient_mode in ("analytic", "finite_diff", "auto"):
                 grad_note = (
                     " analytic_grad={:.6f}s".format(grad_timings[name])
                     if name in grad_timings
-                    else " finite_diff_est={:.6f}s".format(selection_scores[name])
+                    else ""
                 )
+                fd_note = " finite_diff_est={:.6f}s".format(fd_timings[name])
+                mode_note = " selected_grad={}".format(selected_gradient_modes[name])
                 print(
-                    "  {}: cost={:.6f}s{} selection_score={:.6f}s value={}".format(
-                        name, elapsed, grad_note, selection_scores[name], values[name]
+                    "  {}: cost={:.6f}s{}{}{} selection_score={:.6f}s value={}".format(
+                        name,
+                        elapsed,
+                        grad_note,
+                        fd_note,
+                        mode_note,
+                        selection_scores[name],
+                        values[name],
                     )
                 )
             else:
                 print("  {}: {:.6f}s value={}".format(name, elapsed, values[name]))
         print("Using objective backend: {}".format(winner))
+        print("Using gradient mode for backend: {}".format(selected_gradient_modes[winner]))
 
     return candidates[winner], timings, values
 
@@ -909,8 +957,13 @@ def build_comm_sq_evaluator(
     benchmark_repeats=1,
     weights=None,
     use_analytic_gradient=True,
+    gradient_mode=None,
     verbose=True,
 ):
+    gradient_mode = normalize_gradient_mode(
+        use_analytic_gradient=use_analytic_gradient,
+        gradient_mode=gradient_mode,
+    )
     evaluator, timings, values = choose_fastest_comm_sq_evaluator(
         sym_ops,
         obt,
@@ -924,12 +977,12 @@ def build_comm_sq_evaluator(
         include_methods=include_methods,
         benchmark_repeats=benchmark_repeats,
         weights=weights,
-        select_for_gradient=use_analytic_gradient,
+        gradient_mode=gradient_mode,
         verbose=verbose,
     )
     gradient = None
     evaluator_gradient = getattr(evaluator, "gradient", None)
-    if use_analytic_gradient and callable(evaluator_gradient):
+    if getattr(evaluator, "selected_gradient_mode", None) == "analytic" and callable(evaluator_gradient):
         gradient = evaluator_gradient
     return evaluator, gradient, timings, values
 
@@ -1026,6 +1079,7 @@ def _run_minimize_trial_worker(payload):
             include_methods=payload["include_methods"],
             benchmark_repeats=1,
             use_analytic_gradient=payload["use_analytic_gradient"],
+            gradient_mode=payload.get("gradient_mode"),
             verbose=False,
         )
 
@@ -1047,17 +1101,25 @@ def num_orbital_rotation_params(n_qubits, parameterization):
         return givens_product_num_params(n_qubits)
     raise ValueError("Unknown parameterization {}".format(parameterization))
 
-def time_optimizer_step(evaluator, params, use_analytic_gradient=True):
+def time_optimizer_step(evaluator, params, use_analytic_gradient=True, gradient_mode=None):
+    gradient_mode = normalize_gradient_mode(
+        use_analytic_gradient=use_analytic_gradient,
+        gradient_mode=gradient_mode,
+    )
     cost_time, value = time_cost_evaluator(evaluator, params, repeats=1)
     gradient = getattr(evaluator, "gradient", None)
-    if use_analytic_gradient and callable(gradient):
+    finite_diff_time = cost_time * (len(params) + 1)
+    if gradient_mode in ("analytic", "auto") and callable(gradient):
         start = time.perf_counter()
         gradient(params)
         grad_time = time.perf_counter() - start
-        return cost_time + grad_time, cost_time, grad_time, value, True
+        analytic_time = cost_time + grad_time
+        if gradient_mode == "auto" and finite_diff_time < analytic_time:
+            return finite_diff_time, cost_time, grad_time, value, False, "finite_diff"
+        return analytic_time, cost_time, grad_time, value, True, "analytic"
 
     # Finite-difference estimate for one gradient evaluation.
-    return cost_time * (len(params) + 1), cost_time, None, value, False
+    return finite_diff_time, cost_time, None, value, False, "finite_diff"
 
 def choose_fastest_parameterization_by_runtime(
     sym_ops,
@@ -1072,6 +1134,7 @@ def choose_fastest_parameterization_by_runtime(
     benchmark_repeats=1,
     weights=None,
     use_analytic_gradient=True,
+    gradient_mode=None,
 ):
     """
     Compare expm and direct Givens-product parameterizations by runtime.
@@ -1080,6 +1143,10 @@ def choose_fastest_parameterization_by_runtime(
     so it compares optimizer-step cost rather than objective values at unrelated
     random coordinates.
     """
+    gradient_mode = normalize_gradient_mode(
+        use_analytic_gradient=use_analytic_gradient,
+        gradient_mode=gradient_mode,
+    )
     candidates = []
 
     expm_methods = (
@@ -1105,13 +1172,16 @@ def choose_fastest_parameterization_by_runtime(
             include_methods=expm_methods,
             benchmark_repeats=benchmark_repeats,
             weights=weights,
-            select_for_gradient=use_analytic_gradient,
+            gradient_mode=gradient_mode,
             verbose=True,
         )
-        total, cost_t, grad_t, value, has_grad = time_optimizer_step(
-            expm_evaluator, x_expm, use_analytic_gradient=use_analytic_gradient
+        total, cost_t, grad_t, value, has_grad, selected_grad_mode = time_optimizer_step(
+            expm_evaluator,
+            x_expm,
+            use_analytic_gradient=use_analytic_gradient,
+            gradient_mode=getattr(expm_evaluator, "selected_gradient_mode", gradient_mode),
         )
-        candidates.append(("expm", expm_evaluator, total, cost_t, grad_t, value, has_grad))
+        candidates.append(("expm", expm_evaluator, total, cost_t, grad_t, value, has_grad, selected_grad_mode))
 
     givens_methods = (
         ("givens_product", "givens_product_matrix_free")
@@ -1136,27 +1206,30 @@ def choose_fastest_parameterization_by_runtime(
             include_methods=givens_methods,
             benchmark_repeats=benchmark_repeats,
             weights=weights,
-            select_for_gradient=use_analytic_gradient,
+            gradient_mode=gradient_mode,
             verbose=True,
         )
-        total, cost_t, grad_t, value, has_grad = time_optimizer_step(
-            givens_evaluator, x_givens, use_analytic_gradient=use_analytic_gradient
+        total, cost_t, grad_t, value, has_grad, selected_grad_mode = time_optimizer_step(
+            givens_evaluator,
+            x_givens,
+            use_analytic_gradient=use_analytic_gradient,
+            gradient_mode=getattr(givens_evaluator, "selected_gradient_mode", gradient_mode),
         )
-        candidates.append(("givens_product", givens_evaluator, total, cost_t, grad_t, value, has_grad))
+        candidates.append(("givens_product", givens_evaluator, total, cost_t, grad_t, value, has_grad, selected_grad_mode))
 
     if not candidates:
         raise ValueError("No compatible parameterizations were requested.")
 
     print("Parameterization runtime comparison at identity:")
-    for name, _, total, cost_t, grad_t, value, has_grad in sorted(candidates, key=lambda item: item[2]):
+    for name, _, total, cost_t, grad_t, value, has_grad, selected_grad_mode in sorted(candidates, key=lambda item: item[2]):
         grad_label = (
             "grad={:.6f}s".format(grad_t)
             if has_grad
             else "finite_diff_est"
         )
         print(
-            "  {}: step={:.6f}s cost={:.6f}s {} value={}".format(
-                name, total, cost_t, grad_label, value
+            "  {}: step={:.6f}s cost={:.6f}s {} selected_grad={} value={}".format(
+                name, total, cost_t, grad_label, selected_grad_mode, value
             )
         )
 
@@ -1189,6 +1262,7 @@ def minimize_cisd_comm_sq(
     finite_diff_eps=1e-4,
     finite_diff_jac=None,
     use_analytic_gradient=True,
+    gradient_mode=None,
     optimizer_options=None,
     return_info=False,
 ):
@@ -1198,6 +1272,10 @@ def minimize_cisd_comm_sq(
 
     """
     print("Symmetries: ", sym_ops)
+    gradient_mode = normalize_gradient_mode(
+        use_analytic_gradient=use_analytic_gradient,
+        gradient_mode=gradient_mode,
+    )
     if basis_dict is None:
         print("Preparing sparse basis...")
         basis_dict = build_sparse_basis(n_qubits, include_obt=True)
@@ -1217,6 +1295,7 @@ def minimize_cisd_comm_sq(
             objective_mode=objective_mode,
             benchmark_repeats=benchmark_repeats,
             use_analytic_gradient=use_analytic_gradient,
+            gradient_mode=gradient_mode,
         )
 
     num_params = num_orbital_rotation_params(n_qubits, parameterization)
@@ -1252,14 +1331,14 @@ def minimize_cisd_comm_sq(
         include_methods=include_methods,
         benchmark_repeats=benchmark_repeats,
         use_analytic_gradient=use_analytic_gradient,
+        gradient_mode=gradient_mode,
         verbose=True,
     )
     cost = evaluator.cost
-    if use_analytic_gradient:
-        if gradient is None:
-            print("Selected objective has no analytic gradient; using finite differences.")
-        else:
-            print("Using analytic gradient for selected objective.")
+    if gradient is None:
+        print("Using finite-difference gradient for selected objective.")
+    else:
+        print("Using analytic gradient for selected objective.")
 
     print("Identity init objective value:", cost(x0))
 
@@ -1298,6 +1377,7 @@ def minimize_cisd_comm_sq(
             "H_qubit": H_qubit,
             "include_methods": (backend_name,),
             "use_analytic_gradient": use_analytic_gradient,
+            "gradient_mode": gradient_mode,
             "optimizer_method": optimizer_method,
             "finite_diff_eps": finite_diff_eps,
             "finite_diff_jac": finite_diff_jac,
@@ -1437,6 +1517,7 @@ def minimize_cisd_comm_sq(
             "orbital_rotation_matrix": U,
             "parameterization": parameterization,
             "objective_backend": getattr(evaluator, "backend_name", None),
+            "gradient_mode": getattr(evaluator, "selected_gradient_mode", gradient_mode),
             "initial_cost": initial_ref_cost,
             "final_cost": final_ref_cost,
             "initial_fci_cost": initial_fci_cost,
@@ -1485,10 +1566,11 @@ def run_orbital_optimization_benchmark(system, directory="./saved/hamiltonians/"
         H_qubit=HQ,
         objective_mode="auto",
         finite_diff_eps=1e-4,
+        gradient_mode="auto",
         parameterization="auto_runtime",
         benchmark_repeats=1,
         n_trials=9,
-        parallel=True,
+        parallel=False,
         n_jobs=10,
         parallel_backend="process",
         threads_per_worker=2,
@@ -1528,6 +1610,7 @@ def run_orbital_optimization_benchmark(system, directory="./saved/hamiltonians/"
         n_qubits,
         res["parameterization"],
         expected_rotated_state=fci_gs_rot,
+        atol=1e-6
     )
 
     benchmark_txt_path = os.path.join(
@@ -1577,5 +1660,5 @@ def run_orbital_optimization_benchmark(system, directory="./saved/hamiltonians/"
 
 
 if __name__ == "__main__":
-    for system in ["H4chain_corr", "H2O_corr"]:
+    for system in ["H2O_corr"]:
         run_orbital_optimization_benchmark(system)
