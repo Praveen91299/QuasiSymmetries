@@ -76,15 +76,15 @@ for system in systems:
 
     data = BenchmarkData.load_datasets('./saved/results/MAY27/_nc_exp_cisd_MAY27{}_datasets'.format(system))
     print("Importing {} symmetries:".format(data[1].tag))
-    bs_syms = data[1].symmetries
-    print(bs_syms)
+    syms = data[1].symmetries
+    print(syms)
 
     with open(output_filename, 'a') as f:
-        print("\nUsing saved Beam Symmetries:\n", file=f)
-        for sym in bs_syms:
+        print("\nUsing saved {}:\n".format(data[1].tag), file=f)
+        for sym in syms:
             print(sym, file=f)  
     
-    ents_rotated, H_perm, gs_rot = get_permuted_bipartite_entanglement(bs_syms, HQ, n_qubits, fci_e, fci_gs, return_state=True, log_base=log_base, verbose=True)
+    ents_rotated, H_perm, gs_rot = get_permuted_bipartite_entanglement(syms, HQ, n_qubits, fci_e, fci_gs, return_state=True, log_base=log_base, verbose=True)
     with open(output_filename, 'a') as f:
         print("\nEntanglement after packing Clifford:\n", file=f)
         for i, e in enumerate(ents_rotated):
@@ -92,6 +92,12 @@ for system in systems:
 
     
     ent_reord, H_reord, psi_reord, fiedler_info = do_fiedler_reordering(H_perm, gs_rot, n_qubits=n_qubits, verbose=True, log_base=log_base)
+
+    syms_reordered = [syms[i] for i in fiedler_info["ordering"]]
+    with open(output_filename, 'a') as f:
+        print("\nReordered symmetries:\n", file=f)
+        for i, sym in enumerate(syms_reordered):
+            print("Site {}: {}".format(i+1, sym), file=f)  
 
     with open(output_filename, 'a') as f:
         print("\nEntanglement after Fiedler reordering:\n", file=f)
