@@ -81,9 +81,9 @@ def entropy(probs, tol=1e-5, log_base='2'):
             probs_trunc.append(p)
 
     probs_trunc = np.array(probs_trunc)
-    if log_base == '2':
+    if log_base == '2' or log_base == 2:
         return np.sum(probs_trunc * np.log2(1/probs_trunc))
-    elif log_base == 'e':
+    elif log_base == 'e' or log_base == np.e:
         return np.sum(probs_trunc * np.log(1/probs_trunc))
 
 def entropy_pauli_sym(projectors_sparse, state, n_qubits):

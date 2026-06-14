@@ -74,7 +74,7 @@ from dataclasses import dataclass
 
 #         # Additive extension
 #         # TODO ensure elements in added obtained from gf2_extend_basis_additive have low hamming weight
-#         # WTF DOESN"T CHECK ORTHOGONALITY/COMMUTING PROPERTY this only checks independence
+#         # DOESN"T CHECK ORTHOGONALITY/COMMUTING PROPERTY this only checks independence
 #         basis_add, added = gf2_extend_basis_additive(basis_add, basis_rref) ### is rref the best to do? Would the choice of product ma
 
 #         # Sanity check: additive basis should lie in current nullspace

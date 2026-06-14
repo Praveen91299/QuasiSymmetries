@@ -228,10 +228,10 @@ def benchmark_syms(list_syms, HQ, fci_gs, fci_e, n_qubits, N_2_sym=False, verbos
     c = len(find_commuting_paulis(HQ, list_syms, verbose=verbose))
 
     ent, H_perm, U, gs_rot = get_permuted_bipartite_entanglement(list_syms, HQ, n_qubits, fci_e, fci_gs, verbose, True, True, 'e', False)
-    compress_cutoff = 1e-20
-    gs_rot_mps = qtn.MatrixProductState.from_dense(gs_rot, cutoff = compress_cutoff)     
+    
+    gs_rot_mps = qtn.MatrixProductState.from_dense(gs_rot, cutoff = 1e-20)     
     dmrg_bd, _ = find_dmrg_conv_bd_quimb(H_perm, n_qubits, fci_e, tol=1.6e-3, n_sweeps=100, 
-                        reps=1, verbose=False, compress_cutoff = compress_cutoff, sweep_tol = 1e-6,
+                        reps=1, verbose=False, compress_cutoff = 1e-20, sweep_tol = 1e-6,
                         noise = 1e0, bsz=2, guess_mps = gs_rot_mps, seed=0)
 
     #ent and dmrg
