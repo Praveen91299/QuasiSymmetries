@@ -1,0 +1,97 @@
+1.0 [Z0 Z2 Z4 Z7 Z8 Z10 Z13]  added at threshold 0.0 with metric value  0.0
+1.0 [Z0 Z2 Z4 Z6 Z8 Z10 Z12]  added at threshold 0.0 with metric value  0.0
+1.0 [Z0 Z1 Z2 Z3 Z8 Z9 Z10 Z11]  added at threshold 0.0 with metric value  0.0
+1.0 [Z4 Z5]  added at threshold 0.0 with metric value  0.0
+1.0 [Z7 Z13]  added at threshold 0.0252067961793301 with metric value  0.182823017249101
+1.0 [Z5]  added at threshold 0.046509825381948124 with metric value  1.1530909282284412e-28
+1.0 [Z1 Z3]  added at threshold 0.06584392974759415 with metric value  0.003303473460916225
+1.0 [Z0 Z2]  added at threshold 0.06679658700501795 with metric value  0.0018108717025034867
+1.0 [Z0]  added at threshold 0.13723383786881108 with metric value  4.841677111176281e-05
+1.0 [Z1]  added at threshold 0.157056081153564 with metric value  9.984162050804155e-05
+1.0 [Z8]  added at threshold 0.45664610143081874 with metric value  0.21706520455070824
+1.0 [Z9]  added at threshold 0.4613455216244923 with metric value  0.21764959957533445
+1.0 [Z6]  added at threshold 0.8329684546459444 with metric value  0.21268259449239343
+1.0 [Z7]  added at threshold 0.8329684546459444 with metric value  0.21268342433078608
+
+1.0 [Z0 Z2 Z4 Z7 Z8 Z10 Z13]  added at threshold 0.0 with metric value  0.0
+1.0 [Z0 Z2 Z4 Z6 Z8 Z10 Z12]  added at threshold 0.0 with metric value  0.0
+1.0 [Z0 Z1 Z2 Z3 Z8 Z9 Z10 Z11]  added at threshold 0.0 with metric value  0.0
+1.0 [Z4 Z5]  added at threshold 0.0 with metric value  0.0
+1.0 [Z8 Z9 Z10 Z11]  added at threshold 0.010548380020007964 with metric value  0.00430103143449943
+1.0 [Z0 Z2 Z5]  added at threshold 0.023626044532238814 with metric value  0.0018108717025034859
+1.0 [Z7 Z13]  added at threshold 0.025206796179330096 with metric value  0.182823017249101
+1.0 [Z5]  added at threshold 0.043606084369692835 with metric value  1.1530909282284412e-28
+1.0 [X6 X7 X8 X9 Y10 Y11 Y12 Y13]  added at threshold 0.049436615319646375 with metric value  0.004706861295193666
+1.0 [X6 X7 Y12 Y13]  added at threshold 0.05580147059602719 with metric value  0.07918773990635104
+1.0 [X6 X7 X12 X13]  added at threshold 0.05586657940071099 with metric value  0.07918773990634662
+1.0 [X8 X9 X10 X11]  added at threshold 0.05801722835969844 with metric value  0.08302513682257835
+1.0 [Z0]  added at threshold 0.3749914119826641 with metric value  4.841677111176281e-05
+1.0 [Z1]  added at threshold 0.3749914119826641 with metric value  9.984162050804155e-05
+Symmetries rotated to Z on qubits:  [0, 6, 1, 4, 7, 5, 9, 8, 2, 3, 10, 11, 12, 13]
+Qubits permuted as:
+0 -> 0
+1 -> 2
+2 -> 8
+3 -> 9
+4 -> 3
+5 -> 5
+6 -> 1
+7 -> 4
+8 -> 7
+9 -> 6
+10 -> 10
+11 -> 11
+12 -> 12
+13 -> 13
+Constructing unitary from factors and permutations...
+Entropy of cuts (log base = e):
+1 | 2 : -2.1849189124630242e-13
+2 | 3 : -2.1849189124630242e-13
+3 | 4 : -2.16715534406901e-13
+4 | 5 : -2.1982415887585347e-13
+5 | 6 : 0.41522943391040534
+6 | 7 : 0.4162647868489714
+7 | 8 : 0.4251967911967105
+8 | 9 : 0.4283801591173378
+9 | 10 : 0.4271894964317164
+10 | 11 : 0.4253274746263139
+11 | 12 : 1.053256479799718
+12 | 13 : 0.6964532317408284
+13 | 14 : 0.6292799510608622
+Symmetries rotated to Z on qubits:  [0, 6, 1, 4, 8, 7, 9, 5, 10, 12, 13, 11, 2, 3]
+Qubits permuted as:
+0 -> 0
+1 -> 2
+2 -> 12
+3 -> 13
+4 -> 3
+5 -> 7
+6 -> 1
+7 -> 5
+8 -> 4
+9 -> 6
+10 -> 8
+11 -> 11
+12 -> 9
+13 -> 10
+Constructing unitary from factors and permutations...
+Entropy of cuts (log base = e):
+1 | 2 : -2.2293278334480598e-13
+2 | 3 : -2.16715534406901e-13
+3 | 4 : -2.1360690993794858e-13
+4 | 5 : -2.1760371282660172e-13
+5 | 6 : 0.013991997183807954
+6 | 7 : 0.018173867127594216
+7 | 8 : 0.4285181580580533
+8 | 9 : 0.4283801591173372
+9 | 10 : 0.6468689876182694
+10 | 11 : 0.608737450568645
+11 | 12 : 0.4814473675829811
+12 | 13 : 0.01712375408472869
+13 | 14 : 0.00894793441873885
+/Users/praveenjayakumar/opt/anaconda3/envs/FermRefl/lib/python3.9/site-packages/cotengra/hyperoptimizers/hyper.py:55: UserWarning: Couldn't find `optuna`, `cmaes`, or `nevergrad` so will use completely random sampling in place of hyper-optimization. It is recommended to install one of these libraries for higher quality contraction paths.
+  warnings.warn(
+DMRG converged at bond dimension: 4
+4
+DMRG converged at bond dimension: 6
+6

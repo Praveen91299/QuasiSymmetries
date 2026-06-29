@@ -1,0 +1,14 @@
+system,Original,BS N/2 Comm,BS N Comm,HCT N/2 Comm,HCT N Comm,SEN N/2 Comm,QUAR N/2 Comm,BS-HCT N/2 Comm,BS-HCT N Comm
+H4chain_eqm,7,3,3,3,3,4,4,3,3
+H4chain_corr,10,4,4,3,3,4,5,3,3
+H4chain_diss,6,2,3,2,3,4,4,4,3
+H4rect_corr,8,3,3,3,3,4,8,3,3
+H4rect_diss,6,3,3,3,3,4,4,3,3
+LIH_eqm,4,3,2,4,4,3,4,4,4
+LIH_corr,4,4,2,4,4,3,4,4,4
+H2O_eqm,10,5,5,6,5,5,7,5,5
+H2O_corr,10,8,4,5,4,5,8,6,4
+H2O_diss,2,1,2,1,1,1,1,1,1
+N2frozen_eqm,40,20,16,20,16,18,30,18,16
+N2frozen_corr,40,18,12,30,30,20,30,18,30
+N2frozen_diss,50,12,12,14,12,14,16,16,12

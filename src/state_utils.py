@@ -186,6 +186,74 @@ def find_index(basis_state):
 
     return index
 
+def significant_determinants(wavefunction, threshold=1e-8):
+    """
+    Extract computational-basis determinants with significant amplitudes.
+
+    Parameters
+    ----------
+    wavefunction : numpy.ndarray, scipy.sparse matrix, or sparse array
+        State vector with shape ``(2**n_qubits,)``, ``(2**n_qubits, 1)``,
+        or ``(1, 2**n_qubits)``.
+    threshold : float, optional
+        Keep determinants whose coefficient magnitude is strictly greater
+        than this value.
+
+    Returns
+    -------
+    list[tuple[str, complex]]
+        ``(determinant, coefficient)`` pairs sorted by decreasing coefficient
+        magnitude. Determinants are occupation bitstrings in OpenFermion
+        ordering: qubit 0 is the leftmost (most-significant) bit.
+    """
+    if threshold < 0:
+        raise ValueError("threshold must be non-negative.")
+
+    if sp.sparse.issparse(wavefunction):
+        if wavefunction.ndim != 2 or 1 not in wavefunction.shape:
+            raise ValueError(
+                "wavefunction must be a row or column vector; "
+                f"got shape {wavefunction.shape}."
+            )
+        dimension = max(wavefunction.shape)
+        state = wavefunction.tocoo(copy=True)
+        state.sum_duplicates()
+        indices = state.row if wavefunction.shape[1] == 1 else state.col
+        coefficients = state.data
+    elif isinstance(wavefunction, np.ndarray):
+        if wavefunction.ndim == 1:
+            state = wavefunction
+        elif wavefunction.ndim == 2 and 1 in wavefunction.shape:
+            state = wavefunction.reshape(-1)
+        else:
+            raise ValueError(
+                "wavefunction must be a 1-D, row, or column vector; "
+                f"got shape {wavefunction.shape}."
+            )
+        dimension = state.size
+        indices = np.flatnonzero(np.abs(state) > threshold)
+        coefficients = state[indices]
+    else:
+        raise TypeError(
+            "wavefunction must be a NumPy array or a SciPy sparse matrix/array."
+        )
+
+    if dimension < 1 or dimension & (dimension - 1):
+        raise ValueError(
+            "wavefunction length must be a positive power of two; "
+            f"got {dimension}."
+        )
+
+    n_qubits = dimension.bit_length() - 1
+
+    significant = [
+        (format(int(index), f"0{n_qubits}b"), coefficient)
+        for index, coefficient in zip(indices, coefficients)
+        if abs(coefficient) > threshold
+    ]
+    significant.sort(key=lambda item: abs(item[1]), reverse=True)
+    return significant
+
 def get_reference_state(occ_no_state, tf = 'bk', gs_format = 'dm'):
     """
     Given some occupation numebr vector, make the density matrix that corresponds to that state.

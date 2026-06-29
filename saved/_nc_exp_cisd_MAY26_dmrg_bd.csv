@@ -1,0 +1,4 @@
+system,Original,BS N/2 Comm,BS N Comm,HCT N/2 Comm,HCT N Comm,SEN N/2 Comm,QUAR N/2 Comm,BS-HCT N/2 Comm,BS-HCT N Comm
+H4chain_eqm,7,3,3,3,3,4,4,3,3
+H4chain_corr,10,4,4,3,3,4,5,3,3
+H4chain_diss,6,2,3,2,3,4,4,4,3

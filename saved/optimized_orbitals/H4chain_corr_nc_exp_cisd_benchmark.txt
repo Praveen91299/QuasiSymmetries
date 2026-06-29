@@ -1,0 +1,47 @@
+H4chain_corr nc_exp_cisd benchmark datasets
+unoptimized_orbitals
+Symmetries:
+1.0 [Z0 Z3 Z4 Z7]
+1.0 [Z0 Z2 Z4 Z6]
+1.0 [Z0 Z1 Z4 Z5]
+1.0 [Z0 Z3 Z5 Z6]
+1.0 [Z0 Z1 Z4 Z7]
+1.0 [Z1]
+1.0 [Z0]
+1.0 [Z7]
+Non-commutator L1:  11.838097200113541
+Entropy:  0
+Commuting terms:  37
+Cut entropies:
+ 4.218847493575568e-15
+4.218847493575568e-15
+4.218847493575568e-15
+0.03101313113280907
+0.6637554787327563
+0.8623468417282556
+0.5598879546577762
+DMRG conv BD:  3
+Single sector energy:  0
+optimized_orbitals
+Symmetries:
+1.0 [Z0 Z3 Z4 Z7]
+1.0 [Z0 Z2 Z4 Z6]
+1.0 [Z0 Z1 Z4 Z5]
+1.0 [Z0 Z3 Z5 Z6]
+1.0 [Z0 Z1 Z4 Z7]
+1.0 [Z1]
+1.0 [Z0]
+1.0 [Z7]
+Non-commutator L1:  27.45987864273219
+Entropy:  0
+Commuting terms:  37
+Cut entropies:
+ 0.6266150138558213
+0.9249196059504471
+0.9124377760874548
+1.1942128046290896
+1.4081130831881437
+1.1213009587456577
+0.6924466943458577
+DMRG conv BD:  8
+Single sector energy:  0

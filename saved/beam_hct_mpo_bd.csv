@@ -1,0 +1,14 @@
+system,fermionic,qubit,BS N Comm,HCT N Comm
+H4chain_eqm,27,46,41,27
+H4chain_corr,27,46,34,27
+H4chain_diss,27,46,29,27
+H4rect_corr,27,26,33,20
+H4rect_diss,27,30,26,23
+LIH_eqm,51,46,110,117
+LIH_corr,51,46,71,57
+H2O_eqm,53,92,242,249
+H2O_corr,53,92,190,254
+H2O_diss,53,62,119,148
+N2frozen_eqm,83,103,427,328
+N2frozen_corr,83,103,253,434
+N2frozen_diss,83,103,357,438

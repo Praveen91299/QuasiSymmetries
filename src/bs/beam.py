@@ -367,8 +367,17 @@ def local_swap_refine(
 # ============================================================
 # Top-level workflow
 # ============================================================
+import warnings
 
-def find_commuting_symmetry_generators(
+def find_commuting_symmetry_generators(*args, **kwargs):
+    warnings.warn(
+        "find_commuting_symmetry_generators is deprecated; use BeamSearch_Symmetries instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return BeamSearch_Symmetries(*args, **kwargs)
+        
+def BeamSearch_Symmetries(
     hamiltonian: QubitOperator,
     *,
     target_rank: int = None,

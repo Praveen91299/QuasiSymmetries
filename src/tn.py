@@ -323,7 +323,7 @@ def get_coeffs_and_ops(of_op, n_qubits):
 
 def find_dmrg_conv_bd_quimb(Hq, n_qubits, exact_energy, bd_list = None, tol=1.6e-3, n_sweeps=10, 
                             reps=1, verbose=False, compress_cutoff = 1e-10, sweep_tol = 1e-6,
-                            noise = 1e-3, bsz = 2, guess_mps = None, seed=None):
+                            noise = 1e-3, bsz = 2, guess_mps = None, seed=None, return_data=False):
 
     mpo = MPO_from_QubitOperator(Hq, max_bond = None, mpo_cutoff = compress_cutoff, 
                                  verbose = verbose, compression_freq = 20)
@@ -358,8 +358,22 @@ def find_dmrg_conv_bd_quimb(Hq, n_qubits, exact_energy, bd_list = None, tol=1.6e
             if abs(dmrg.energy - exact_energy) <= tol:
                 print("DMRG converged at bond dimension: {}".format(bd))
                 
-                return bd, dmrg.energy
+                if return_data:
+                    print("Returning MPO...")
+                    data = {
+                        "mpo": mpo
+                    }
+                    return bd, dmrg.energy, data
+                else:
+                    return bd, dmrg.energy
             
     print(f'DMRG not converged at bd = {bd_list[-1]}')
-
-    return bd_list[-1], dmrg.energy
+    
+    if return_data:
+        print("Returning MPO...")
+        data = {
+            "mpo": mpo
+        }
+        return bd_list[-1], dmrg.energy, data
+    else:
+        return bd_list[-1], dmrg.energy

@@ -208,7 +208,7 @@ class BenchmarkData:
         return fig
 
 def benchmark_syms(list_syms, HQ, fci_gs, fci_e, n_qubits, N_2_sym=False, verbose=True, print_to_file=None, tag="",
-                   compress_cutoff = 1e-10):
+                   compress_cutoff = 1e-10, return_processed_data =False, log_base=np.e):
     """
     Run all benchmarks for symmetries
 
@@ -227,12 +227,12 @@ def benchmark_syms(list_syms, HQ, fci_gs, fci_e, n_qubits, N_2_sym=False, verbos
     nc_l1 = universal_grading(list_syms, HQ, verbose=verbose)
     c = len(find_commuting_paulis(HQ, list_syms, verbose=verbose))
 
-    ent, H_perm, U, gs_rot = get_permuted_bipartite_entanglement(list_syms, HQ, n_qubits, fci_e, fci_gs, verbose, True, True, 'e', False)
+    ent, H_perm, U, gs_rot = get_permuted_bipartite_entanglement(list_syms, HQ, n_qubits, fci_e, fci_gs, verbose, True, True, log_base, False)
     
     gs_rot_mps = qtn.MatrixProductState.from_dense(gs_rot, cutoff = 1e-20)     
-    dmrg_bd, _ = find_dmrg_conv_bd_quimb(H_perm, n_qubits, fci_e, tol=1.6e-3, n_sweeps=100, 
+    dmrg_bd, _, dmrg_data = find_dmrg_conv_bd_quimb(H_perm, n_qubits, fci_e, tol=1.6e-3, n_sweeps=100, 
                         reps=1, verbose=False, compress_cutoff = 1e-20, sweep_tol = 1e-6,
-                        noise = 1e0, bsz=2, guess_mps = gs_rot_mps, seed=0)
+                        noise = 1e0, bsz=2, guess_mps = gs_rot_mps, seed=0, return_data=True)
 
     #ent and dmrg
     if N_2_sym:
@@ -248,7 +248,16 @@ def benchmark_syms(list_syms, HQ, fci_gs, fci_e, n_qubits, N_2_sym=False, verbos
     if print_to_file is not None:
         data.write_to_file(print_to_file)
 
-    return data
+    if return_processed_data:
+        processed_data = {
+            "H_perm": H_perm,
+            "U": U,
+            "gs_rot": gs_rot,
+            "mpo": dmrg_data["mpo"]
+        }
+        return data, processed_data
+    else:
+        return data
 
 def main():
     import pandas as pd

@@ -1,0 +1,80 @@
+Data obtained using pyscf (see code below)
+
+n2 correlated orbital information
+converged SCF energy = -107.184846460802
+Orbital 0 | Energy: -15.4187 Hartree | Label: A1u
+Orbital 1 | Energy: -15.4183 Hartree | Label: A1g
+Orbital 2 | Energy: -1.0936 Hartree | Label: A1g
+Orbital 3 | Energy: -0.7917 Hartree | Label: A1u
+Orbital 4 | Energy: -0.4144 Hartree | Label: A1g
+Orbital 5 | Energy: -0.3312 Hartree | Label: E1uy
+Orbital 6 | Energy: -0.3312 Hartree | Label: E1ux
+Orbital 7 | Energy: 0.1295 Hartree | Label: E1gx
+Orbital 8 | Energy: 0.1295 Hartree | Label: E1gy
+Orbital 9 | Energy: 0.4271 Hartree | Label: A1u
+
+h2o correlated
+converged SCF energy = -74.3528097843953
+Orbital 0 | Energy: -20.3114 Hartree | Label: A1
+Orbital 1 | Energy: -1.1269 Hartree | Label: A1
+Orbital 2 | Energy: -0.4103 Hartree | Label: B1
+Orbital 3 | Energy: -0.2818 Hartree | Label: B2
+Orbital 4 | Energy: -0.2618 Hartree | Label: A1
+Orbital 5 | Energy: 0.0944 Hartree | Label: A1
+Orbital 6 | Energy: 0.1065 Hartree | Label: B2
+
+lih correlated
+converged SCF energy = -7.62497563013132
+Orbital 0 | Energy: -2.3830 Hartree | Label: A1
+Orbital 1 | Energy: -0.1301 Hartree | Label: A1
+Orbital 2 | Energy: 0.0345 Hartree | Label: A1
+Orbital 3 | Energy: 0.1469 Hartree | Label: E1x
+Orbital 4 | Energy: 0.1469 Hartree | Label: E1y
+Orbital 5 | Energy: 0.1625 Hartree | Label: A1
+
+"""
+import openfermion
+from openfermion.chem import MolecularData
+from openfermionpyscf import run_pyscf
+from pyscf import gto, scf, symm
+
+
+# 1. Initialize OpenFermion's container
+geometry = [('Li', (0.0, 0.0, -2.0)), ('H', (0.0, 0.0, 2.0))] #[('N', (0.0, 0.0, -0.8)), ('N', (0.0, 0.0, 0.8))]#
+molecule = MolecularData(geometry, basis='sto-3g', multiplicity=1)
+
+# 2. Build the underlying PySCF molecule manually to enforce symmetry
+pyscf_mol = gto.Mole()
+pyscf_mol.atom = geometry
+pyscf_mol.basis = 'sto-3g'
+pyscf_mol.spin = 0  # spin = 2S = multiplicity - 1
+pyscf_mol.symmetry = True  # <--- Explicitly turns on symmetry tracking
+pyscf_mol.build()
+
+# 3. Create the standard RHF calculation object
+pyscf_scf = scf.RHF(pyscf_mol)
+pyscf_scf.kernel()  # Run the Hartree-Fock calculation
+
+# 4. Bind the completed PySCF objects to OpenFermion's expected internal dictionary
+molecule._pyscf_data = {
+    'mol': pyscf_mol,
+    'scf': pyscf_scf
+}
+
+# 5. Populate OpenFermion's default orbital energy arrays from the manual run
+molecule.orbital_energies = pyscf_scf.mo_energy
+molecule.n_orbitals = len(pyscf_scf.mo_energy)
+
+# 6. Extract the clean symmetry labels from PySCF
+orbital_labels = symm.label_orb_symm(
+    pyscf_mol, 
+    pyscf_mol.irrep_name, 
+    pyscf_mol.symm_orb, 
+    pyscf_scf.mo_coeff
+)
+
+# 7. Print the results
+for i, (energy, label) in enumerate(zip(molecule.orbital_energies, orbital_labels)):
+    print(f"Orbital {i} | Energy: {energy:.4f} Hartree | Label: {label}")
+# Create a quick classification map for the D2h / C2v groups
+"""
