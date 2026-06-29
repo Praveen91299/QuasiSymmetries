@@ -1,3 +1,3 @@
-system,Original ferm,Original Qubit,BS N/2 Comm,BS N Comm,HCT N/2 Comm,HCT N Comm,SEN N/2 Comm,Pauli BLISS+HCT($n_q$),HCT fiedler,BS fiedler
-H4chain_corr,3,10,4,4,3,3,4,3,3,3
-H4chain_diss,3,6,2,3,2,3,4,2,2,2
+system,Original Qubit,BS N/2 Comm,BS N Comm,HCT N/2 Comm,HCT N Comm,SEN N/2 Comm,Pauli BLISS+HCT($n_q$),HCT fiedler,BS fiedler
+H4chain_corr,10,4,4,3,3,4,3,3,3
+H4chain_diss,6,2,3,2,3,4,2,2,2

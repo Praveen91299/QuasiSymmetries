@@ -224,27 +224,7 @@ for system in systems:
         for i, e in enumerate(ents_og):
             print("{}|{}: {}".format(i+1, i+2, e), file=f)
 
-    #ferm
-    import importlib
-    import test_mpo_ferm
-
-    importlib.reload(test_mpo_ferm)
-
-    mpodata = test_mpo_ferm.benchmark_system(system)
-    ferm_dmrg_bd = mpodata["mps_converged_bond_dimension"]
-
-    if mpodata["converged"]:
-        print("\nFermionic MPS bd for convergence:", mpodata["mps_converged_bond_dimension"])
-        print("Fermionic MPO bond dimension:", mpodata["mpo_bond_dimension"])
-
-        with open(output_filename, 'a') as f:
-            print("\nFermionic MPS bd for convergence:", mpodata["mps_converged_bond_dimension"], file=f)
-            print("Fermionic MPO bond dimension:", mpodata["mpo_bond_dimension"], file=f)
-    else:
-        print("\nFermionic MPO bond dimension:", mpodata["mpo_bond_dimension"])
-        with open(output_filename, 'a') as f:
-            print("Fermionic MPO bond dimension:", mpodata["mpo_bond_dimension"], file=f)
-        print("Warning: DMRG not converged!")
+    # Fermionic MPO/MPS benchmarks are omitted because they require pyblock2.
 
     #qubit
     compress_cutoff = 1e-20
@@ -274,13 +254,13 @@ for system in systems:
     #write fiedler info to file
 
     #add to csv
-    cols = ["system"] + ["Original ferm", "Original Qubit"] + [data.tag for data in datasets] + ["HCT fiedler", "BS fiedler"]
-    bd_rows.append(dict(zip(cols, [system] + [ferm_dmrg_bd, dmrg_bd] + [data.dmrg_bd for data in datasets] + [hct_N_fiedler_info["dmrg_bd"], bs_N_fiedler_info["dmrg_bd"]])))
+    cols = ["system", "Original Qubit"] + [data.tag for data in datasets] + ["HCT fiedler", "BS fiedler"]
+    bd_rows.append(dict(zip(cols, [system, dmrg_bd] + [data.dmrg_bd for data in datasets] + [hct_N_fiedler_info["dmrg_bd"], bs_N_fiedler_info["dmrg_bd"]])))
     df = pd.DataFrame(bd_rows)
     df.to_csv(output_filename + "_dmrg_bd.csv", index=False)
 
-    mpo_cols = ["system", "Original ferm", "Original Qubit", "HCT N", "BS N", "HCT fiedler", "BS fiedler"]
-    mpo_bd_rows.append(dict(zip(mpo_cols, [system, mpodata["mpo_bond_dimension"], og_mpo_bd,
+    mpo_cols = ["system", "Original Qubit", "HCT N", "BS N", "HCT fiedler", "BS fiedler"]
+    mpo_bd_rows.append(dict(zip(mpo_cols, [system, og_mpo_bd,
                                           hct_N_mpo_bd, bs_N_mpo_bd,
                                           hct_N_fiedler_info["mpo_bd"], bs_N_fiedler_info["mpo_bd"]])))
     pd.DataFrame(mpo_bd_rows).to_csv(output_filename + "_mpo_bd.csv", index=False)

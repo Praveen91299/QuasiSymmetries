@@ -1,3 +1,3 @@
-system,Original ferm,Original Qubit,HCT N,BS N,HCT fiedler,BS fiedler
-H4chain_corr,27,46,27,34,40,34
-H4chain_diss,27,46,27,29,40,46
+system,Original Qubit,HCT N,BS N,HCT fiedler,BS fiedler
+H4chain_corr,46,27,34,40,34
+H4chain_diss,46,27,29,40,46
