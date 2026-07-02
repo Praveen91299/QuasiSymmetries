@@ -227,7 +227,19 @@ def benchmark_syms(list_syms, HQ, fci_gs, fci_e, n_qubits, N_2_sym=False, verbos
     nc_l1 = universal_grading(list_syms, HQ, verbose=verbose)
     c = len(find_commuting_paulis(HQ, list_syms, verbose=verbose))
 
-    ent, H_perm, U, gs_rot = get_permuted_bipartite_entanglement(list_syms, HQ, n_qubits, fci_e, fci_gs, verbose, True, True, log_base, False)
+    ent, H_perm, U, gs_rot, clifford_info = get_permuted_bipartite_entanglement(
+        list_syms,
+        HQ,
+        n_qubits,
+        fci_e,
+        fci_gs,
+        verbose,
+        True,
+        True,
+        log_base,
+        False,
+        return_clifford_info=True,
+    )
     
     gs_rot_mps = qtn.MatrixProductState.from_dense(gs_rot, cutoff = 1e-20)     
     dmrg_bd, _, dmrg_data = find_dmrg_conv_bd_quimb(H_perm, n_qubits, fci_e, tol=1.6e-3, n_sweeps=100, 
@@ -253,7 +265,8 @@ def benchmark_syms(list_syms, HQ, fci_gs, fci_e, n_qubits, N_2_sym=False, verbos
             "H_perm": H_perm,
             "U": U,
             "gs_rot": gs_rot,
-            "mpo": dmrg_data["mpo"]
+            "mpo": dmrg_data["mpo"],
+            "clifford_info": clifford_info,
         }
         return data, processed_data
     else:

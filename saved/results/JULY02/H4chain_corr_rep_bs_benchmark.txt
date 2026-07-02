@@ -1,0 +1,536 @@
+H4chain_corr repeated beam-search benchmarks
+Repeated beam search iteration 1
+Symmetries:
+1.0 [Z0 Z3 Z4 Z7]
+1.0 [Z0 Z2 Z4 Z6]
+1.0 [Z0 Z1 Z4 Z5]
+1.0 [Y0 Z1 Y2 Y4 Z5 Y6]
+1.0 [Z0 Z3 Z5 Z6]
+1.0 [Z7]
+1.0 [X1 X2 X5 X6]
+1.0 [Z0 Z5 Z6]
+Non-commutator L1:  17.25508633150351
+Entropy:  0
+Commuting terms:  9
+Cut entropies:
+ 5.107025913275681e-15
+5.107025913275681e-15
+5.107025913275681e-15
+0.5711288126454128
+0.5917785050787003
+0.8888422534298356
+0.6382820482821876
+DMRG conv BD:  4
+Single sector energy:  0
+Symmetries in original frame:
+1.0 [Z0 Z3 Z4 Z7]
+1.0 [Z0 Z2 Z4 Z6]
+1.0 [Z0 Z1 Z4 Z5]
+1.0 [Y0 Z1 Y2 Y4 Z5 Y6]
+1.0 [Z0 Z3 Z5 Z6]
+1.0 [Z7]
+1.0 [X1 X2 X5 X6]
+1.0 [Z0 Z5 Z6]
+Forward Clifford factors for next frame:
+  H(0)
+  H(3)
+  H(4)
+  H(7)
+  CNOT(0->3)
+  CNOT(0->4)
+  CNOT(0->7)
+  H(0)
+  H(2)
+  H(6)
+  CNOT(2->3)
+  CNOT(2->6)
+  CNOT(2->7)
+  H(2)
+  H(1)
+  H(5)
+  CNOT(1->3)
+  CNOT(1->5)
+  CNOT(1->7)
+  H(1)
+  H(4)
+  H(6)
+  CNOT(3->4)
+  CNOT(3->6)
+  CNOT(3->7)
+  H(3)
+  H(4)
+  H(6)
+  CNOT(4->5)
+  CNOT(4->6)
+  CNOT(4->7)
+  H(4)
+  H(7)
+  H(5)
+  H(6)
+  CNOT(5->6)
+  H(5)
+  H(6)
+Qubit permutation: [0, 2, 1, 3, 4, 6, 7, 5]
+Repeated beam search iteration 2
+Symmetries:
+1.0 [Z1]
+1.0 [Z0]
+1.0 [Z1 Z2]
+1.0 [Z1 Z6]
+1.0 [Z1 Z4]
+1.0 [Z2 Z3]
+1.0 [Z5 Z6]
+1.0 [Z5 Z7]
+Non-commutator L1:  23.190950923518507
+Entropy:  0
+Commuting terms:  9
+Cut entropies:
+ 7.105427357600926e-15
+7.105427357600926e-15
+7.105427357600926e-15
+0.49470214506572613
+0.515845875329561
+0.8873039868728234
+0.6382820482821884
+DMRG conv BD:  4
+Single sector energy:  0
+Symmetries in original frame:
+1.0 [Z2 Z3 Z6 Z7]
+1.0 [Z0 Z3 Z4 Z7]
+1.0 [Z1 Z2 Z5 Z6]
+-1.0 [X1 Y2 Z3 X5 Y6 Z7]
+1.0 [Z2 Z3 Z4 Z5]
+1.0 [X0 Z1 X2 X4 Z5 X6]
+1.0 [X1 X2 X5 X6 Z7]
+1.0 [X0 X2 X4 X6 Z7]
+Forward Clifford factors for next frame:
+  H(1)
+  H(1)
+  H(0)
+  H(0)
+  H(2)
+  H(2)
+  H(6)
+  H(6)
+  H(4)
+  H(4)
+  H(3)
+  H(3)
+  H(5)
+  H(5)
+  H(7)
+  H(7)
+Qubit permutation: [1, 0, 2, 5, 4, 6, 3, 7]
+Repeated beam search iteration 3
+Symmetries:
+1.0 [Z1]
+1.0 [Z0]
+1.0 [Z1 Z2]
+1.0 [Z2 Z5]
+1.0 [Z2 Z3]
+1.0 [Z1 Z4]
+1.0 [Z3 Z6]
+1.0 [Z6 Z7]
+Non-commutator L1:  23.190950923518507
+Entropy:  0
+Commuting terms:  9
+Cut entropies:
+ 9.547918011776209e-15
+9.547918011776209e-15
+9.547918011776209e-15
+0.5711288126454146
+0.8948631850328911
+0.8873039868728234
+0.6382820482821894
+DMRG conv BD:  4
+Single sector energy:  0
+Symmetries in original frame:
+1.0 [Z0 Z3 Z4 Z7]
+1.0 [Z2 Z3 Z6 Z7]
+1.0 [Z0 Z1 Z4 Z5]
+1.0 [X0 Z1 X2 X4 Z5 X6]
+-1.0 [Y1 X2 Z3 Y5 X6 Z7]
+1.0 [Z0 Z3 Z5 Z6]
+1.0 [X1 X2 X5 X6 Z7]
+1.0 [X0 X2 X4 X6 Z7]
+Forward Clifford factors for next frame:
+  H(1)
+  H(1)
+  H(0)
+  H(0)
+  H(2)
+  H(2)
+  H(5)
+  H(5)
+  H(3)
+  H(3)
+  H(4)
+  H(4)
+  H(6)
+  H(6)
+  H(7)
+  H(7)
+Qubit permutation: [1, 0, 2, 4, 5, 3, 6, 7]
+Repeated beam search iteration 4
+Symmetries:
+1.0 [Z1]
+1.0 [Z0]
+1.0 [Z1 Z2]
+1.0 [Z0 Z3 Z4 Z7]
+1.0 [X6]
+1.0 [Z2 Z3]
+1.0 [Z2 Z5]
+1.0 [Z1 Z4]
+Non-commutator L1:  22.630351973058076
+Entropy:  0
+Commuting terms:  9
+Cut entropies:
+ 1.2212453270876498e-14
+1.2212453270876498e-14
+1.2212453270876498e-14
+0.5529265781866814
+0.9080193836529834
+0.7196269567404434
+0.692379217119615
+DMRG conv BD:  4
+Single sector energy:  0
+Symmetries in original frame:
+1.0 [Z2 Z3 Z6 Z7]
+1.0 [Z0 Z3 Z4 Z7]
+1.0 [Z1 Z2 Z5 Z6]
+1.0 [Z0 X1 X2 Z4 X5 X6]
+1.0 [X0 X3 X4 X7]
+1.0 [X0 Z1 X2 X4 Z5 X6]
+1.0 [Z1 Z3 Z4 Z6]
+-1.0 [X1 Y2 Z3 X5 Y6 Z7]
+Forward Clifford factors for next frame:
+  H(1)
+  H(1)
+  H(0)
+  H(0)
+  H(2)
+  H(2)
+  H(3)
+  H(4)
+  H(7)
+  CNOT(3->4)
+  CNOT(3->7)
+  H(3)
+  H(6)
+  CNOT(4->7)
+  H(4)
+  H(5)
+  H(5)
+  H(7)
+Qubit permutation: [1, 0, 2, 3, 5, 6, 4, 7]
+Repeated beam search iteration 5
+Symmetries:
+1.0 [Z1]
+1.0 [Z0]
+1.0 [Z1 Z2]
+1.0 [Z0 Z3 Z4 Z7]
+1.0 [Z3 Z5]
+1.0 [Z5 Z7]
+1.0 [Z2 Z3]
+1.0 [Z1 Z6]
+Non-commutator L1:  22.043447776820752
+Entropy:  0
+Commuting terms:  9
+Cut entropies:
+ 1.4876988529976766e-14
+1.4876988529976766e-14
+1.4876988529976766e-14
+0.5711288126454167
+0.6709107933297921
+0.6661341114835038
+0.031013131132819546
+DMRG conv BD:  4
+Single sector energy:  0
+Symmetries in original frame:
+1.0 [Z0 Z3 Z4 Z7]
+1.0 [Z2 Z3 Z6 Z7]
+1.0 [Z0 Z1 Z4 Z5]
+1.0 [X1 Z2 X3 X5 Z6 X7]
+1.0 [X0 X2 Z3 X4 X6 Z7]
+1.0 [X1 X2 X5 X6]
+-1.0 [Y1 X2 Y5 X6]
+1.0 [Z0 Z3 Z5 Z6]
+Forward Clifford factors for next frame:
+  H(1)
+  H(1)
+  H(0)
+  H(0)
+  H(2)
+  H(2)
+  H(3)
+  H(4)
+  H(7)
+  CNOT(3->4)
+  CNOT(3->7)
+  H(3)
+  H(5)
+  CNOT(4->5)
+  CNOT(4->7)
+  H(4)
+  CNOT(5->7)
+  H(5)
+  H(7)
+  H(6)
+  H(6)
+Qubit permutation: [1, 0, 2, 3, 4, 5, 7, 6]
+Repeated beam search iteration 6
+Symmetries:
+1.0 [Z1]
+1.0 [Z0]
+1.0 [Z1 Z2]
+1.0 [Z3 Z4]
+1.0 [Z0 Z3 Z5 Z6]
+1.0 [Z2 Z3]
+1.0 [Z2 Z5]
+1.0 [Z7]
+Non-commutator L1:  22.043447776820752
+Entropy:  0
+Commuting terms:  9
+Cut entropies:
+ 1.731947918415199e-14
+1.731947918415199e-14
+1.731947918415199e-14
+0.5711288126454181
+0.7093776095812536
+0.6661341114835053
+0.031013131132821902
+DMRG conv BD:  3
+Single sector energy:  0
+Symmetries in original frame:
+1.0 [Z2 Z3 Z6 Z7]
+1.0 [Z0 Z3 Z4 Z7]
+1.0 [Z1 Z2 Z5 Z6]
+1.0 [X0 X2 Z3 X4 X6 Z7]
+-1.0 [Y0 X3 Y4 X7]
+-1.0 [Y1 X3 Y5 X7]
+-1.0 [Y1 X2 Z3 Y5 X6 Z7]
+1.0 [Z4 Z5 Z6 Z7]
+Forward Clifford factors for next frame:
+  H(1)
+  H(1)
+  H(0)
+  H(0)
+  H(2)
+  H(2)
+  H(3)
+  H(4)
+  CNOT(3->4)
+  H(3)
+  H(5)
+  H(6)
+  CNOT(4->5)
+  CNOT(4->6)
+  H(4)
+  CNOT(5->6)
+  H(5)
+  H(6)
+  H(7)
+  H(7)
+Qubit permutation: [1, 0, 2, 3, 4, 5, 6, 7]
+Repeated beam search iteration 7
+Symmetries:
+1.0 [Z1]
+1.0 [Z0]
+1.0 [Z1 Z2]
+1.0 [Z2 Z3]
+1.0 [Z3 Z5]
+1.0 [Z3 Z4]
+1.0 [Z5 Z6]
+1.0 [Z7]
+Non-commutator L1:  22.630351973058072
+Entropy:  0
+Commuting terms:  9
+Cut entropies:
+ 1.9984014443252218e-14
+1.9984014443252218e-14
+1.9984014443252218e-14
+0.5711288126454193
+0.7120565718774954
+0.666134111483506
+0.03101313113282469
+DMRG conv BD:  3
+Single sector energy:  0
+Symmetries in original frame:
+1.0 [Z0 Z3 Z4 Z7]
+1.0 [Z2 Z3 Z6 Z7]
+1.0 [Z0 Z1 Z4 Z5]
+1.0 [X0 Z1 X2 X4 Z5 X6]
+1.0 [X1 X2 Z3 X5 X6 Z7]
+-1.0 [X0 Y3 X4 Y7]
+1.0 [X1 X2 X5 X6]
+1.0 [Z4 Z5 Z6 Z7]
+Forward Clifford factors for next frame:
+  H(1)
+  H(1)
+  H(0)
+  H(0)
+  H(2)
+  H(2)
+  H(3)
+  H(3)
+  H(5)
+  H(5)
+  H(4)
+  H(4)
+  H(6)
+  H(6)
+  H(7)
+  H(7)
+Qubit permutation: [1, 0, 2, 3, 5, 4, 6, 7]
+Repeated beam search iteration 8
+Symmetries:
+1.0 [Z1]
+1.0 [Z0]
+1.0 [Z1 Z2]
+1.0 [Z2 Z3]
+1.0 [Z5 Z6]
+1.0 [Z3 Z5]
+1.0 [Z3 Z4]
+1.0 [Z7]
+Non-commutator L1:  22.630351973058072
+Entropy:  0
+Commuting terms:  9
+Cut entropies:
+ 2.2426505097427408e-14
+2.2426505097427408e-14
+2.2426505097427408e-14
+0.57112881264542
+0.8977773305265957
+0.6217566018932843
+0.031013131132827037
+DMRG conv BD:  4
+Single sector energy:  0
+Symmetries in original frame:
+1.0 [Z2 Z3 Z6 Z7]
+1.0 [Z0 Z3 Z4 Z7]
+1.0 [Z1 Z2 Z5 Z6]
+1.0 [X0 Z1 X2 X4 Z5 X6]
+1.0 [X0 X3 X4 X7]
+-1.0 [X0 Y3 X4 Y7]
+1.0 [X1 X2 Z3 X5 X6 Z7]
+1.0 [Z4 Z5 Z6 Z7]
+Forward Clifford factors for next frame:
+  H(1)
+  H(1)
+  H(0)
+  H(0)
+  H(2)
+  H(2)
+  H(3)
+  H(3)
+  H(5)
+  H(6)
+  CNOT(5->6)
+  H(5)
+  H(6)
+  H(4)
+  H(4)
+  H(7)
+  H(7)
+Qubit permutation: [1, 0, 2, 3, 6, 4, 5, 7]
+Repeated beam search iteration 9
+Symmetries:
+1.0 [Z1]
+1.0 [Z0]
+1.0 [Z1 Z2]
+1.0 [Z2 Z3]
+1.0 [Z5 Z6]
+1.0 [Z3 Z6]
+1.0 [Z1 Z4]
+1.0 [Z7]
+Non-commutator L1:  22.630351973058072
+Entropy:  0
+Commuting terms:  9
+Cut entropies:
+ 2.509104035652759e-14
+2.509104035652759e-14
+2.509104035652759e-14
+0.5711288126454215
+0.9081869816161212
+0.4264318196826553
+0.031013131132829393
+DMRG conv BD:  4
+Single sector energy:  0
+Symmetries in original frame:
+1.0 [Z0 Z3 Z4 Z7]
+1.0 [Z2 Z3 Z6 Z7]
+1.0 [Z0 Z1 Z4 Z5]
+1.0 [X0 Z1 X2 X4 Z5 X6]
+1.0 [X1 X2 X5 X6]
+1.0 [X1 X2 Z3 X5 X6 Z7]
+1.0 [Y0 Y3 Y4 Y7]
+1.0 [Z4 Z5 Z6 Z7]
+Forward Clifford factors for next frame:
+  H(1)
+  H(1)
+  H(0)
+  H(0)
+  H(2)
+  H(2)
+  H(3)
+  H(3)
+  H(5)
+  H(6)
+  CNOT(5->6)
+  H(5)
+  H(6)
+  H(4)
+  H(4)
+  H(7)
+  H(7)
+Qubit permutation: [1, 0, 2, 3, 6, 4, 5, 7]
+Repeated beam search iteration 10
+Symmetries:
+1.0 [Z1]
+1.0 [Z0]
+1.0 [Z1 Z2]
+1.0 [Z2 Z3]
+1.0 [Z3 Z5]
+1.0 [Z1 Z4]
+1.0 [Z1 Z6]
+1.0 [Z7]
+Non-commutator L1:  22.630351973058072
+Entropy:  0
+Commuting terms:  9
+Cut entropies:
+ 2.7089441800852718e-14
+2.7089441800852718e-14
+2.7089441800852718e-14
+0.5711288126454224
+0.5691591079604407
+0.42643181968265614
+0.03101313113283153
+DMRG conv BD:  4
+Single sector energy:  0
+Symmetries in original frame:
+1.0 [Z2 Z3 Z6 Z7]
+1.0 [Z0 Z3 Z4 Z7]
+1.0 [Z1 Z2 Z5 Z6]
+1.0 [X0 Z1 X2 X4 Z5 X6]
+1.0 [X1 X2 Z3 X5 X6 Z7]
+-1.0 [X1 Y2 Z3 X5 Y6 Z7]
+-1.0 [X0 Z2 Y3 X4 Z6 Y7]
+1.0 [Z4 Z5 Z6 Z7]
+Forward Clifford factors for next frame:
+  H(1)
+  H(1)
+  H(0)
+  H(0)
+  H(2)
+  H(2)
+  H(3)
+  H(3)
+  H(5)
+  H(5)
+  H(4)
+  H(4)
+  H(6)
+  H(6)
+  H(7)
+  H(7)
+Qubit permutation: [1, 0, 2, 3, 5, 4, 6, 7]

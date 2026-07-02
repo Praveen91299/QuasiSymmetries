@@ -187,6 +187,18 @@ def test_full_clifford_optional_and_matches_sequence():
     assert_operator_matches_dense(direct, dense, 2)
 
 
+def test_inverse_clifford_factor_sequence_recovers_pauli():
+    op = -QubitOperator("Y0 X1 Z2")
+    sequence = ["Sdg(0)", "H(1)", "CNOT(1->2)", "H(0)"]
+    transformed = cs.conjugate_qubit_operator_by_clifford_factors_exact(
+        op, sequence, n_qubits=3
+    )
+    recovered = cs.inverse_conjugate_qubit_operator_by_clifford_factors_exact(
+        transformed, sequence, n_qubits=3
+    )
+    assert oq_equal(recovered, op)
+
+
 # ---------------- Hamiltonian and spectra ----------------
 
 

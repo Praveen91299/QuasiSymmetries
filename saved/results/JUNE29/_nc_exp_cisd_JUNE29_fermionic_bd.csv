@@ -1,0 +1,5 @@
+system,Fermionic MPO,Fermionic MPS,converged
+H4chain_corr,27,3,True
+H4chain_diss,27,3,True
+H8cube_eqm,83,30,True
+H8cube_3A,83,60,True

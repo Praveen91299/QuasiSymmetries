@@ -431,7 +431,19 @@ def get_bipartite_mps(HQ, n_qubits, target_energy=None, bd=100, n_sweeps=100, to
 
     return driver.get_bipartite_entanglement(ket), ket
 
-def get_permuted_bipartite_entanglement(symmetries, HQ, n_qubits, fci_energy=None, fci_gs=None, verbose=False, return_state=False, return_U=False, log_base='e', use_dmrg=False):
+def get_permuted_bipartite_entanglement(
+    symmetries,
+    HQ,
+    n_qubits,
+    fci_energy=None,
+    fci_gs=None,
+    verbose=False,
+    return_state=False,
+    return_U=False,
+    log_base='e',
+    use_dmrg=False,
+    return_clifford_info=False,
+):
     """
     Get bi-partite entanglement across all partitions after diagonalizing symmetries and localizing them to qubits 0, 1, 2, ... in order
     *Modified version of get_ent with dmrg calculations for speed.*
@@ -449,6 +461,11 @@ def get_permuted_bipartite_entanglement(symmetries, HQ, n_qubits, fci_energy=Non
     Ucliff_sparse = sparse_clifford_unitary(clifford.clifford_result, n_qubits)
     Uperm_sparse = sparse_qubit_permutation_unitary(perm, True)
     U = Uperm_sparse @ Ucliff_sparse
+    clifford_info = {
+        "factor_descriptions": list(clifford.clifford_result.factor_descriptions),
+        "parsed_gates": list(clifford.clifford_result.parsed_gates),
+        "permutation": list(perm),
+    }
 
     #solve
     if use_dmrg:
@@ -470,15 +487,18 @@ def get_permuted_bipartite_entanglement(symmetries, HQ, n_qubits, fci_energy=Non
         for i, e in enumerate(ents):
             print("{} | {} : {}".format(i+1, i+2, e))
 
-    #construct clifford
+    # Construct the requested return tuple without changing existing callers.
     if return_U:
-
         if return_state:
-            return ents, H_perm, U, gs
+            result = (ents, H_perm, U, gs)
         else:
-            return ents, H_perm, U
+            result = (ents, H_perm, U)
     else:
         if return_state:
-            return ents, H_perm, gs
+            result = (ents, H_perm, gs)
         else:
-            return ents, H_perm
+            result = (ents, H_perm)
+
+    if return_clifford_info:
+        return (*result, clifford_info)
+    return result

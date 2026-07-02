@@ -327,6 +327,26 @@ def parse_factor_descriptions(factor_descriptions: Sequence[Union[str, ParsedGat
     return parsed
 
 
+def invert_clifford_factor_sequence(
+    factor_descriptions: Sequence[Union[str, ParsedGate]],
+) -> List[ParsedGate]:
+    """Return the gate sequence implementing the inverse Clifford."""
+    inverse: List[ParsedGate] = []
+    for gate in reversed(parse_factor_descriptions(factor_descriptions)):
+        name = gate[0]
+        if name == "Sdg":
+            inverse.append(("S", int(gate[1])))
+        elif name == "S":
+            inverse.append(("Sdg", int(gate[1])))
+        elif name == "H":
+            inverse.append(("H", int(gate[1])))
+        elif name == "CNOT":
+            inverse.append(("CNOT", int(gate[1]), int(gate[2])))
+        else:
+            raise ValueError(f"Unknown parsed gate: {gate!r}")
+    return inverse
+
+
 def conjugate_single_term_by_parsed_gates_exact(
     term: Term,
     coeff: complex,
@@ -416,6 +436,21 @@ def conjugate_qubit_operator_by_clifford_factors_exact(
 # a phase-dropping path.
 conjugate_single_pauli_by_factor_sequence = conjugate_single_pauli_by_factor_sequence_exact
 conjugate_qubit_operator_by_clifford_factors = conjugate_qubit_operator_by_clifford_factors_exact
+
+
+def inverse_conjugate_qubit_operator_by_clifford_factors_exact(
+    op: QubitOperator,
+    factor_descriptions: Sequence[Union[str, ParsedGate]],
+    n_qubits: Optional[int] = None,
+    compress_abs_tol: float = 1e-12,
+) -> QubitOperator:
+    """Return C† op C for the Clifford C described by the factor sequence."""
+    return conjugate_qubit_operator_by_clifford_factors_exact(
+        op,
+        invert_clifford_factor_sequence(factor_descriptions),
+        n_qubits=n_qubits,
+        compress_abs_tol=compress_abs_tol,
+    )
 
 
 # ============================================================
