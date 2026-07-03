@@ -2,6 +2,7 @@ from __future__ import annotations
 ### July 1, repeated Beam search on h2o/n2
 
 #load data
+import os
 import pickle
 import numpy as np
 from pathlib import Path
@@ -17,11 +18,7 @@ from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 from openfermion import QubitOperator, get_sparse_operator, expectation
 from src.bs.utils import *
-from src.clifford_symmetry_optimized import (
-    inverse_conjugate_qubit_operator_by_clifford_factors_exact,
-    invert_permutation,
-    permute_qubits_in_qubit_operator,
-)
+from src.clifford_symmetry_optimized import Clifford
 from src.metrics import (
     comm_sq_exp_fast,
     comm_sq_exp_sparse_syms,
@@ -33,28 +30,15 @@ from copy import deepcopy
 
 def inverse_transform_symmetries_to_original_frame(
     symmetries,
-    frame_transforms,
+    frame_cliffords,
     n_qubits,
 ):
     """Map Pauli symmetries from the current repeated-search frame to frame 0."""
-    original_frame_symmetries = [deepcopy(sym) for sym in symmetries]
-
-    for transform in reversed(frame_transforms):
-        inverse_perm = invert_permutation(transform["permutation"])
-        original_frame_symmetries = [
-            permute_qubits_in_qubit_operator(sym, inverse_perm)
-            for sym in original_frame_symmetries
-        ]
-        original_frame_symmetries = [
-            inverse_conjugate_qubit_operator_by_clifford_factors_exact(
-                sym,
-                transform["parsed_gates"],
-                n_qubits=n_qubits,
-            )
-            for sym in original_frame_symmetries
-        ]
-
-    return original_frame_symmetries
+    _ = n_qubits
+    return [
+        Clifford.inverse_transform_by_cliffords(sym, frame_cliffords)
+        for sym in symmetries
+    ]
 
 
 def BeamSearch_Symmetries_rep(
@@ -81,6 +65,9 @@ def BeamSearch_Symmetries_rep(
     seed_with_exact_symmetries: bool = False,
     max_exact_symmetry_seeds: Optional[int] = None,
     benchmark_output_file: Optional[str] = None,
+    score_is_separable: bool = False,
+    n_processes: int = 1,
+    mp_start_method: Optional[str] = None,
 ) -> List[QubitOperator]:
     """
     Beam search for exact and approximate symmetries
@@ -122,7 +109,7 @@ def BeamSearch_Symmetries_rep(
     current_cisd = deepcopy(cisd_gs)
     current_fci = deepcopy(fci_gs)
     benchmark_datasets: List[BenchmarkData] = []
-    frame_transforms = []
+    frame_cliffords: List[Clifford] = []
 
     print("Starting search...")
     for r in range(reps):
@@ -132,6 +119,7 @@ def BeamSearch_Symmetries_rep(
 
         print(expectation(current_hamiltonian_sparse, current_cisd))
         score_func = lambda s_list: (-1)*comm_sq_exp_fast(s_list, current_hamiltonian_sparse, current_cisd, n_qubits)
+        separable_score_cache = {} if score_is_separable else None
 
         syms = beam_search_symmetries(
             current_hamiltonian,
@@ -141,7 +129,11 @@ def BeamSearch_Symmetries_rep(
             beam_width=beam_width,
             heavy_core_fraction=heavy_core_fraction,
             initial_generators=seed_generators,
-            score_func=score_func
+            score_func=score_func,
+            score_is_separable=score_is_separable,
+            separable_score_cache=separable_score_cache,
+            n_processes=n_processes,
+            mp_start_method=mp_start_method,
         )
         
 
@@ -152,7 +144,11 @@ def BeamSearch_Symmetries_rep(
                 candidate_pool,
                 n_qubits=n_qubits,
                 max_passes=local_refine_passes,
-                score_func=score_func
+                score_func=score_func,
+                score_is_separable=score_is_separable,
+                separable_score_cache=separable_score_cache,
+                n_processes=n_processes,
+                mp_start_method=mp_start_method,
             )
 
         print(syms)
@@ -161,7 +157,7 @@ def BeamSearch_Symmetries_rep(
         syms_sparse = prepare_sparse_symmetries(syms, n_qubits)
         original_frame_syms = inverse_transform_symmetries_to_original_frame(
             syms,
-            frame_transforms,
+            frame_cliffords,
             n_qubits,
         )
         print("Symmetries in the original frame:")
@@ -185,23 +181,21 @@ def BeamSearch_Symmetries_rep(
             benchmark_datasets.append(benchmark_data)
             ent = benchmark_data.cut_entropies
             current_hamiltonian = processed_data["H_perm"]
-            U = processed_data["U"]
+            clifford = processed_data["clifford"]
             current_fci = processed_data["gs_rot"]
-            clifford_info = processed_data["clifford_info"]
         else:
             # Transform without running the more expensive DMRG benchmark.
-            ent, current_hamiltonian, U, current_fci, clifford_info = get_permuted_bipartite_entanglement(
+            ent, current_hamiltonian, clifford, current_fci = get_permuted_bipartite_entanglement(
                 syms,
                 current_hamiltonian,
                 n_qubits,
-                fci_e,
-                current_fci,
-                True,
-                True,
-                True,
-                'e',
-                False,
-                return_clifford_info=True,
+                fci_energy=fci_e,
+                fci_gs=current_fci,
+                verbose=True,
+                return_state=True,
+                return_clifford=True,
+                log_base='e',
+                use_dmrg=False,
             )
 
         if benchmark_output_file is not None:
@@ -210,24 +204,23 @@ def BeamSearch_Symmetries_rep(
                 for sym in original_frame_syms:
                     print(sym, file=f)
                 print("Forward Clifford factors for next frame:", file=f)
-                for factor in clifford_info["factor_descriptions"]:
+                for factor in clifford.factor_descriptions:
                     print(f"  {factor}", file=f)
                 print(
-                    f"Qubit permutation: {clifford_info['permutation']}",
+                    f"Qubit permutation: {list(clifford.permutation)}",
                     file=f,
                 )
 
-        frame_transforms.append(clifford_info)
+        frame_cliffords.append(clifford)
 
         # Transform the state and the original symmetry generators in the same
         # direction as the Hamiltonian: A -> U A U^\dagger.
-        current_cisd = U @ current_cisd
-        U_dag = U.getH()
+        current_cisd = clifford.transform_state(current_cisd)
         rotated_hamiltonian_sparse = get_sparse_operator(current_hamiltonian, n_qubits).tocsr()
 
         def rotated_sparse_score_func(s_list_sparse):
             rotated_syms_sparse = [
-                (U @ sym_sparse @ U_dag).tocsr()
+                clifford.transform_sparse(sym_sparse)
                 for sym_sparse in s_list_sparse
             ]
             return (-1)*comm_sq_exp_sparse_syms(
@@ -247,34 +240,38 @@ def BeamSearch_Symmetries_rep(
 
     return syms
 
-directory = "./saved/hamiltonians/"
-system = "H4chain_corr"
-benchmark_directory = Path("./saved/results/JULY02")
-benchmark_output_file = benchmark_directory / f"{system}_rep_bs_benchmark.txt"
-benchmark_directory.mkdir(parents=True, exist_ok=True)
-with benchmark_output_file.open("w") as f:
-    print(f"{system} repeated beam-search benchmarks", file=f)
+def main():
+    directory = "./saved/hamiltonians/"
+    system = "H4chain_corr"
+    benchmark_directory = Path("./saved/results/JULY02")
+    benchmark_output_file = benchmark_directory / f"{system}_rep_bs_benchmark.txt"
+    benchmark_directory.mkdir(parents=True, exist_ok=True)
+    with benchmark_output_file.open("w") as f:
+        print(f"{system} repeated beam-search benchmarks", file=f)
 
-is_n2 = True if system[:2] == 'N2' else False
-        
-filename = directory+system 
-with open(filename+".pkl", "rb") as f:
-    data = pickle.load(f)
-mol = MolecularData(filename=filename)
-H, fci_e, fci_gs, cisd_e, cisd_gs = data
+    filename = directory + system
+    with open(filename + ".pkl", "rb") as f:
+        data = pickle.load(f)
+    mol = MolecularData(filename=filename)
+    H, fci_e, fci_gs, cisd_e, cisd_gs = data
 
-HQ = jordan_wigner(H)
-n_qubits = count_qubits(H)
-print(fci_e)
+    HQ = jordan_wigner(H)
+    n_qubits = count_qubits(H)
+    print(fci_e)
 
-#repeat search and transform
-syms = BeamSearch_Symmetries_rep(
-    HQ,
-    cisd_gs=cisd_gs,
-    cisd_e=cisd_e,
-    fci_gs=fci_gs,
-    fci_e=fci_e,
-    reps=10,
-    target_rank=n_qubits,
-    benchmark_output_file=str(benchmark_output_file),
-)
+    return BeamSearch_Symmetries_rep(
+        HQ,
+        cisd_gs=cisd_gs,
+        cisd_e=cisd_e,
+        fci_gs=fci_gs,
+        fci_e=fci_e,
+        reps=5,
+        target_rank=n_qubits,
+        benchmark_output_file=str(benchmark_output_file),
+        score_is_separable=True,
+        n_processes=int(os.environ.get("BEAM_SEARCH_PROCESSES", "1")),
+    )
+
+
+if __name__ == "__main__":
+    syms = main()

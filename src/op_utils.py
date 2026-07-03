@@ -3,10 +3,42 @@ from openfermion import MolecularData, QubitOperator
 #from openfermionpyscf import run_pyscf
 from openfermion.transforms import get_fermion_operator
 import numpy as np
+from .clifford_symmetry_optimized import Clifford
 
 BASIS_NAME = "sto-3g"
 MULTIPLICITY = 1
 CHARGE = 0
+
+
+def permute_sym_to_start(
+    hamiltonian,
+    symmetries,
+    n_qubits,
+    verbose=False,
+    return_clifford_perm=False,
+):
+    """Map symmetry generators to leading Z qubits and transform an operator.
+
+    The returned :class:`Clifford` contains both the synthesized Clifford and
+    final qubit permutation. When ``return_clifford_perm`` is true, this keeps
+    the historical ``(operator, clifford, permutation)`` return shape.
+    """
+    clifford = Clifford.from_symmetries(
+        symmetries,
+        n_qubits=n_qubits,
+        symmetry_qubits_first=True,
+    )
+    transformed = clifford.transform(hamiltonian)
+
+    if verbose:
+        print("Symmetries rotated to Z on qubits: ", clifford.mapped_qubits)
+        print("Qubits permuted as:")
+        for old_q, new_q in enumerate(clifford.permutation):
+            print(old_q, "->", new_q)
+
+    if return_clifford_perm:
+        return transformed, clifford, list(clifford.permutation)
+    return transformed
 
 def linear_h4_geometry(R, n_H=4):
     """
@@ -168,6 +200,167 @@ def freeze_qubits(op: QubitOperator, frozen: dict[int, int]) -> QubitOperator:
             reduced += QubitOperator(tuple(new_term), new_coeff)
 
     return reduced
+
+
+def split_pauli_operator_seniority(term, n_tapered: int):
+    """Split a Pauli string into the first ``n_tapered`` qubits and the rest.
+
+    This retains the historical function name used by the seniority code, but
+    the operation itself is generic and can be used after
+    ``permute_sym_to_start``.
+    """
+    if n_tapered < 0:
+        raise ValueError("n_tapered must be nonnegative.")
+
+    if isinstance(term, QubitOperator):
+        if len(term.terms) != 1:
+            raise ValueError("Expected a QubitOperator containing one Pauli term.")
+        term = next(iter(term.terms))
+
+    term = tuple(term)
+    tapered_part = tuple(item for item in term if item[0] < n_tapered)
+    remaining_part = tuple(item for item in term if item[0] >= n_tapered)
+    return tapered_part, remaining_part
+
+
+def _validate_basis_labels(labels, name: str):
+    labels = tuple(int(label) for label in labels)
+    if any(label not in (0, 1) for label in labels):
+        raise ValueError(f"{name} must contain only computational-basis labels 0 or 1.")
+    return labels
+
+
+def pauli_matrix_element_with_basis_state(term, bra_labels, ket_labels):
+    """Evaluate ``<bra_labels|term|ket_labels>`` for a Pauli string.
+
+    Qubit labels follow OpenFermion order. In particular,
+    ``<0|Y|1> = -1j`` and ``<1|Y|0> = +1j``.
+    """
+    if isinstance(term, QubitOperator):
+        if len(term.terms) != 1:
+            raise ValueError("Expected a QubitOperator containing one Pauli term.")
+        term = next(iter(term.terms))
+
+    bra_labels = _validate_basis_labels(bra_labels, "bra_labels")
+    ket_labels = _validate_basis_labels(ket_labels, "ket_labels")
+    if len(bra_labels) != len(ket_labels):
+        raise ValueError("bra_labels and ket_labels must have equal length.")
+
+    paulis = dict(term)
+    if any(q < 0 or q >= len(bra_labels) for q in paulis):
+        raise ValueError("The Pauli term acts outside the supplied basis labels.")
+
+    value = 1.0 + 0.0j
+    for q, (bra, ket) in enumerate(zip(bra_labels, ket_labels)):
+        pauli = paulis.get(q)
+        if pauli is None:
+            if bra != ket:
+                return 0.0
+        elif pauli == "X":
+            if bra == ket:
+                return 0.0
+        elif pauli == "Y":
+            if bra == ket:
+                return 0.0
+            value *= -1.0j if (bra, ket) == (0, 1) else 1.0j
+        elif pauli == "Z":
+            if bra != ket:
+                return 0.0
+            if bra == 1:
+                value *= -1.0
+        else:
+            raise ValueError(f"Unsupported Pauli operator {pauli!r}.")
+    return np.real_if_close(value).item()
+
+
+def taper_pauli_term(term, bra_labels, ket_labels):
+    """Return ``<bra|term[:N]|ket> term[N:]`` without reindexing qubits."""
+    bra_labels = _validate_basis_labels(bra_labels, "bra_labels")
+    ket_labels = _validate_basis_labels(ket_labels, "ket_labels")
+    if len(bra_labels) != len(ket_labels):
+        raise ValueError("bra_labels and ket_labels must have equal length.")
+
+    tapered_part, remaining_part = split_pauli_operator_seniority(
+        term, len(bra_labels)
+    )
+    matrix_element = pauli_matrix_element_with_basis_state(
+        tapered_part, bra_labels, ket_labels
+    )
+    return matrix_element * QubitOperator(remaining_part)
+
+
+def shift_hamiltonian_qubits_uniformly(op: QubitOperator, shift: int) -> QubitOperator:
+    """Remove ``shift`` leading identity qubits from a QubitOperator."""
+    if shift < 0:
+        raise ValueError("shift must be nonnegative.")
+
+    shifted = QubitOperator.zero()
+    for term, coefficient in op.terms.items():
+        if any(q < shift for q, _pauli in term):
+            raise ValueError(
+                "Cannot shift: the operator still acts on a removed leading qubit."
+            )
+        shifted_term = tuple((q - shift, pauli) for q, pauli in term)
+        shifted += QubitOperator(shifted_term, coefficient)
+    shifted.compress()
+    return shifted
+
+
+def taper_hamiltonian(
+    hamiltonian: QubitOperator,
+    bra_labels,
+    ket_labels,
+    shift_to_zero: bool = True,
+) -> QubitOperator:
+    """Project leading qubits onto specified bra and ket basis labels.
+
+    If ``N = len(bra_labels)``, this returns the effective operator
+
+        ``<bra_labels| hamiltonian |ket_labels>``
+
+    acting on the untapered qubits. This supports both diagonal sectors and
+    off-diagonal blocks, including the complex phases generated by Pauli Y.
+    It is intended for Hamiltonians returned by ``permute_sym_to_start``, where
+    the symmetry qubits occupy indices ``0, ..., N - 1``.
+
+    With ``shift_to_zero=True``, remaining indices ``N, N+1, ...`` are compacted
+    to ``0, 1, ...``.
+    """
+    bra_labels = _validate_basis_labels(bra_labels, "bra_labels")
+    ket_labels = _validate_basis_labels(ket_labels, "ket_labels")
+    if len(bra_labels) != len(ket_labels):
+        raise ValueError("bra_labels and ket_labels must have equal length.")
+
+    tapered = QubitOperator.zero()
+    for term, coefficient in hamiltonian.terms.items():
+        tapered += coefficient * taper_pauli_term(
+            term, bra_labels, ket_labels
+        )
+    tapered.compress()
+
+    if shift_to_zero:
+        return shift_hamiltonian_qubits_uniformly(
+            tapered, len(bra_labels)
+        )
+    return tapered
+
+def taper_symmetries(HQ, symmetries, bra_labels, ket_labels, n_qubits, verbose=False):
+    """
+    Rotate symmetries to the start and then taper for given labels
+
+    HQ: QubitOperator
+    symmetries: list[QubitOperator]
+    bra_labels, ket_labels: list[int] bra and ket labels of 0, 1
+    
+    """
+    n_sym = len(symmetries)
+    assert n_sym == len(bra_labels) and n_sym == len(ket_labels), "invalid number of sector labels {}, {} passed for {} symmetries".format(len(bra_labels), len(ket_labels), n_sym)
+
+    HQ_perm, clifford, perm = permute_sym_to_start(HQ, symmetries, n_qubits, verbose=verbose, return_clifford_perm=True)
+
+    HQ_tapered = taper_hamiltonian(HQ_perm, bra_labels, ket_labels, True)
+
+    return HQ_tapered
 
 def has_complex_entries(HQ: QubitOperator, tol: float = 1e-12) -> bool:
     """

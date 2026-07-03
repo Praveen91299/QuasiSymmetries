@@ -1126,3 +1126,18 @@ def build_symmetry_block_structure_with_packed_qubits(
             ordered_sectors=None,
             sector_boundaries=None,
         )
+
+
+# Canonical user-facing implementation. Legacy definitions above remain only
+# so old pickles/notebooks can import their names; active construction and
+# transformation entry points are delegated to the unified implementation.
+from .clifford_symmetry_optimized import (
+    Clifford,
+    build_symmetry_block_structure,
+    build_symmetry_block_structure_with_packed_qubits,
+    conjugate_qubit_operator_by_clifford_factors,
+    conjugate_qubit_operator_by_clifford_factors_exact,
+    inverse_conjugate_qubit_operator_by_clifford_factors_exact,
+    permute_qubits_in_qubit_operator,
+    synthesize_ordered_symmetry_clifford,
+)

@@ -459,7 +459,7 @@ def inverse_conjugate_qubit_operator_by_clifford_factors_exact(
 
 
 @dataclass
-class CliffordSynthesisResult:
+class _CliffordSynthesisData:
     mapped_qubits: List[int]
     factor_descriptions: List[str]
     parsed_gates: List[ParsedGate]
@@ -473,12 +473,12 @@ def _validate_symmetry_coeff(coeff: complex, *, atol: float = 1e-12) -> None:
         raise ValueError("Each symmetry coefficient must be real ±1 for a Hermitian Pauli symmetry.")
 
 
-def synthesize_ordered_symmetry_clifford(
+def _synthesize_ordered_symmetry_clifford_data(
     symmetries: Sequence[QubitOperator],
     n_qubits: Optional[int] = None,
     return_full_clifford: bool = False,
     return_elementary_factors: bool = False,
-) -> CliffordSynthesisResult:
+) -> _CliffordSynthesisData:
     """Synthesize a Clifford mapping an ordered independent commuting set to Z pivots.
 
     Later rows may be multiplied by earlier rows during elimination. Therefore
@@ -584,7 +584,7 @@ def synthesize_ordered_symmetry_clifford(
             full_clifford = U * full_clifford
         full_clifford.compress(abs_tol=1e-12)
 
-    return CliffordSynthesisResult(
+    return _CliffordSynthesisData(
         mapped_qubits=mapped_qubits,
         factor_descriptions=factor_descriptions,
         parsed_gates=parsed_gates,
@@ -773,8 +773,13 @@ def plot_reordered_hamiltonian(
 
 @dataclass
 class SymmetryBlockStructureResult:
-    clifford_result: CliffordSynthesisResult
+    clifford: "Clifford"
     reordered_result: ReorderedHamiltonianResult
+
+    @property
+    def clifford_result(self) -> "Clifford":
+        """Compatibility alias for the former synthesis dataclass field."""
+        return self.clifford
 
 
 def build_symmetry_block_structure(
@@ -788,18 +793,20 @@ def build_symmetry_block_structure(
             qubit_operator_num_qubits(hamiltonian),
             max(qubit_operator_num_qubits(s) for s in symmetries),
         )
-    clifford_result = synthesize_ordered_symmetry_clifford(
-        symmetries=symmetries,
+    clifford = Clifford.from_symmetries(
+        symmetries,
         n_qubits=n_qubits,
-        return_full_clifford=return_full_clifford,
+        symmetry_qubits_first=False,
     )
+    _ = return_full_clifford
+    transformed_hamiltonian = clifford.transform(hamiltonian)
     reordered_result = reordered_matrix_by_sector(
-        hamiltonian=hamiltonian,
-        symmetry_qubits=clifford_result.mapped_qubits,
-        factor_descriptions=clifford_result.parsed_gates,
+        hamiltonian=transformed_hamiltonian,
+        symmetry_qubits=clifford.mapped_qubits,
+        factor_descriptions=[],
         n_qubits=n_qubits,
     )
-    return SymmetryBlockStructureResult(clifford_result, reordered_result)
+    return SymmetryBlockStructureResult(clifford, reordered_result)
 
 
 # ============================================================
@@ -890,7 +897,7 @@ def permute_hamiltonian_qubits(
 
 @dataclass
 class SymmetryBlockStructurePackedResult:
-    clifford_result: CliffordSynthesisResult
+    clifford: "Clifford"
     transformed_hamiltonian: QubitOperator
     packed_hamiltonian: QubitOperator
     original_mapped_qubits: List[int]
@@ -900,6 +907,11 @@ class SymmetryBlockStructurePackedResult:
     ordered_sectors: Optional[List[Tuple[int, ...]]]
     sector_boundaries: Optional[List[int]]
 
+    @property
+    def clifford_result(self) -> "Clifford":
+        """Compatibility alias for the former synthesis dataclass field."""
+        return self.clifford
+
 
 def build_symmetry_block_structure_with_packed_qubits(
     hamiltonian: QubitOperator,
@@ -908,17 +920,16 @@ def build_symmetry_block_structure_with_packed_qubits(
     return_full_clifford: bool = False,
     reorder_sector: bool = False,
 ) -> SymmetryBlockStructurePackedResult:
-    clifford_result = synthesize_ordered_symmetry_clifford(
-        symmetries=symmetries,
+    clifford = Clifford.from_symmetries(
+        symmetries,
         n_qubits=n_qubits,
-        return_full_clifford=return_full_clifford,
+        symmetry_qubits_first=False,
     )
-    transformed_h = conjugate_qubit_operator_by_clifford_factors_exact(
-        hamiltonian,
-        factor_descriptions=clifford_result.parsed_gates,
-        n_qubits=n_qubits,
+    _ = return_full_clifford
+    transformed_h = clifford.transform(hamiltonian)
+    packed = move_symmetry_qubits_to_end(
+        transformed_h, clifford.mapped_qubits, n_qubits
     )
-    packed = move_symmetry_qubits_to_end(transformed_h, clifford_result.mapped_qubits, n_qubits)
 
     reordered_matrix = None
     ordered_sectors = None
@@ -935,10 +946,10 @@ def build_symmetry_block_structure_with_packed_qubits(
         sector_boundaries = reordered.sector_boundaries
 
     return SymmetryBlockStructurePackedResult(
-        clifford_result=clifford_result,
+        clifford=clifford,
         transformed_hamiltonian=transformed_h,
         packed_hamiltonian=packed.permuted_hamiltonian,
-        original_mapped_qubits=clifford_result.mapped_qubits,
+        original_mapped_qubits=clifford.mapped_qubits,
         packed_symmetry_qubits=packed.permuted_symmetry_qubits,
         qubit_permutation=packed.qubit_permutation,
         reordered_matrix=reordered_matrix,
@@ -1024,13 +1035,543 @@ def sparse_qubit_permutation_unitary(
     U = csr_matrix((data, (rows, cols)), shape=(dim, dim), dtype=dtype)
     return U
 
-def sparse_clifford_unitary(clifford: CliffordSynthesisResult, n_qubits):
+def sparse_clifford_unitary(
+    clifford: Union[_CliffordSynthesisData, "Clifford"],
+    n_qubits,
+):
     """
     Return sparse matrix representing clifford
     """
-    Ucliff = sparse.identity(1<<n_qubits)
+    if isinstance(clifford, Clifford):
+        if clifford.n_qubits != n_qubits:
+            raise ValueError("n_qubits does not match the Clifford.")
+        return clifford.sparse_matrix
 
+    Ucliff = sparse.identity(1<<n_qubits)
     for gate in clifford.parsed_gates:
         factor = get_sparse_operator(factor_from_parsed_gate(gate), n_qubits)
         Ucliff = factor @ Ucliff
     return Ucliff
+
+
+# ============================================================
+# Unified Clifford object
+# ============================================================
+
+def _permute_masks(x: int, z: int, perm: Sequence[int]) -> Tuple[int, int]:
+    x_out = 0
+    z_out = 0
+    for old_q, new_q in enumerate(perm):
+        old_bit = 1 << old_q
+        new_bit = 1 << new_q
+        if x & old_bit:
+            x_out |= new_bit
+        if z & old_bit:
+            z_out |= new_bit
+    return x_out, z_out
+
+
+def _popcount(value: int) -> int:
+    """Fast integer population count with Python 3.9 compatibility."""
+    bit_count = getattr(value, "bit_count", None)
+    return bit_count() if bit_count is not None else bin(value).count("1")
+
+
+def _pauli_product_phase_exponent(
+    x1: int,
+    z1: int,
+    x2: int,
+    z2: int,
+) -> int:
+    """Return k such that P1 P2 = i**k P(x1 xor x2, z1 xor z2)."""
+    x_out = x1 ^ x2
+    z_out = z1 ^ z2
+    return (
+        _popcount(x1 & z1)
+        + _popcount(x2 & z2)
+        + 2 * _popcount(z1 & x2)
+        - _popcount(x_out & z_out)
+    ) % 4
+
+
+def _apply_parsed_gates_to_masks(
+    x: int,
+    z: int,
+    phase_exponent: int,
+    gates: Sequence[ParsedGate],
+) -> Tuple[int, int, int]:
+    sign = 1
+    for gate in gates:
+        name = gate[0]
+        if name == "H":
+            x, z, sign = apply_H_to_masks(x, z, sign, int(gate[1]))
+        elif name == "Sdg":
+            x, z, sign = apply_Sdg_to_masks(x, z, sign, int(gate[1]))
+        elif name == "S":
+            x, z, sign = apply_S_to_masks(x, z, sign, int(gate[1]))
+        elif name == "CNOT":
+            x, z, sign = apply_CNOT_to_masks(
+                x, z, sign, int(gate[1]), int(gate[2])
+            )
+        else:
+            raise ValueError(f"Unknown parsed gate: {gate!r}")
+    if sign == -1:
+        phase_exponent = (phase_exponent + 2) % 4
+    return x, z, phase_exponent
+
+
+class Clifford:
+    """A synthesized Clifford with binary and cached sparse representations.
+
+    The represented unitary is ``U = P C``, where ``C`` is the synthesized
+    Clifford gate sequence and ``P`` is the stored qubit permutation.  Pauli
+    transforms use a precomputed signed binary tableau; factor matrices are
+    therefore not constructed or traversed during repeated operator transforms.
+    """
+
+    def __init__(
+        self,
+        n_qubits: int,
+        factor_descriptions: Sequence[Union[str, ParsedGate]] = (),
+        permutation: Optional[Sequence[int]] = None,
+        *,
+        mapped_qubits: Sequence[int] = (),
+        transformed_generators: Sequence[QubitOperator] = (),
+        source_symmetries: Sequence[QubitOperator] = (),
+    ) -> None:
+        self.n_qubits = int(n_qubits)
+        if self.n_qubits < 0:
+            raise ValueError("n_qubits must be nonnegative.")
+
+        self._parsed_gates = parse_factor_descriptions(factor_descriptions)
+        self._factor_descriptions = [
+            self._format_gate(gate) for gate in self._parsed_gates
+        ]
+        self._permutation = self._validate_permutation(
+            permutation if permutation is not None else range(self.n_qubits)
+        )
+        self.mapped_qubits = list(mapped_qubits)
+        self.transformed_generators = list(transformed_generators)
+        self.source_symmetries = list(source_symmetries)
+        self._sparse_matrix_cache: Optional[sparse.csr_matrix] = None
+        self._elementary_factors_cache: Optional[Tuple[QubitOperator, ...]] = None
+        self._full_clifford_cache: Optional[QubitOperator] = None
+        self._forward_tableau = self._build_tableau(inverse=False)
+        self._inverse_tableau = self._build_tableau(inverse=True)
+
+    @classmethod
+    def from_symmetries(
+        cls,
+        symmetries: Sequence[QubitOperator],
+        n_qubits: Optional[int] = None,
+        *,
+        symmetry_qubits_first: bool = True,
+    ) -> "Clifford":
+        """Synthesize a Clifford from commuting independent Pauli symmetries."""
+        if n_qubits is None:
+            n_qubits = max(
+                (qubit_operator_num_qubits(sym) for sym in symmetries),
+                default=0,
+            )
+        synthesis = _synthesize_ordered_symmetry_clifford_data(
+            symmetries,
+            n_qubits=n_qubits,
+        )
+        if symmetry_qubits_first:
+            mapped = synthesis.mapped_qubits
+            mapped_set = set(mapped)
+            residual = [q for q in range(n_qubits) if q not in mapped_set]
+            permutation = [0] * n_qubits
+            for new_q, old_q in enumerate(list(mapped) + residual):
+                permutation[old_q] = new_q
+        else:
+            permutation = list(range(n_qubits))
+
+        return cls(
+            n_qubits,
+            synthesis.parsed_gates,
+            permutation,
+            mapped_qubits=synthesis.mapped_qubits,
+            transformed_generators=synthesis.transformed_generators,
+            source_symmetries=symmetries,
+        )
+
+    @staticmethod
+    def _format_gate(gate: ParsedGate) -> str:
+        if gate[0] in ("H", "S", "Sdg"):
+            return f"{gate[0]}({gate[1]})"
+        if gate[0] == "CNOT":
+            return f"CNOT({gate[1]}->{gate[2]})"
+        raise ValueError(f"Unknown parsed gate: {gate!r}")
+
+    def _validate_permutation(self, permutation: Sequence[int]) -> List[int]:
+        permutation = [int(q) for q in permutation]
+        if sorted(permutation) != list(range(self.n_qubits)):
+            raise ValueError(
+                "permutation must contain each qubit index exactly once."
+            )
+        return permutation
+
+    @property
+    def factor_descriptions(self) -> Tuple[str, ...]:
+        return tuple(self._factor_descriptions)
+
+    @property
+    def parsed_gates(self) -> Tuple[ParsedGate, ...]:
+        return tuple(self._parsed_gates)
+
+    @property
+    def permutation(self) -> Tuple[int, ...]:
+        return tuple(self._permutation)
+
+    @property
+    def inverse_permutation(self) -> Tuple[int, ...]:
+        return tuple(invert_permutation(self._permutation))
+
+    @property
+    def symmetry_qubits(self) -> Tuple[int, ...]:
+        return tuple(self._permutation[q] for q in self.mapped_qubits)
+
+    @property
+    def canonical_generators(self) -> Tuple[QubitOperator, ...]:
+        """Row-reduced synthesized generators after the stored permutation."""
+        return tuple(
+            permute_qubits_in_qubit_operator(op, self._permutation)
+            for op in self.transformed_generators
+        )
+
+    @property
+    def transformed_symmetries(self) -> Tuple[QubitOperator, ...]:
+        """Direct images of the original input symmetry generators."""
+        return tuple(self.transform_operators(self.source_symmetries))
+
+    @property
+    def elementary_factors(self) -> Tuple[QubitOperator, ...]:
+        """Compatibility view of elementary factors, constructed lazily."""
+        if self._elementary_factors_cache is None:
+            self._elementary_factors_cache = tuple(
+                factor_from_parsed_gate(gate) for gate in self._parsed_gates
+            )
+        return self._elementary_factors_cache
+
+    @property
+    def full_clifford(self) -> QubitOperator:
+        """QubitOperator expansion of C (before permutation), constructed lazily."""
+        if self._full_clifford_cache is None:
+            full = I_op()
+            for factor in self.elementary_factors:
+                full = factor * full
+            full.compress(abs_tol=1e-12)
+            self._full_clifford_cache = full
+        return self._full_clifford_cache
+
+    def set_permutation(self, permutation: Sequence[int]) -> None:
+        """Replace the final qubit permutation and invalidate cached data."""
+        self._permutation = self._validate_permutation(permutation)
+        self._rebuild_representations()
+
+    def set_factor_descriptions(
+        self,
+        factor_descriptions: Sequence[Union[str, ParsedGate]],
+    ) -> None:
+        """Replace the Clifford gate sequence and invalidate cached data."""
+        self._parsed_gates = parse_factor_descriptions(factor_descriptions)
+        self._factor_descriptions = [
+            self._format_gate(gate) for gate in self._parsed_gates
+        ]
+        self._rebuild_representations()
+
+    def _rebuild_representations(self) -> None:
+        self._sparse_matrix_cache = None
+        self._elementary_factors_cache = None
+        self._full_clifford_cache = None
+        self._forward_tableau = self._build_tableau(inverse=False)
+        self._inverse_tableau = self._build_tableau(inverse=True)
+
+    def _map_basis_pauli(
+        self,
+        x: int,
+        z: int,
+        *,
+        inverse: bool,
+    ) -> Tuple[int, int, int]:
+        phase = 0
+        if inverse:
+            x, z = _permute_masks(
+                x, z, invert_permutation(self._permutation)
+            )
+            return _apply_parsed_gates_to_masks(
+                x,
+                z,
+                phase,
+                invert_clifford_factor_sequence(self._parsed_gates),
+            )
+
+        x, z, phase = _apply_parsed_gates_to_masks(
+            x, z, phase, self._parsed_gates
+        )
+        x, z = _permute_masks(x, z, self._permutation)
+        return x, z, phase
+
+    def _build_tableau(
+        self,
+        *,
+        inverse: bool,
+    ) -> Tuple[Tuple[Tuple[int, int, int], ...], Tuple[Tuple[int, int, int], ...]]:
+        x_images = tuple(
+            self._map_basis_pauli(1 << q, 0, inverse=inverse)
+            for q in range(self.n_qubits)
+        )
+        z_images = tuple(
+            self._map_basis_pauli(0, 1 << q, inverse=inverse)
+            for q in range(self.n_qubits)
+        )
+        return x_images, z_images
+
+    @staticmethod
+    def _multiply_binary_paulis(
+        left: Tuple[int, int, int],
+        right: Tuple[int, int, int],
+    ) -> Tuple[int, int, int]:
+        x1, z1, phase1 = left
+        x2, z2, phase2 = right
+        phase = (
+            phase1
+            + phase2
+            + _pauli_product_phase_exponent(x1, z1, x2, z2)
+        ) % 4
+        return x1 ^ x2, z1 ^ z2, phase
+
+    def _transform_term_from_tableau(
+        self,
+        term: Term,
+        coeff: complex,
+        tableau,
+    ) -> Tuple[Term, complex]:
+        x, z = term_to_masks(term)
+        accumulator = (0, 0, _popcount(x & z) % 4)
+        x_images, z_images = tableau
+
+        support = x
+        while support:
+            low = support & -support
+            q = low.bit_length() - 1
+            accumulator = self._multiply_binary_paulis(
+                accumulator, x_images[q]
+            )
+            support ^= low
+
+        support = z
+        while support:
+            low = support & -support
+            q = low.bit_length() - 1
+            accumulator = self._multiply_binary_paulis(
+                accumulator, z_images[q]
+            )
+            support ^= low
+
+        x_out, z_out, phase = accumulator
+        phase_factor = (1, 1j, -1, -1j)[phase]
+        return masks_to_term(x_out, z_out, self.n_qubits), coeff * phase_factor
+
+    def _transform_operator(self, op: QubitOperator, tableau) -> QubitOperator:
+        transformed = QubitOperator()
+        for term, coeff in op.terms.items():
+            new_term, new_coeff = self._transform_term_from_tableau(
+                term, coeff, tableau
+            )
+            transformed += QubitOperator(new_term, new_coeff)
+        transformed.compress(abs_tol=1e-12)
+        return transformed
+
+    def transform(self, op: QubitOperator) -> QubitOperator:
+        """Return ``U op U†`` using the cached signed binary tableau."""
+        return self._transform_operator(op, self._forward_tableau)
+
+    def inverse_transform(self, op: QubitOperator) -> QubitOperator:
+        """Return ``U† op U`` using the cached inverse binary tableau."""
+        return self._transform_operator(op, self._inverse_tableau)
+
+    def transform_operators(
+        self,
+        operators: Sequence[QubitOperator],
+    ) -> List[QubitOperator]:
+        return [self.transform(op) for op in operators]
+
+    def inverse_transform_operators(
+        self,
+        operators: Sequence[QubitOperator],
+    ) -> List[QubitOperator]:
+        return [self.inverse_transform(op) for op in operators]
+
+    @property
+    def sparse_matrix(self) -> sparse.csr_matrix:
+        """Sparse matrix for U, constructed once and cached."""
+        if self._sparse_matrix_cache is None:
+            unitary = sparse.identity(
+                1 << self.n_qubits, dtype=complex, format="csr"
+            )
+            for gate in self._parsed_gates:
+                factor = get_sparse_operator(
+                    factor_from_parsed_gate(gate), self.n_qubits
+                ).tocsr()
+                unitary = factor @ unitary
+            permutation = sparse_qubit_permutation_unitary(
+                self._permutation, msb_ordering=True
+            )
+            self._sparse_matrix_cache = (permutation @ unitary).tocsr()
+        return self._sparse_matrix_cache
+
+    def transform_sparse(self, op) -> sparse.csr_matrix:
+        """Return ``U op U†`` for a sparse or dense matrix operator."""
+        op_sparse = sparse.csr_matrix(op)
+        U = self.sparse_matrix
+        return (U @ op_sparse @ U.getH()).tocsr()
+
+    def inverse_transform_sparse(self, op) -> sparse.csr_matrix:
+        """Return ``U† op U`` for a sparse or dense matrix operator."""
+        op_sparse = sparse.csr_matrix(op)
+        U = self.sparse_matrix
+        return (U.getH() @ op_sparse @ U).tocsr()
+
+    def transform_state(self, state) -> np.ndarray:
+        return np.asarray(self.sparse_matrix @ state)
+
+    def inverse_transform_state(self, state) -> np.ndarray:
+        return np.asarray(self.sparse_matrix.getH() @ state)
+
+    def reorder_operator_by_symmetry_sectors(
+        self,
+        op: QubitOperator,
+    ) -> ReorderedHamiltonianResult:
+        """Transform an operator and group its matrix by mapped Z sectors."""
+        return reordered_matrix_by_sector(
+            hamiltonian=self.transform(op),
+            symmetry_qubits=self.symmetry_qubits,
+            factor_descriptions=[],
+            n_qubits=self.n_qubits,
+        )
+
+    def clear_sparse_cache(self) -> None:
+        self._sparse_matrix_cache = None
+
+    def to_dict(self) -> Dict[str, object]:
+        """Return a portable description; the sparse cache is intentionally omitted."""
+        return {
+            "n_qubits": self.n_qubits,
+            "factor_descriptions": list(self.factor_descriptions),
+            "permutation": list(self.permutation),
+            "mapped_qubits": list(self.mapped_qubits),
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, object]) -> "Clifford":
+        return cls(
+            n_qubits=int(data["n_qubits"]),
+            factor_descriptions=data.get("factor_descriptions", ()),  # type: ignore[arg-type]
+            permutation=data.get("permutation"),  # type: ignore[arg-type]
+            mapped_qubits=data.get("mapped_qubits", ()),  # type: ignore[arg-type]
+        )
+
+    @classmethod
+    def transform_by_cliffords(
+        cls,
+        op: QubitOperator,
+        cliffords: Sequence["Clifford"],
+    ) -> QubitOperator:
+        """Apply a sequence in list order: C[-1] ... C[0] op C[0]† ..."""
+        transformed = op
+        for clifford in cliffords:
+            transformed = clifford.transform(transformed)
+        return transformed
+
+    @classmethod
+    def inverse_transform_by_cliffords(
+        cls,
+        op: QubitOperator,
+        cliffords: Sequence["Clifford"],
+    ) -> QubitOperator:
+        """Undo a Clifford list, applying inverse transforms in reverse order."""
+        transformed = op
+        for clifford in reversed(cliffords):
+            transformed = clifford.inverse_transform(transformed)
+        return transformed
+
+    @classmethod
+    def transform_sparse_by_cliffords(
+        cls,
+        op,
+        cliffords: Sequence["Clifford"],
+    ) -> sparse.csr_matrix:
+        transformed = sparse.csr_matrix(op)
+        for clifford in cliffords:
+            transformed = clifford.transform_sparse(transformed)
+        return transformed
+
+    @classmethod
+    def inverse_transform_sparse_by_cliffords(
+        cls,
+        op,
+        cliffords: Sequence["Clifford"],
+    ) -> sparse.csr_matrix:
+        transformed = sparse.csr_matrix(op)
+        for clifford in reversed(cliffords):
+            transformed = clifford.inverse_transform_sparse(transformed)
+        return transformed
+
+    @classmethod
+    def transform_state_by_cliffords(
+        cls,
+        state,
+        cliffords: Sequence["Clifford"],
+    ) -> np.ndarray:
+        transformed = np.asarray(state)
+        for clifford in cliffords:
+            transformed = clifford.transform_state(transformed)
+        return transformed
+
+    @classmethod
+    def inverse_transform_state_by_cliffords(
+        cls,
+        state,
+        cliffords: Sequence["Clifford"],
+    ) -> np.ndarray:
+        transformed = np.asarray(state)
+        for clifford in reversed(cliffords):
+            transformed = clifford.inverse_transform_state(transformed)
+        return transformed
+
+    def __matmul__(self, other):
+        """Compatibility shorthand for applying the sparse unitary."""
+        return self.sparse_matrix @ other
+
+    def __repr__(self) -> str:
+        return (
+            f"Clifford(n_qubits={self.n_qubits}, "
+            f"n_factors={len(self._parsed_gates)}, "
+            f"permutation={self._permutation})"
+        )
+
+
+def synthesize_ordered_symmetry_clifford(
+    symmetries: Sequence[QubitOperator],
+    n_qubits: Optional[int] = None,
+    return_full_clifford: bool = False,
+    return_elementary_factors: bool = False,
+) -> Clifford:
+    """Compatibility synthesis entry point returning the unified class.
+
+    No final qubit permutation is added here, matching the historical behavior.
+    Use ``Clifford.from_symmetries`` (the default) to place symmetry pivots on
+    the first qubits as part of the same object.
+    """
+    clifford = Clifford.from_symmetries(
+        symmetries,
+        n_qubits=n_qubits,
+        symmetry_qubits_first=False,
+    )
+    if return_elementary_factors:
+        _ = clifford.elementary_factors
+    if return_full_clifford:
+        _ = clifford.full_clifford
+    return clifford

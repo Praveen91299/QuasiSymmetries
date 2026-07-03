@@ -387,7 +387,8 @@ if __name__ == "__main__":
         #clifford transformed qubit space
         ## Beam(n_q)
         from benchmark_all import BenchmarkData
-        from src.metrics import permute_sym_to_start, get_permuted_bipartite_entanglement
+        from src.metrics import get_permuted_bipartite_entanglement
+        from src.op_utils import permute_sym_to_start
         from src.fiedler import do_fiedler_reordering
         symdataset = BenchmarkData.load_datasets('./saved/results/MAY27/_nc_exp_cisd_MAY27{}_datasets'.format(system))
         for idx in symtypes:
@@ -397,7 +398,17 @@ if __name__ == "__main__":
             print(symmetries)
 
             log_base =np.e
-            ents, H_perm, clifford, gs_rot= get_permuted_bipartite_entanglement(symmetries, HQ, n_qubits, fci_e, fci_gs, True, True, True, log_base=log_base)
+            ents, H_perm, clifford, gs_rot = get_permuted_bipartite_entanglement(
+                symmetries,
+                HQ,
+                n_qubits,
+                fci_energy=fci_e,
+                fci_gs=fci_gs,
+                verbose=True,
+                return_state=True,
+                return_clifford=True,
+                log_base=log_base,
+            )
             #H_perm, clifford, perm = permute_sym_to_start(HQ, symmetries, n_qubits, verbose=False, return_clifford_perm=True)
             mpo = MPO_from_QubitOperator(H_perm, None, mpo_cutoff=1e-20, compression_freq=20, verbose=False)
             system_bond_sizes[symdata.tag] = max(mpo.bond_sizes())

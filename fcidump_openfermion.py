@@ -59,6 +59,9 @@ def read_fcidump_integrals(
         ao2mo.restore(1, data["H2"], n_orbitals),
         dtype=float,
     )
+    
+    # reorder chemist (pq|rs) -> OpenFermion's (ps|qr) convention
+    two_body_integrals = np.einsum('psqr->pqrs', two_body_integrals)
 
     return {
         "n_orbitals": n_orbitals,

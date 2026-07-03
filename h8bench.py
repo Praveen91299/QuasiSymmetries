@@ -3,6 +3,7 @@
 
 import os
 import pickle
+import multiprocessing as mp
 
 import pandas as pd
 from openfermion import count_qubits, jordan_wigner, get_sparse_operator, MolecularData
@@ -108,6 +109,12 @@ for system in systems:
 
     #make symmetries
     bw=16 # beam width for bs-hct and bs
+    beam_n_processes = int(os.environ.get("BEAM_SEARCH_PROCESSES", "1"))
+    beam_mp_start_method = (
+        "fork"
+        if beam_n_processes > 1 and "fork" in mp.get_all_start_methods()
+        else None
+    )
     sym_hct_N_2, eps = hct_mod(HQ, n_qubits//2, use_coeffs_eps=True, sym_metric_func=sym_metric_func)
     sym_hct_N, eps = hct_mod(HQ, n_qubits, use_coeffs_eps=True, sym_metric_func=sym_metric_func)
 
@@ -145,6 +152,9 @@ for system in systems:
         include_hct_symmetries = True,
         hct_n_sym = n_qubits//2,
         hct_use_coeffs_eps = True,
+        score_is_separable=True,
+        n_processes=beam_n_processes,
+        mp_start_method=beam_mp_start_method,
     )
 
     sym_bs_N = BeamSearch_Symmetries(
@@ -159,6 +169,9 @@ for system in systems:
         include_hct_symmetries = True,
         hct_n_sym = n_qubits,
         hct_use_coeffs_eps = True,
+        score_is_separable=True,
+        n_processes=beam_n_processes,
+        mp_start_method=beam_mp_start_method,
     )
 
     #benchmarks

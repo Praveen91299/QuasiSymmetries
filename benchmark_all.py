@@ -227,18 +227,17 @@ def benchmark_syms(list_syms, HQ, fci_gs, fci_e, n_qubits, N_2_sym=False, verbos
     nc_l1 = universal_grading(list_syms, HQ, verbose=verbose)
     c = len(find_commuting_paulis(HQ, list_syms, verbose=verbose))
 
-    ent, H_perm, U, gs_rot, clifford_info = get_permuted_bipartite_entanglement(
+    ent, H_perm, clifford, gs_rot = get_permuted_bipartite_entanglement(
         list_syms,
         HQ,
         n_qubits,
-        fci_e,
-        fci_gs,
-        verbose,
-        True,
-        True,
-        log_base,
-        False,
-        return_clifford_info=True,
+        fci_energy=fci_e,
+        fci_gs=fci_gs,
+        verbose=verbose,
+        return_state=True,
+        return_clifford=True,
+        log_base=log_base,
+        use_dmrg=False,
     )
     
     gs_rot_mps = qtn.MatrixProductState.from_dense(gs_rot, cutoff = 1e-20)     
@@ -263,10 +262,9 @@ def benchmark_syms(list_syms, HQ, fci_gs, fci_e, n_qubits, N_2_sym=False, verbos
     if return_processed_data:
         processed_data = {
             "H_perm": H_perm,
-            "U": U,
+            "clifford": clifford,
             "gs_rot": gs_rot,
             "mpo": dmrg_data["mpo"],
-            "clifford_info": clifford_info,
         }
         return data, processed_data
     else:
@@ -360,6 +358,7 @@ def main():
             include_hct_symmetries = True,
             hct_n_sym = n_qubits//2,
             hct_use_coeffs_eps = True,
+            score_is_separable=True,
         )
 
         sym_bs_N = find_commuting_symmetry_generators(
@@ -374,6 +373,7 @@ def main():
             include_hct_symmetries = True,
             hct_n_sym = n_qubits,
             hct_use_coeffs_eps = True,
+            score_is_separable=True,
         )
 
         datasets.append(benchmark_syms(sym_bs_N_2, HQ, fci_gs, fci_e, 

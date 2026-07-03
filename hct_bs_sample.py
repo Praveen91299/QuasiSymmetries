@@ -101,7 +101,8 @@ sym_bs = find_commuting_symmetry_generators(
     include_pairwise_products=True,
     pairwise_seed_terms=12,
     seed_with_exact_symmetries=True,
-    score_func= sym_group_score_func # this function maximizes the cost function TODO invert this
+    score_func=sym_group_score_func,
+    score_is_separable=True,
 )
 for s in sym_bs:
     print("  ", s)

@@ -3,9 +3,9 @@ from openfermion import commutator, get_sparse_operator, expectation, get_ground
 import numpy as np
 from scipy.sparse import identity as sparse_id
 from copy import deepcopy
-from src.op_utils import freeze_qubits
+from src.op_utils import freeze_qubits, permute_sym_to_start
 from src.tn import *
-from src.clifford_symmetry_optimized import build_symmetry_block_structure_with_packed_qubits, permute_qubits_in_qubit_operator, sparse_qubit_permutation_unitary, sparse_clifford_unitary
+from src.clifford_symmetry_optimized import Clifford
 
 def construct_projectors(sym_list: list[QubitOperator]):
     """
@@ -289,47 +289,6 @@ def get_entropies_at_cuts(state, n_qubits, log_base='2'):
         entropies.append(entropy(np.abs(d)**2, log_base=log_base))
     return entropies
 
-def permute_sym_to_start(HQ, symmetries, n_qubits, verbose=False, return_clifford_perm=False):
-    """
-    Move qubits to the start
-    
-    """
-    res = build_symmetry_block_structure_with_packed_qubits(
-        hamiltonian=HQ,
-        symmetries=symmetries,
-        n_qubits=n_qubits,
-    )
-
-    #permute symmetries to the start
-    H_trans = res.transformed_hamiltonian
-    sym_mapped_qubits = res.original_mapped_qubits
-
-    #syms to start + rest in order
-    if verbose: print("Symmetries rotated to Z on qubits: ", sym_mapped_qubits)
-    n_sym = len(sym_mapped_qubits) #locations of symmetry qubits - should go to the beginning
-    perm = []
-    ns=0
-    nns =0
-    for i in range(n_qubits): #qubit count
-        if i in sym_mapped_qubits: 
-            assert ns < n_sym, "Too many symmetry indices!"
-            perm.append(sym_mapped_qubits.index(i))
-            ns +=1
-        else:
-            perm.append(n_sym + nns)
-            nns += 1
-
-    if verbose:
-        print("Qubits permuted as:")
-        for i, p in enumerate(perm):
-            print(i, "->", p)
-
-    H_perm = permute_qubits_in_qubit_operator(H_trans, perm)
-    if return_clifford_perm:
-        return H_perm, res, perm
-    else:
-        return H_perm
-
 def get_ent(symmetries, HQ, n_qubits, verbose=False, return_state=False, return_sparse_clifford=False, log_base='2'):
     """
     Get bi-partite entanglement across all partitions after diagonalizing symmetries and localizing them to qubits 0, 1, 2, ... in order
@@ -442,7 +401,7 @@ def get_permuted_bipartite_entanglement(
     return_U=False,
     log_base='e',
     use_dmrg=False,
-    return_clifford_info=False,
+    return_clifford=False,
 ):
     """
     Get bi-partite entanglement across all partitions after diagonalizing symmetries and localizing them to qubits 0, 1, 2, ... in order
@@ -455,18 +414,9 @@ def get_permuted_bipartite_entanglement(
     else:
         if verbose: print("No symmetries passed, returning original bond entanglements.")
         H_perm = HQ
+        clifford = Clifford(n_qubits)
+        perm = list(clifford.permutation)
     
-    #construct U
-    if verbose: print("Constructing unitary from factors and permutations...")
-    Ucliff_sparse = sparse_clifford_unitary(clifford.clifford_result, n_qubits)
-    Uperm_sparse = sparse_qubit_permutation_unitary(perm, True)
-    U = Uperm_sparse @ Ucliff_sparse
-    clifford_info = {
-        "factor_descriptions": list(clifford.clifford_result.factor_descriptions),
-        "parsed_gates": list(clifford.clifford_result.parsed_gates),
-        "permutation": list(perm),
-    }
-
     #solve
     if use_dmrg:
         ents, gs = get_bipartite_mps(H_perm, n_qubits, target_energy=fci_energy)
@@ -476,7 +426,7 @@ def get_permuted_bipartite_entanglement(
     else:
         if fci_gs is not None:
             #transform state directly
-            gs = U @ fci_gs
+            gs = clifford.transform_state(fci_gs)
         else:
             e_p, gs = get_ground_state(get_sparse_operator(H_perm, n_qubits))
             if fci_energy is not None: assert np.isclose(fci_energy, e_p, atol=1e-5), "Permuted Hamiltonian ground state differs from fci by {}".format(fci_energy - e_p)
@@ -488,17 +438,23 @@ def get_permuted_bipartite_entanglement(
             print("{} | {} : {}".format(i+1, i+2, e))
 
     # Construct the requested return tuple without changing existing callers.
-    if return_U:
+    if return_clifford:
+        transform_object = clifford
+    elif return_U:
+        # Backward compatibility for callers that explicitly requested U.
+        transform_object = clifford.sparse_matrix
+    else:
+        transform_object = None
+
+    if transform_object is not None:
         if return_state:
-            result = (ents, H_perm, U, gs)
+            result = (ents, H_perm, transform_object, gs)
         else:
-            result = (ents, H_perm, U)
+            result = (ents, H_perm, transform_object)
     else:
         if return_state:
             result = (ents, H_perm, gs)
         else:
             result = (ents, H_perm)
 
-    if return_clifford_info:
-        return (*result, clifford_info)
     return result
