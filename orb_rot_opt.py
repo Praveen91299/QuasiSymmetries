@@ -7,7 +7,7 @@ import os
 import json
 from contextlib import nullcontext
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
-from src.orbital_rotation import (
+from quasisymmetries.orbital_rotation import (
     SpinRestrictedRealOrbitalRotation,
     RealOrbitalRotation,
     apply_real_orbital_rotation_to_state,
@@ -20,7 +20,7 @@ from src.orbital_rotation import (
     givens_product_pairs,
     sparse_real_givens_unitary,
 )
-from src.metrics import (
+from quasisymmetries.metrics import (
     l1norm,
     get_ent,
     find_commuting_paulis,
@@ -31,15 +31,15 @@ from src.metrics import (
     comm_sq_exp_pauli_actions,
     comm_sq_exp_fast
 )
-from src.op_utils import (
+from quasisymmetries.op_utils import (
     prepare_pauli_actions,
     prepare_pauli_sum_action,
 )
-from src.ferm_utils import Eij, rotate_chem_tbt, rotate_chem_obt, get_chem_tensors, spatial_obt_to_spin_obt, spatial_tbt_to_spin_tbt, build_sparse_basis
+from quasisymmetries.ferm_utils import Eij, rotate_chem_tbt, rotate_chem_obt, get_chem_tensors, spatial_obt_to_spin_obt, spatial_tbt_to_spin_tbt, build_sparse_basis
 from openfermion import MolecularData, get_sparse_operator, jordan_wigner, count_qubits, FermionOperator, QubitOperator, commutator, get_ground_state
 import numpy as np
 from scipy.sparse import csr_matrix, identity as sparse_identity
-from src.sym import hct_mod, get_seniority_symmetries
+from quasisymmetries.sym import hct_mod, get_seniority_symmetries
 import time
 
 def threadpool_limit_context(num_threads):
@@ -630,7 +630,7 @@ class GivensProductSparseSimilarityCostEvaluator(SimpleSparseSimilarityCostEvalu
         return H_rot, psi_rot, Hpsi_rot
 
     def _tangent_generators(self, params):
-        from src.orbital_rotation import givens_product_pairs, sparse_real_givens_unitary
+        from quasisymmetries.orbital_rotation import givens_product_pairs, sparse_real_givens_unitary
 
         if self.basis_dict is None:
             raise ValueError("Analytic gradient requires a one-body sparse basis_dict.")
@@ -1619,7 +1619,7 @@ def run_orbital_optimization_benchmark(system, directory="./saved/hamiltonians/"
     with open(benchmark_txt_path, "w") as f:
         print("{} {} benchmark datasets".format(system, orbital_tag), file=f)
 
-    from benchmark_all import BenchmarkData, benchmark_syms
+    from quasisymmetries.benchmark import BenchmarkData, benchmark_syms
 
     benchmark_datasets = [
         benchmark_syms(

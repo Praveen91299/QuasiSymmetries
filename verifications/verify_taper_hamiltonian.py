@@ -4,15 +4,12 @@ Run from QuasiSymmetries:
     python verifications/verify_taper_hamiltonian.py
 """
 
-import sys
-from pathlib import Path
 
 import numpy as np
 from openfermion import QubitOperator, get_sparse_operator
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from src.op_utils import (
+from quasisymmetries.op_utils import (
     freeze_qubits,
     pauli_matrix_element_with_basis_state,
     permute_sym_to_start,

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 from openfermion import QubitOperator
-from src.gf2_utils import (
+from ..gf2_utils import (
     gf2_int_in_span,
     gf2_int_msb_pos,
     gf2_int_nullspace_basis,

@@ -7,24 +7,24 @@ from openfermion import FermionOperator, hermitian_conjugated, normal_ordered
 from openfermion.transforms import get_interaction_operator, jordan_wigner
 
 
-from src.tn import find_dmrg_conv_bd_quimb
+from quasisymmetries.tn import find_dmrg_conv_bd_quimb
 
 import pickle
 import quimb.tensor as qtn
 import numpy as np
 from openfermion import count_qubits, jordan_wigner, MolecularData, get_sparse_operator
-from src.state_utils import get_hf_wfn, get_hf_occ
-from src.metrics import get_permuted_bipartite_entanglement, comm_sq_exp_fast, get_entropies_at_cuts
-from src.sym import get_seniority_symmetries, hct_mod
-from src.bliss import lp_bliss_paper_real_pauli_1norm
-from benchmark_all import benchmark_syms, BenchmarkData
+from quasisymmetries.state_utils import get_hf_wfn, get_hf_occ
+from quasisymmetries.metrics import get_permuted_bipartite_entanglement, comm_sq_exp_fast, get_entropies_at_cuts
+from quasisymmetries.sym import get_seniority_symmetries, hct_mod
+from quasisymmetries.bliss import lp_bliss_paper_real_pauli_1norm
+from quasisymmetries.benchmark import benchmark_syms, BenchmarkData
 import pandas as pd
-from src.fiedler import fiedler_order_from_state, reorder_statevector_axes
-from src.bs.beam import find_commuting_symmetry_generators
+from quasisymmetries.fiedler import fiedler_order_from_state, reorder_statevector_axes
+from quasisymmetries.bs.beam import find_commuting_symmetry_generators
 
 import numpy as np
 from pyblock2.driver.core import DMRGDriver, SymmetryTypes
-from src.tn import MPO_from_QubitOperator
+from quasisymmetries.tn import MPO_from_QubitOperator
 
 
 def _pauli_dense_from_qubit_term(term, coeff, n_qubits):

@@ -1,16 +1,16 @@
 ### May 26, testing new DMRG calculation stuff
 
-from src.tn import find_dmrg_conv_bd_quimb
+from quasisymmetries.tn import find_dmrg_conv_bd_quimb
 
 import pickle
 import quimb.tensor as qtn
 import numpy as np
 from openfermion import count_qubits, jordan_wigner, MolecularData, get_sparse_operator
-from src.state_utils import get_hf_wfn, get_hf_occ
-from src.metrics import get_permuted_bipartite_entanglement, comm_sq_exp_fast
-from src.sym import get_seniority_symmetries, hct_mod
-from src.bliss import lp_bliss_paper_real_pauli_1norm
-from benchmark_all import benchmark_syms, BenchmarkData
+from quasisymmetries.state_utils import get_hf_wfn, get_hf_occ
+from quasisymmetries.metrics import get_permuted_bipartite_entanglement, comm_sq_exp_fast
+from quasisymmetries.sym import get_seniority_symmetries, hct_mod
+from quasisymmetries.bliss import lp_bliss_paper_real_pauli_1norm
+from quasisymmetries.benchmark import benchmark_syms, BenchmarkData
 import pandas as pd
 
 directory = "./saved/hamiltonians/"

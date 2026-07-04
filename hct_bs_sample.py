@@ -6,16 +6,16 @@ import numpy as np
 from openfermion import FermionOperator
 from copy import deepcopy
 from openfermion import commutator
-from src.state_utils import get_cisd_gs, get_fci_state_openfermion
-from src.op_utils import build_H_chain_for_R
-from src.sym import get_quartic_symmetries, get_seniority_symmetries, hct_mod
+from quasisymmetries.state_utils import get_cisd_gs, get_fci_state_openfermion
+from quasisymmetries.op_utils import build_H_chain_for_R
+from quasisymmetries.sym import get_quartic_symmetries, get_seniority_symmetries, hct_mod
 
-from src.bs.utils import *
-from src.bs.beam import *
+from quasisymmetries.bs.utils import *
+from quasisymmetries.bs.beam import *
 
 # hct
-from src.metrics import variance, comm_sq_exp_fast, find_commuting_paulis, universal_grading
-from src.state_utils import get_hf_occ, get_hf_wfn
+from quasisymmetries.metrics import variance, comm_sq_exp_fast, find_commuting_paulis, universal_grading
+from quasisymmetries.state_utils import get_hf_occ, get_hf_wfn
 
 def h2o_geometry(bond_length, bond_angle_deg):
     theta = np.deg2rad(bond_angle_deg)
@@ -108,7 +108,7 @@ for s in sym_bs:
     print("  ", s)
 
 # evaluate metrics
-from src.metrics import universal_grading, entropy_pauli_syms, find_commuting_paulis, get_ent
+from quasisymmetries.metrics import universal_grading, entropy_pauli_syms, find_commuting_paulis, get_ent
 
 print("Non-commutativity")
 print("HCT:{}".format(universal_grading(sym_hct, HQ)))
@@ -128,7 +128,7 @@ _ = find_commuting_paulis(HQ, sym_sen)
 _ = find_commuting_paulis(HQ, sym_quar)
 _ = find_commuting_paulis(HQ, sym_bs)
 
-from src.tn import find_dmrg_conv_bd
+from quasisymmetries.tn import find_dmrg_conv_bd
 
 max_bd=20
 og_bd = find_dmrg_conv_bd(HQ, n_qubits, e, max_bd=max_bd, n_sweeps=50, reps=10)

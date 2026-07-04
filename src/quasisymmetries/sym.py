@@ -1,9 +1,9 @@
 import numpy as np
-from src.op_utils import *
-from src.gf2_utils import *
+from .op_utils import *
+from .gf2_utils import *
 from openfermion import count_qubits, jordan_wigner, QubitOperator
-from src.metrics import universal_grading
-from src.op_utils import truncate_qubitop
+from .metrics import universal_grading
+from .op_utils import truncate_qubitop
 from dataclasses import dataclass
 
 # def find_approx_symm(H, n_sym=None, num_intervals=100, eps_max=None, verbose=True, print_new=True, sym_metric_func=None):

@@ -3,8 +3,8 @@
 from openfermion import count_qubits, jordan_wigner, get_ground_state, get_sparse_operator, MolecularData, get_fermion_operator
 
 from openfermionpyscf import run_pyscf
-from src.state_utils import get_cisd_gs
-from src.state_utils import get_hf_wfn, get_hf_occ
+from quasisymmetries.state_utils import get_cisd_gs
+from quasisymmetries.state_utils import get_hf_wfn, get_hf_occ
 import pickle
 
 # bl = 2.2

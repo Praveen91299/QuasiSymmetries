@@ -5,20 +5,20 @@ from openfermion import count_qubits, jordan_wigner, get_ground_state, get_spars
 import pickle
 
 import numpy as np
-from src.sym import get_seniority_symmetries, hct_mod
+from quasisymmetries.sym import get_seniority_symmetries, hct_mod
 
-from src.bs.utils import *
-from src.bs.beam import *
+from quasisymmetries.bs.utils import *
+from quasisymmetries.bs.beam import *
 import pprint
 
 # hct
-from src.state_utils import get_hf_occ
+from quasisymmetries.state_utils import get_hf_occ
 
-from src.metrics import *
+from quasisymmetries.metrics import *
 import matplotlib.pyplot as plt
 import pickle
-from src.metrics import *
-from src.pt import computational_basis_matrix_element, coupled_computational_basis_states
+from quasisymmetries.metrics import *
+from quasisymmetries.pt import computational_basis_matrix_element, coupled_computational_basis_states
 
 directory = './saved/hamiltonians/'
 system = 'H4chain_corr'
@@ -31,7 +31,7 @@ HQ = jordan_wigner(H)
 n_qubits = count_qubits(HQ)
 Hs = get_sparse_operator(HQ, n_qubits)
 
-from src.op_utils import split_diagonal_paulis
+from quasisymmetries.op_utils import split_diagonal_paulis
 
 def separate_H(HQ, list_syms, verbose=False, verify=True):
     const = HQ.constant

@@ -1,20 +1,20 @@
 ### diagonal vs non-diagonal symmetry test
 
-from src.bs.beam import build_candidate_pool_hct
-from src.bs.utils import exact_pauli_symmetry_basis, qubit_operator_terms, mask_to_qubit_operator
+from quasisymmetries.bs.beam import build_candidate_pool_hct
+from quasisymmetries.bs.utils import exact_pauli_symmetry_basis, qubit_operator_terms, mask_to_qubit_operator
 
 ### May 26, testing new DMRG calculation stuff
 
-from src.tn import find_dmrg_conv_bd_quimb
+from quasisymmetries.tn import find_dmrg_conv_bd_quimb
 
 import pickle
 import quimb.tensor as qtn
 import numpy as np
 from openfermion import count_qubits, jordan_wigner, MolecularData, get_sparse_operator
-from src.state_utils import get_hf_wfn, get_hf_occ
-from src.metrics import get_permuted_bipartite_entanglement, comm_sq_exp_fast
-from src.sym import get_seniority_symmetries, hct_mod
-from src.bliss import lp_bliss_paper_real_pauli_1norm
+from quasisymmetries.state_utils import get_hf_wfn, get_hf_occ
+from quasisymmetries.metrics import get_permuted_bipartite_entanglement, comm_sq_exp_fast
+from quasisymmetries.sym import get_seniority_symmetries, hct_mod
+from quasisymmetries.bliss import lp_bliss_paper_real_pauli_1norm
 
 directory = "./saved/hamiltonians/"
 
@@ -99,7 +99,7 @@ candidate_pool = build_candidate_pool_hct(
     hct_use_coeffs_eps = hct_use_coeffs_eps,
 )
 
-from src.bs.beam import beam_search_symmetries, local_swap_refine
+from quasisymmetries.bs.beam import beam_search_symmetries, local_swap_refine
 
 target_rank=n_qubits
 heavy_core_fraction=0.95
@@ -130,7 +130,7 @@ if do_local_refine:
 
 print(syms)
 
-from benchmark_all import benchmark_syms
+from quasisymmetries.benchmark import benchmark_syms
 
 data_n2_og =  benchmark_syms(syms, HQ, fci_gs, fci_e, n_qubits, False, True, tag="N2 BS unmodified", print_to_file=outfile)
 
@@ -149,11 +149,11 @@ candidate_pool = build_candidate_pool_hct(
     hct_use_coeffs_eps = hct_use_coeffs_eps,
 )
 
-from src.bs.utils import mask_to_qubit_operator
+from quasisymmetries.bs.utils import mask_to_qubit_operator
 for term in candidate_pool:
     print(mask_to_qubit_operator(term, n_qubits))
 
-from src.bs.beam import beam_search_symmetries, local_swap_refine
+from quasisymmetries.bs.beam import beam_search_symmetries, local_swap_refine
 
 target_rank=n_qubits
 heavy_core_fraction=0.95
@@ -186,7 +186,7 @@ if do_local_refine:
 
 print(syms)
 
-from benchmark_all import benchmark_syms, BenchmarkData
+from quasisymmetries.benchmark import benchmark_syms, BenchmarkData
 
 data_n2_filtered =  benchmark_syms(syms, HQ, fci_gs, fci_e, n_qubits, False, True, tag="N2 BS diagonal", print_to_file=outfile)
 

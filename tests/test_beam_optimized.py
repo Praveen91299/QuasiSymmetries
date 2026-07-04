@@ -3,13 +3,13 @@ from collections import Counter
 import pytest
 from openfermion import QubitOperator
 
-from src.bs.beam import (
+from quasisymmetries.bs.beam import (
     BeamSearch_Symmetries,
     beam_search_symmetries,
     build_candidate_pool,
     local_swap_refine,
 )
-from src.bs.utils import qubit_operator_terms, qubitops_to_masks
+from quasisymmetries.bs.utils import qubit_operator_terms, qubitops_to_masks
 
 
 def example_problem():

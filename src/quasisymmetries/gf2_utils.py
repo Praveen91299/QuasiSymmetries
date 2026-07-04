@@ -140,7 +140,8 @@ def gf2_rref(A):
     """
     Compute row-reduced echelon form over GF(2).
 
-    Uses the packed-int convention shared with src.bs.utils: matrix column i
+    Uses the packed-int convention shared with quasisymmetries.bs.utils:
+    matrix column i
     maps to packed bit i, and pivots are chosen from high bit to low bit.
     
     Parameters
@@ -238,7 +239,8 @@ def gf2_nullspace(A):
     """
     Compute basis for nullspace of A over GF(2): {x : Ax = 0 mod 2}.
 
-    Uses the packed-int nullspace convention shared with src.bs.utils:
+    Uses the packed-int nullspace convention shared with
+    quasisymmetries.bs.utils:
     matrix column i maps to packed bit i, and pivots are chosen from high bit
     to low bit.
     
@@ -537,7 +539,7 @@ def gf2_intersection(A, B, n_qubits, verify=True):
     return y
 
 def gf2_complement(A, B, verify=True):
-    """
+    r"""
     Returns generating set for span(A)\span(B)
     
     Notes:

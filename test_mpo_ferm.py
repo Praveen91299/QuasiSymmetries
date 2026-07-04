@@ -13,7 +13,7 @@ from openfermion import (
 )
 from pyblock2.algebra.io import MPSTools
 from pyblock2.driver.core import DMRGDriver, SymmetryTypes
-from mpo_bds import build_qc_mpo_from_openfermion_molecule
+from quasisymmetries.mpo import build_qc_mpo_from_openfermion_molecule
 
 
 def statevector_to_sz_determinants(

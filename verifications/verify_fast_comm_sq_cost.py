@@ -11,6 +11,8 @@ from pathlib import Path
 import numpy as np
 from openfermion import QubitOperator, get_sparse_operator
 
+# ``orb_rot_opt.py`` intentionally remains a repository script rather than part of
+# the installable package, so make the repository root importable for this check.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from orb_rot_opt import (
@@ -21,10 +23,10 @@ from orb_rot_opt import (
     choose_fastest_comm_sq_evaluator,
     sparse_hamiltonian_from_rotated_tensors,
 )
-from src.ferm_utils import build_sparse_basis, rotate_chem_obt, rotate_chem_tbt
-from src.metrics import comm_sq_exp_fast
-from src.op_utils import prepare_pauli_actions, prepare_pauli_sum_action
-from src.orbital_rotation import (
+from quasisymmetries.ferm_utils import build_sparse_basis, rotate_chem_obt, rotate_chem_tbt
+from quasisymmetries.metrics import comm_sq_exp_fast
+from quasisymmetries.op_utils import prepare_pauli_actions, prepare_pauli_sum_action
+from quasisymmetries.orbital_rotation import (
     RealOrbitalRotation,
     apply_givens_product_to_sparse_operator,
     apply_givens_product_to_state,

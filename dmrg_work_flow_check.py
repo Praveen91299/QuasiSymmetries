@@ -3,7 +3,7 @@ import pickle
 import quimb.tensor as qtn
 import numpy as np
 from openfermion import count_qubits, jordan_wigner, MolecularData, get_sparse_operator
-from src.state_utils import get_hf_wfn, get_hf_occ
+from quasisymmetries.state_utils import get_hf_wfn, get_hf_occ
 
 def MPO_from_QubitOperator(H, max_bond = None, mpo_cutoff = 1e-10, verbose = True,
                            compression_freq = 20):

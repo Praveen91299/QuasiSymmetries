@@ -4,12 +4,15 @@ Verify orbital-rotation optimization backends.
 Run from QuasiSymmetries:
     python verifications/verify_orb_rot_opt_backends.py
 """
+
 import sys
 from pathlib import Path
 
 import numpy as np
 from openfermion import QubitOperator
 
+# ``orb_rot_opt.py`` intentionally remains a repository script rather than part of
+# the installable package, so make the repository root importable for this check.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from orb_rot_opt import (
@@ -22,9 +25,9 @@ from orb_rot_opt import (
     minimize_cisd_comm_sq,
     sparse_hamiltonian_from_rotated_tensors,
 )
-from src.ferm_utils import build_sparse_basis, rotate_chem_obt, rotate_chem_tbt
-from src.metrics import comm_sq_exp_fast
-from src.orbital_rotation import (
+from quasisymmetries.ferm_utils import build_sparse_basis, rotate_chem_obt, rotate_chem_tbt
+from quasisymmetries.metrics import comm_sq_exp_fast
+from quasisymmetries.orbital_rotation import (
     RealOrbitalRotation,
     apply_givens_product_adjoint_to_state,
     apply_givens_product_to_sparse_operator,

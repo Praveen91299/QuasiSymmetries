@@ -7,5 +7,41 @@ Notes:
 - BS-HCT has been observed to not improve much upon HCT, hence redundant.  
 - Beam search (with HCT symmetries added) currently performs best (lowest entanglement/bond dimension for DMRG convergence).  
 
-### Requirements  
-numpy, openfermion, openfermionpyscf, pyscf, block2, scipy and other standard libraries.
+### Requirements
+
+Python 3.9 or newer. Core dependencies are installed automatically;
+tensor-network, chemistry, circuit, and development dependencies are available
+as optional extras below.
+
+### Installation
+
+Install the core package in editable mode while developing:
+
+```bash
+python -m pip install -e .
+```
+
+Optional features can be installed with extras:
+
+```bash
+python -m pip install -e ".[tensor-network,chemistry,circuits,dev]"
+```
+
+The import name is `quasisymmetries`:
+
+```python
+from quasisymmetries import (
+    BeamSearch_Symmetries,
+    Clifford,
+    permute_sym_to_start,
+    taper_hamiltonian,
+)
+```
+
+Workflow and benchmarking scripts remain at the repository root. Reusable
+benchmark and MPO helpers are available from `quasisymmetries.benchmark` and
+`quasisymmetries.mpo`.
+
+`BenchmarkData.save()` and `BenchmarkData.save_datasets()` use versioned JSON
+files. Existing pickle benchmark files remain readable for migration, but
+pickle files should only be loaded when their source is trusted.

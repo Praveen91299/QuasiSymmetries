@@ -10,14 +10,16 @@ from scipy import sparse
 from openfermion import QubitOperator, get_sparse_operator
 
 
-MODULE_PATH = os.environ.get(
-    "MODULE_UNDER_TEST",
-    os.path.join(os.path.dirname(__file__), "clifford_symmetry_optimized.py"),
-)
-spec = importlib.util.spec_from_file_location("clifford_symmetry_optimized", MODULE_PATH)
-cs = importlib.util.module_from_spec(spec)
-sys.modules[spec.name] = cs
-spec.loader.exec_module(cs)
+MODULE_PATH = os.environ.get("MODULE_UNDER_TEST")
+if MODULE_PATH:
+    spec = importlib.util.spec_from_file_location(
+        "clifford_symmetry_optimized", MODULE_PATH
+    )
+    cs = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = cs
+    spec.loader.exec_module(cs)
+else:
+    import quasisymmetries.clifford_symmetry_optimized as cs
 
 
 def oq_equal(a, b, atol=1e-10):

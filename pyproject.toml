@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quasi-symmetries"
+version = "0.1.0"
+description = "Search, Clifford transformation, and analysis tools for Pauli quasi-symmetries."
+readme = "readme.md"
+requires-python = ">=3.9"
+dependencies = [
+    "numpy",
+    "scipy",
+    "openfermion",
+    "matplotlib",
+]
+
+[project.optional-dependencies]
+tensor-network = [
+    "block2",
+    "quimb",
+    "pandas",
+]
+chemistry = [
+    "openfermionpyscf",
+    "pyscf",
+]
+circuits = [
+    "qiskit",
+]
+qcc = [
+    "tequila-basic",
+]
+dev = [
+    "build",
+    "pytest",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

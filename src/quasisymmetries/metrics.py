@@ -3,9 +3,8 @@ from openfermion import commutator, get_sparse_operator, expectation, get_ground
 import numpy as np
 from scipy.sparse import identity as sparse_id
 from copy import deepcopy
-from src.op_utils import freeze_qubits, permute_sym_to_start
-from src.tn import *
-from src.clifford_symmetry_optimized import Clifford
+from .op_utils import freeze_qubits, permute_sym_to_start
+from .clifford_symmetry_optimized import Clifford
 
 def construct_projectors(sym_list: list[QubitOperator]):
     """
@@ -369,6 +368,8 @@ def get_bipartite_mps(HQ, n_qubits, target_energy=None, bd=100, n_sweeps=100, to
     """
     np.random.seed(0)
     
+    from .tn import QO_to_block2_MPO
+
     mpo, driver = QO_to_block2_MPO(HQ, n_qubits)
     ket = driver.get_random_mps(tag="KET", bond_dim=bd, nroots=1)
 

@@ -1,6 +1,6 @@
 ### hct number of symmetry dependence:
-from src.metrics import get_ent, variance, comm_sq_exp_fast
-from src.sym import hct_mod, bs_hct
+from quasisymmetries.metrics import get_ent, variance, comm_sq_exp_fast
+from quasisymmetries.sym import hct_mod, bs_hct
 import matplotlib.pyplot as plt
 import pickle
 from openfermion import MolecularData, jordan_wigner, count_qubits, get_sparse_operator

@@ -7,9 +7,9 @@ import pickle
 import numpy as np
 from pathlib import Path
 from openfermion import MolecularData, jordan_wigner, count_qubits
-from mpo_bds import build_qc_mpo_from_openfermion_molecule
-from src.bs.beam import *
-from benchmark_all import BenchmarkData, benchmark_syms
+from quasisymmetries.mpo import build_qc_mpo_from_openfermion_molecule
+from quasisymmetries.bs.beam import *
+from quasisymmetries.benchmark import BenchmarkData, benchmark_syms
 
 
 
@@ -17,9 +17,9 @@ from dataclasses import dataclass
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 from openfermion import QubitOperator, get_sparse_operator, expectation
-from src.bs.utils import *
-from src.clifford_symmetry_optimized import Clifford
-from src.metrics import (
+from quasisymmetries.bs.utils import *
+from quasisymmetries.clifford_symmetry_optimized import Clifford
+from quasisymmetries.metrics import (
     comm_sq_exp_fast,
     comm_sq_exp_sparse_syms,
     get_permuted_bipartite_entanglement,

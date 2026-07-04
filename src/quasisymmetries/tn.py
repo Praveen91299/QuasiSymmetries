@@ -1,7 +1,7 @@
 from openfermion import QubitOperator
 from openfermion.utils import count_qubits
 from copy import deepcopy
-from src.op_utils import has_complex_entries
+from .op_utils import has_complex_entries
 import quimb.tensor as qtn
 import numpy as np
 
@@ -15,7 +15,8 @@ except ImportError:
 def _require_pyblock2():
     if DMRGDriver is None or SymmetryTypes is None:
         raise ImportError(
-            "pyblock2 is required for the block2 DMRG helpers in src.tn. "
+            "pyblock2 is required for the block2 DMRG helpers in "
+            "quasisymmetries.tn. "
             "Use find_dmrg_conv_bd_quimb for the quimb-only DMRG path."
         )
 

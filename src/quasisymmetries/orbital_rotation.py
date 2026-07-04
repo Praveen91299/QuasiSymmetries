@@ -1,8 +1,8 @@
 import numpy as np
 from scipy.linalg import expm, logm
 from scipy.sparse import csr_matrix, identity as sparse_identity
-from src.ferm_utils import get_U
-from src.mat_utils import is_antihermitian, pad_2d_to_square, is_unitary, is_skewsymmetric, skew_log_orthogonal, is_orthogonal
+from .ferm_utils import get_U
+from .mat_utils import is_antihermitian, pad_2d_to_square, is_unitary, is_skewsymmetric, skew_log_orthogonal, is_orthogonal
 from qiskit import QuantumCircuit
 from copy import deepcopy
 

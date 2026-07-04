@@ -5,16 +5,13 @@ Run from QuasiSymmetries:
     python verifications/verify_orbital_rotation_fast_state.py
 """
 import time
-import sys
-from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from openfermion import QubitOperator, get_sparse_operator
 
-from src.orbital_rotation import (
+from quasisymmetries.orbital_rotation import (
     RealOrbitalRotation,
     apply_real_orbital_rotation_to_sparse_operator,
     apply_real_orbital_rotation_to_state,

@@ -605,8 +605,8 @@ def reorder_statevector_axes(
 
     return psi_reordered
 
-from src.clifford_symmetry_optimized import permute_qubits_in_qubit_operator
-from src.metrics import get_entropies_at_cuts
+from .clifford_symmetry_optimized import permute_qubits_in_qubit_operator
+from .metrics import get_entropies_at_cuts
 
 def do_fiedler_reordering(HQ, psi, n_qubits, verbose=True, component_order="index", log_base=np.e):
     """

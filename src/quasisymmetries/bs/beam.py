@@ -1,13 +1,11 @@
 from __future__ import annotations
-from .utils import *
-
 import multiprocessing as mp
 from contextlib import nullcontext
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Optional, Sequence, Tuple
 
 from openfermion import QubitOperator
-from src.bs.utils import *
+from .utils import *
 
 ### AI code, seems to work
 
@@ -87,8 +85,8 @@ def build_candidate_pool_hct(
 
     if include_hct_symmetries:
         print("Adding HCT symmetries to the pool:")
-        from src.sym import hct_mod
-        from src.bs.utils import terms_to_HQ, qubitops_to_masks
+        from ..sym import hct_mod
+        from .utils import terms_to_HQ, qubitops_to_masks
 
         HQ_rt = terms_to_HQ(terms)
         n_sym = hct_n_sym if hct_n_sym is not None else n_qubits

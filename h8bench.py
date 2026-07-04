@@ -7,15 +7,15 @@ import multiprocessing as mp
 
 import pandas as pd
 from openfermion import count_qubits, jordan_wigner, get_sparse_operator, MolecularData
-from src.bs.beam import find_commuting_symmetry_generators
-from src.metrics import comm_sq_exp_fast, variance
-from src.sym import get_quartic_symmetries, get_seniority_symmetries, hct_mod, bs_hct
-from benchmark_all import BenchmarkData, benchmark_syms
+from quasisymmetries.bs.beam import find_commuting_symmetry_generators
+from quasisymmetries.metrics import comm_sq_exp_fast, variance
+from quasisymmetries.sym import get_quartic_symmetries, get_seniority_symmetries, hct_mod, bs_hct
+from quasisymmetries.benchmark import BenchmarkData, benchmark_syms
 import numpy as np
-from src.fiedler import do_fiedler_reordering
-from src.bliss import lp_bliss_paper_real_pauli_1norm
-from src.sym import hct_mod
-from src.bs.beam import BeamSearch_Symmetries
+from quasisymmetries.fiedler import do_fiedler_reordering
+from quasisymmetries.bliss import lp_bliss_paper_real_pauli_1norm
+from quasisymmetries.sym import hct_mod
+from quasisymmetries.bs.beam import BeamSearch_Symmetries
 
 def do_fiedler_analysis(syms, HQ, fci_gs, fci_e, n_qubits, log_base=np.e, verbose=True, write_to_file=False, filename=None):
     ent_reord, H_reord, psi_reord, fiedler_info = do_fiedler_reordering(HQ, fci_gs, n_qubits=n_qubits, verbose=verbose, log_base=log_base)
@@ -228,7 +228,7 @@ for system in systems:
 
     #dmrg bds
     # unrotated DMRG (as paulis) and entanglement
-    from src.metrics import get_entropies_at_cuts
+    from quasisymmetries.metrics import get_entropies_at_cuts
     ents_og = get_entropies_at_cuts(fci_gs, n_qubits, log_base=log_base)
 
     with open(output_filename, 'a') as f:
@@ -242,7 +242,7 @@ for system in systems:
     #qubit
     compress_cutoff = 1e-20
     import quimb.tensor as qtn
-    from src.tn import find_dmrg_conv_bd_quimb
+    from quasisymmetries.tn import find_dmrg_conv_bd_quimb
     gs_mps = qtn.MatrixProductState.from_dense(fci_gs, cutoff = compress_cutoff)     
     dmrg_bd, _, og_mpo_data = find_dmrg_conv_bd_quimb(HQ, n_qubits, fci_e, tol=1.6e-3, n_sweeps=100, 
                         reps=1, verbose=False, compress_cutoff = compress_cutoff, sweep_tol = 1e-6,
