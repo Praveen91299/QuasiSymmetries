@@ -59,7 +59,7 @@ def get_sector_projectors(list_sym, sectors, n_qubits):
     return proj
 
 def find_overlaps(sym_ops, state, n_qubits):
-    """
+    r"""
     Find coefficients of state in different symmetry subspaces
 
     <\psi Pi_s \psi> for all s vectors
@@ -288,13 +288,28 @@ def get_entropies_at_cuts(state, n_qubits, log_base='2'):
         entropies.append(entropy(np.abs(d)**2, log_base=log_base))
     return entropies
 
-def get_ent(symmetries, HQ, n_qubits, verbose=False, return_state=False, return_sparse_clifford=False, log_base='2'):
+def get_ent(
+    symmetries,
+    HQ,
+    n_qubits,
+    verbose=False,
+    return_state=False,
+    return_sparse_clifford=False,
+    log_base='2',
+    synthesis_basis="X",
+):
     """
     Get bi-partite entanglement across all partitions after diagonalizing symmetries and localizing them to qubits 0, 1, 2, ... in order
 
     """
     if len(symmetries) > 0:
-        H_perm = permute_sym_to_start(HQ, symmetries, n_qubits, verbose=verbose)
+        H_perm = permute_sym_to_start(
+            HQ,
+            symmetries,
+            n_qubits,
+            verbose=verbose,
+            synthesis_basis=synthesis_basis,
+        )
     else:
         if verbose: print("No symmetries passed, returning original bond entanglements.")
         H_perm = HQ
@@ -334,7 +349,13 @@ def int_to_binary_list(x: int, n: int, MSB_first=True) -> list[int]:
     else:
         return list(reversed(b))
 
-def get_single_sector_energies(HQ, list_sym, n_qubits, verbose=False):
+def get_single_sector_energies(
+    HQ,
+    list_sym,
+    n_qubits,
+    verbose=False,
+    synthesis_basis="X",
+):
     """
     Find ground state in symmetry sectors
 
@@ -346,7 +367,13 @@ def get_single_sector_energies(HQ, list_sym, n_qubits, verbose=False):
     n_qubits_red = n_qubits - n_sym
     #all combinations
 
-    H_perm = permute_sym_to_start(HQ, list_sym, n_qubits,False)
+    H_perm = permute_sym_to_start(
+        HQ,
+        list_sym,
+        n_qubits,
+        False,
+        synthesis_basis=synthesis_basis,
+    )
     frozen_qubits = list(range(n_sym))
 
     gs_e_list = []
@@ -403,19 +430,31 @@ def get_permuted_bipartite_entanglement(
     log_base='e',
     use_dmrg=False,
     return_clifford=False,
+    synthesis_basis="X",
 ):
     """
     Get bi-partite entanglement across all partitions after diagonalizing symmetries and localizing them to qubits 0, 1, 2, ... in order
     *Modified version of get_ent with dmrg calculations for speed.*
 
+    ``synthesis_basis`` is forwarded to ``Clifford.from_symmetries``.
     """
     #permute
     if len(symmetries) > 0:
-        H_perm, clifford, perm = permute_sym_to_start(HQ, symmetries, n_qubits, verbose=verbose, return_clifford_perm=True)
+        H_perm, clifford, perm = permute_sym_to_start(
+            HQ,
+            symmetries,
+            n_qubits,
+            verbose=verbose,
+            return_clifford_perm=True,
+            synthesis_basis=synthesis_basis,
+        )
     else:
         if verbose: print("No symmetries passed, returning original bond entanglements.")
         H_perm = HQ
-        clifford = Clifford(n_qubits)
+        clifford = Clifford(
+            n_qubits,
+            synthesis_basis=synthesis_basis,
+        )
         perm = list(clifford.permutation)
     
     #solve

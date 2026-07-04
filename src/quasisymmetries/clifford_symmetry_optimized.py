@@ -9,7 +9,7 @@ term rewrites.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Sequence, Tuple, Union
+from typing import Dict, List, Literal, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -192,6 +192,7 @@ def apply_CNOT_to_rows(xs: np.ndarray, zs: np.ndarray, control: int, target: int
 
 ParsedGate = Tuple[Union[str, int], ...]
 Term = Tuple[Tuple[int, str], ...]
+SynthesisBasis = Literal["X", "Z"]
 
 
 _LOCAL_CODE = {
@@ -473,11 +474,19 @@ def _validate_symmetry_coeff(coeff: complex, *, atol: float = 1e-12) -> None:
         raise ValueError("Each symmetry coefficient must be real ±1 for a Hermitian Pauli symmetry.")
 
 
+def _validate_synthesis_basis(synthesis_basis: str) -> SynthesisBasis:
+    basis = str(synthesis_basis).upper()
+    if basis not in {"X", "Z"}:
+        raise ValueError("synthesis_basis must be either 'X' or 'Z'.")
+    return basis  # type: ignore[return-value]
+
+
 def _synthesize_ordered_symmetry_clifford_data(
     symmetries: Sequence[QubitOperator],
     n_qubits: Optional[int] = None,
     return_full_clifford: bool = False,
     return_elementary_factors: bool = False,
+    synthesis_basis: SynthesisBasis = "X",
 ) -> _CliffordSynthesisData:
     """Synthesize a Clifford mapping an ordered independent commuting set to Z pivots.
 
@@ -487,6 +496,8 @@ def _synthesize_ordered_symmetry_clifford_data(
     """
     if len(symmetries) == 0:
         raise ValueError("Need at least one symmetry.")
+
+    synthesis_basis = _validate_synthesis_basis(synthesis_basis)
 
     if n_qubits is None:
         n_qubits = max(qubit_operator_num_qubits(s) for s in symmetries)
@@ -539,33 +550,64 @@ def _synthesize_ordered_symmetry_clifford_data(
         mapped_qubits.append(pivot)
         mapped_set.add(pivot)
 
-        active_support = [q for q in range(n_qubits) if xs[i, q] or zs[i, q]]
-        for q in active_support:
-            if q in mapped_qubits[:-1]:
-                if xs[i, q] or zs[i, q]:
-                    raise RuntimeError("Failed to clear previous pivot support.")
-                continue
+        active_support = [
+            q for q in range(n_qubits) if xs[i, q] or zs[i, q]
+        ]
+        if synthesis_basis == "X":
+            for q in active_support:
+                if q in mapped_qubits[:-1]:
+                    if xs[i, q] or zs[i, q]:
+                        raise RuntimeError(
+                            "Failed to clear previous pivot support."
+                        )
+                    continue
 
-            if xs[i, q] == 1 and zs[i, q] == 0:
-                pass
-            elif xs[i, q] == 1 and zs[i, q] == 1:
-                apply_Sdg_to_rows(xs, zs, q)
-                add_gate(f"Sdg({q})")
-            elif xs[i, q] == 0 and zs[i, q] == 1:
-                apply_H_to_rows(xs, zs, q)
-                add_gate(f"H({q})")
-            else:
-                raise RuntimeError("Unexpected local Pauli state.")
+                if xs[i, q] == 1 and zs[i, q] == 0:
+                    pass
+                elif xs[i, q] == 1 and zs[i, q] == 1:
+                    apply_Sdg_to_rows(xs, zs, q)
+                    add_gate(f"Sdg({q})")
+                elif xs[i, q] == 0 and zs[i, q] == 1:
+                    apply_H_to_rows(xs, zs, q)
+                    add_gate(f"H({q})")
+                else:
+                    raise RuntimeError("Unexpected local Pauli state.")
 
-        active_support = [q for q in range(n_qubits) if xs[i, q] or zs[i, q]]
-        for q in list(active_support):
-            if q == pivot:
-                continue
-            apply_CNOT_to_rows(xs, zs, pivot, q)
-            add_gate(f"CNOT({pivot}->{q})")
+            for q in active_support:
+                if q == pivot:
+                    continue
+                apply_CNOT_to_rows(xs, zs, pivot, q)
+                add_gate(f"CNOT({pivot}->{q})")
 
-        apply_H_to_rows(xs, zs, pivot)
-        add_gate(f"H({pivot})")
+            apply_H_to_rows(xs, zs, pivot)
+            add_gate(f"H({pivot})")
+        else:
+            for q in active_support:
+                if q in mapped_qubits[:-1]:
+                    if xs[i, q] or zs[i, q]:
+                        raise RuntimeError(
+                            "Failed to clear previous pivot support."
+                        )
+                    continue
+
+                if xs[i, q] == 0 and zs[i, q] == 1:
+                    pass
+                elif xs[i, q] == 1 and zs[i, q] == 0:
+                    apply_H_to_rows(xs, zs, q)
+                    add_gate(f"H({q})")
+                elif xs[i, q] == 1 and zs[i, q] == 1:
+                    apply_Sdg_to_rows(xs, zs, q)
+                    add_gate(f"Sdg({q})")
+                    apply_H_to_rows(xs, zs, q)
+                    add_gate(f"H({q})")
+                else:
+                    raise RuntimeError("Unexpected local Pauli state.")
+
+            for q in active_support:
+                if q == pivot:
+                    continue
+                apply_CNOT_to_rows(xs, zs, q, pivot)
+                add_gate(f"CNOT({q}->{pivot})")
 
     transformed_generators = [
         pauli_dict_to_qubit_operator(pauli_map_from_binary(xs[i], zs[i]))
@@ -787,6 +829,7 @@ def build_symmetry_block_structure(
     symmetries: Sequence[QubitOperator],
     n_qubits: Optional[int] = None,
     return_full_clifford: bool = False,
+    synthesis_basis: SynthesisBasis = "X",
 ) -> SymmetryBlockStructureResult:
     if n_qubits is None:
         n_qubits = max(
@@ -797,6 +840,7 @@ def build_symmetry_block_structure(
         symmetries,
         n_qubits=n_qubits,
         symmetry_qubits_first=False,
+        synthesis_basis=synthesis_basis,
     )
     _ = return_full_clifford
     transformed_hamiltonian = clifford.transform(hamiltonian)
@@ -919,11 +963,13 @@ def build_symmetry_block_structure_with_packed_qubits(
     n_qubits: int,
     return_full_clifford: bool = False,
     reorder_sector: bool = False,
+    synthesis_basis: SynthesisBasis = "X",
 ) -> SymmetryBlockStructurePackedResult:
     clifford = Clifford.from_symmetries(
         symmetries,
         n_qubits=n_qubits,
         symmetry_qubits_first=False,
+        synthesis_basis=synthesis_basis,
     )
     _ = return_full_clifford
     transformed_h = clifford.transform(hamiltonian)
@@ -1135,6 +1181,7 @@ class Clifford:
         factor_descriptions: Sequence[Union[str, ParsedGate]] = (),
         permutation: Optional[Sequence[int]] = None,
         *,
+        synthesis_basis: SynthesisBasis = "X",
         mapped_qubits: Sequence[int] = (),
         transformed_generators: Sequence[QubitOperator] = (),
         source_symmetries: Sequence[QubitOperator] = (),
@@ -1150,6 +1197,7 @@ class Clifford:
         self._permutation = self._validate_permutation(
             permutation if permutation is not None else range(self.n_qubits)
         )
+        self.synthesis_basis = _validate_synthesis_basis(synthesis_basis)
         self.mapped_qubits = list(mapped_qubits)
         self.transformed_generators = list(transformed_generators)
         self.source_symmetries = list(source_symmetries)
@@ -1166,8 +1214,14 @@ class Clifford:
         n_qubits: Optional[int] = None,
         *,
         symmetry_qubits_first: bool = True,
+        synthesis_basis: SynthesisBasis = "X",
     ) -> "Clifford":
-        """Synthesize a Clifford from commuting independent Pauli symmetries."""
+        """Synthesize a Clifford from commuting independent Pauli symmetries.
+
+        ``synthesis_basis="X"`` uses the historical X-string elimination.
+        ``synthesis_basis="Z"`` keeps Z terms fixed and eliminates Z strings
+        directly using CNOTs directed toward each pivot.
+        """
         if n_qubits is None:
             n_qubits = max(
                 (qubit_operator_num_qubits(sym) for sym in symmetries),
@@ -1176,6 +1230,7 @@ class Clifford:
         synthesis = _synthesize_ordered_symmetry_clifford_data(
             symmetries,
             n_qubits=n_qubits,
+            synthesis_basis=synthesis_basis,
         )
         if symmetry_qubits_first:
             mapped = synthesis.mapped_qubits
@@ -1191,6 +1246,7 @@ class Clifford:
             n_qubits,
             synthesis.parsed_gates,
             permutation,
+            synthesis_basis=synthesis_basis,
             mapped_qubits=synthesis.mapped_qubits,
             transformed_generators=synthesis.transformed_generators,
             source_symmetries=symmetries,
@@ -1461,6 +1517,7 @@ class Clifford:
             "n_qubits": self.n_qubits,
             "factor_descriptions": list(self.factor_descriptions),
             "permutation": list(self.permutation),
+            "synthesis_basis": self.synthesis_basis,
             "mapped_qubits": list(self.mapped_qubits),
         }
 
@@ -1470,6 +1527,7 @@ class Clifford:
             n_qubits=int(data["n_qubits"]),
             factor_descriptions=data.get("factor_descriptions", ()),  # type: ignore[arg-type]
             permutation=data.get("permutation"),  # type: ignore[arg-type]
+            synthesis_basis=data.get("synthesis_basis", "X"),  # type: ignore[arg-type]
             mapped_qubits=data.get("mapped_qubits", ()),  # type: ignore[arg-type]
         )
 
@@ -1549,6 +1607,7 @@ class Clifford:
         return (
             f"Clifford(n_qubits={self.n_qubits}, "
             f"n_factors={len(self._parsed_gates)}, "
+            f"synthesis_basis={self.synthesis_basis!r}, "
             f"permutation={self._permutation})"
         )
 
@@ -1558,6 +1617,7 @@ def synthesize_ordered_symmetry_clifford(
     n_qubits: Optional[int] = None,
     return_full_clifford: bool = False,
     return_elementary_factors: bool = False,
+    synthesis_basis: SynthesisBasis = "X",
 ) -> Clifford:
     """Compatibility synthesis entry point returning the unified class.
 
@@ -1569,6 +1629,7 @@ def synthesize_ordered_symmetry_clifford(
         symmetries,
         n_qubits=n_qubits,
         symmetry_qubits_first=False,
+        synthesis_basis=synthesis_basis,
     )
     if return_elementary_factors:
         _ = clifford.elementary_factors

@@ -59,6 +59,7 @@ class BenchmarkData:
     cut_entropies: list[float] = field(default_factory=list)
     dmrg_bd: int = 0
     single_sector_e: float = 0
+    clifford_synthesis_basis: str = "X"
 
     @staticmethod
     def _with_suffix(filename, suffix):
@@ -115,6 +116,7 @@ class BenchmarkData:
             ],
             "dmrg_bd": int(self.dmrg_bd),
             "single_sector_e": float(self.single_sector_e),
+            "clifford_synthesis_basis": self.clifford_synthesis_basis,
         }
 
     @classmethod
@@ -177,6 +179,11 @@ class BenchmarkData:
             print("Cut entropies:\n", ent_str, file=f)
             print("DMRG conv BD: ", self.dmrg_bd, file=f)
             print("Single sector energy: ", self.single_sector_e, file=f)
+            print(
+                "Clifford synthesis basis: ",
+                self.clifford_synthesis_basis,
+                file=f,
+            )
     
     @staticmethod
     def _write_json(payload, filename):
@@ -371,11 +378,25 @@ class BenchmarkData:
 
         return fig
 
-def benchmark_syms(list_syms, HQ, fci_gs, fci_e, n_qubits, N_2_sym=False, verbose=True, print_to_file=None, tag="",
-                   compress_cutoff = 1e-10, return_processed_data =False, log_base=np.e):
+def benchmark_syms(
+    list_syms,
+    HQ,
+    fci_gs,
+    fci_e,
+    n_qubits,
+    N_2_sym=False,
+    verbose=True,
+    print_to_file=None,
+    tag="",
+    compress_cutoff=1e-10,
+    return_processed_data=False,
+    log_base=np.e,
+    synthesis_basis="X",
+):
     """
     Run all benchmarks for symmetries
 
+    ``synthesis_basis`` selects the X-native or Z-native Clifford route.
     """
     import quimb.tensor as qtn
     from .metrics import (
@@ -402,7 +423,9 @@ def benchmark_syms(list_syms, HQ, fci_gs, fci_e, n_qubits, N_2_sym=False, verbos
         return_clifford=True,
         log_base=log_base,
         use_dmrg=False,
+        synthesis_basis=synthesis_basis,
     )
+    synthesis_basis = clifford.synthesis_basis
     
     gs_rot_mps = qtn.MatrixProductState.from_dense(gs_rot, cutoff = 1e-20)     
     dmrg_bd, _, dmrg_data = find_dmrg_conv_bd_quimb(H_perm, n_qubits, fci_e, tol=1.6e-3, n_sweeps=100, 
@@ -412,13 +435,19 @@ def benchmark_syms(list_syms, HQ, fci_gs, fci_e, n_qubits, N_2_sym=False, verbos
     #ent and dmrg
     if N_2_sym:
         ent_N_2 = entropy_pauli_syms(list_syms, fci_gs, n_qubits, verbose=verbose)
-        ss_energies = get_single_sector_energies(HQ, list_syms, n_qubits, verbose=verbose)
+        ss_energies = get_single_sector_energies(
+            HQ,
+            list_syms,
+            n_qubits,
+            verbose=verbose,
+            synthesis_basis=synthesis_basis,
+        )
         ss_e = np.min(ss_energies)
         #N/2 syms, single sector, BO energies TODO K and BO energies, but they are not really relevant here
 
-        data = BenchmarkData(tag=tag, symmetries=list_syms, non_commuting_l1 = nc_l1, num_commuting_terms=c,  sym_entropy=ent_N_2, cut_entropies=ent, dmrg_bd=dmrg_bd, single_sector_e=ss_e)
+        data = BenchmarkData(tag=tag, symmetries=list_syms, non_commuting_l1 = nc_l1, num_commuting_terms=c,  sym_entropy=ent_N_2, cut_entropies=ent, dmrg_bd=dmrg_bd, single_sector_e=ss_e, clifford_synthesis_basis=synthesis_basis)
     else:
-        data = BenchmarkData(tag=tag, symmetries=list_syms, non_commuting_l1 = nc_l1, num_commuting_terms=c, cut_entropies=ent, dmrg_bd=dmrg_bd)
+        data = BenchmarkData(tag=tag, symmetries=list_syms, non_commuting_l1 = nc_l1, num_commuting_terms=c, cut_entropies=ent, dmrg_bd=dmrg_bd, clifford_synthesis_basis=synthesis_basis)
     
     if print_to_file is not None:
         data.write_to_file(print_to_file)

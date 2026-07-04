@@ -151,6 +151,24 @@ def test_synthesis_simple_maps_to_single_z():
     assert oq_equal(direct, QubitOperator("Z0"))
 
 
+def test_z_native_synthesis_keeps_z_strings_in_z_basis():
+    res = cs.synthesize_ordered_symmetry_clifford(
+        [QubitOperator("Z0 Z1")],
+        n_qubits=2,
+        synthesis_basis="Z",
+    )
+    assert res.factor_descriptions == ("CNOT(1->0)",)
+    assert oq_equal(res.transform(QubitOperator("Z0 Z1")), QubitOperator("Z0"))
+
+
+def test_synthesis_basis_validation():
+    with pytest.raises(ValueError, match="either 'X' or 'Z'"):
+        cs.Clifford.from_symmetries(
+            [QubitOperator("Z0")],
+            synthesis_basis="Y",
+        )
+
+
 def test_synthesis_rejects_noncommuting_symmetries():
     with pytest.raises(ValueError, match="do not commute"):
         cs.synthesize_ordered_symmetry_clifford([QubitOperator("X0"), QubitOperator("Z0")], n_qubits=1)
@@ -347,15 +365,25 @@ def commutes(op1, op2, n):
     return cs.binary_symplectic_commutes(x1, z1, x2, z2)
 
 
-def test_exhaustive_single_generator_synthesis_for_two_qubits():
+@pytest.mark.parametrize("synthesis_basis", ["X", "Z"])
+def test_exhaustive_single_generator_synthesis_for_two_qubits(
+    synthesis_basis,
+):
     n = 2
     for sym in all_nonidentity_paulis(n):
-        res = cs.synthesize_ordered_symmetry_clifford([sym], n_qubits=n)
+        res = cs.synthesize_ordered_symmetry_clifford(
+            [sym],
+            n_qubits=n,
+            synthesis_basis=synthesis_basis,
+        )
         direct = cs.conjugate_qubit_operator_by_clifford_factors_exact(sym, res.parsed_gates, n_qubits=n)
         assert oq_equal(direct, QubitOperator(f"Z{res.mapped_qubits[0]}"))
 
 
-def test_exhaustive_commuting_independent_pairs_two_qubits():
+@pytest.mark.parametrize("synthesis_basis", ["X", "Z"])
+def test_exhaustive_commuting_independent_pairs_two_qubits(
+    synthesis_basis,
+):
     n = 2
     paulis = list(all_nonidentity_paulis(n))
     checked = 0
@@ -363,7 +391,11 @@ def test_exhaustive_commuting_independent_pairs_two_qubits():
         if not commutes(a, b, n):
             continue
         try:
-            res = cs.synthesize_ordered_symmetry_clifford([a, b], n_qubits=n)
+            res = cs.synthesize_ordered_symmetry_clifford(
+                [a, b],
+                n_qubits=n,
+                synthesis_basis=synthesis_basis,
+            )
         except ValueError as exc:
             # Dependent pairs are allowed to be rejected.
             assert "dependent" in str(exc)
@@ -371,6 +403,14 @@ def test_exhaustive_commuting_independent_pairs_two_qubits():
         assert len(res.mapped_qubits) == 2
         for i, q in enumerate(res.mapped_qubits):
             assert oq_equal(res.transformed_generators[i], QubitOperator(f"Z{q}"))
+        for symmetry in (a, b):
+            transformed = res.transform(symmetry)
+            assert all(
+                pauli == "Z"
+                for term in transformed.terms
+                for _, pauli in term
+            )
+            assert oq_equal(res.inverse_transform(transformed), symmetry)
         checked += 1
     assert checked > 0
 
@@ -430,9 +470,17 @@ def test_clifford_sparse_matrix_is_cached_and_invalidated():
     assert clifford.sparse_matrix is not second
 
 
-def test_clifford_from_symmetries_maps_row_reduced_generators_to_front_zs():
+@pytest.mark.parametrize("synthesis_basis", ["X", "Z"])
+def test_clifford_from_symmetries_maps_row_reduced_generators_to_front_zs(
+    synthesis_basis,
+):
     syms = [QubitOperator("X1"), QubitOperator("X0 X1")]
-    clifford = cs.Clifford.from_symmetries(syms, n_qubits=3)
+    clifford = cs.Clifford.from_symmetries(
+        syms,
+        n_qubits=3,
+        synthesis_basis=synthesis_basis,
+    )
+    assert clifford.synthesis_basis == synthesis_basis
     assert clifford.symmetry_qubits == (0, 1)
     for i, generator in enumerate(clifford.canonical_generators):
         assert oq_equal(generator, QubitOperator(f"Z{i}"))
@@ -482,6 +530,7 @@ def test_clifford_portable_description_roundtrip():
         3,
         ["Sdg(0)", "H(2)", "CNOT(2->1)"],
         [1, 2, 0],
+        synthesis_basis="Z",
         mapped_qubits=[2],
     )
     restored = cs.Clifford.from_dict(original.to_dict())

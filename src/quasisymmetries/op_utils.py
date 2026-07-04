@@ -16,17 +16,20 @@ def permute_sym_to_start(
     n_qubits,
     verbose=False,
     return_clifford_perm=False,
+    synthesis_basis="X",
 ):
     """Map symmetry generators to leading Z qubits and transform an operator.
 
     The returned :class:`Clifford` contains both the synthesized Clifford and
     final qubit permutation. When ``return_clifford_perm`` is true, this keeps
     the historical ``(operator, clifford, permutation)`` return shape.
+    ``synthesis_basis`` selects X-string or Z-string Clifford elimination.
     """
     clifford = Clifford.from_symmetries(
         symmetries,
         n_qubits=n_qubits,
         symmetry_qubits_first=True,
+        synthesis_basis=synthesis_basis,
     )
     transformed = clifford.transform(hamiltonian)
 
@@ -344,7 +347,15 @@ def taper_hamiltonian(
         )
     return tapered
 
-def taper_symmetries(HQ, symmetries, bra_labels, ket_labels, n_qubits, verbose=False):
+def taper_symmetries(
+    HQ,
+    symmetries,
+    bra_labels,
+    ket_labels,
+    n_qubits,
+    verbose=False,
+    synthesis_basis="X",
+):
     """
     Rotate symmetries to the start and then taper for given labels
 
@@ -356,7 +367,14 @@ def taper_symmetries(HQ, symmetries, bra_labels, ket_labels, n_qubits, verbose=F
     n_sym = len(symmetries)
     assert n_sym == len(bra_labels) and n_sym == len(ket_labels), "invalid number of sector labels {}, {} passed for {} symmetries".format(len(bra_labels), len(ket_labels), n_sym)
 
-    HQ_perm, clifford, perm = permute_sym_to_start(HQ, symmetries, n_qubits, verbose=verbose, return_clifford_perm=True)
+    HQ_perm, clifford, perm = permute_sym_to_start(
+        HQ,
+        symmetries,
+        n_qubits,
+        verbose=verbose,
+        return_clifford_perm=True,
+        synthesis_basis=synthesis_basis,
+    )
 
     HQ_tapered = taper_hamiltonian(HQ_perm, bra_labels, ket_labels, True)
 

@@ -21,6 +21,7 @@ def sample_data(tag="sample"):
         cut_entropies=[0.1, 0.2],
         dmrg_bd=12,
         single_sector_e=-2.5,
+        clifford_synthesis_basis="Z",
     )
 
 
@@ -33,6 +34,10 @@ def assert_data_equal(actual, expected):
     assert actual.cut_entropies == expected.cut_entropies
     assert actual.dmrg_bd == expected.dmrg_bd
     assert actual.single_sector_e == expected.single_sector_e
+    assert (
+        actual.clifford_synthesis_basis
+        == expected.clifford_synthesis_basis
+    )
 
 
 def test_json_single_round_trip(tmp_path):

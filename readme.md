@@ -45,3 +45,22 @@ benchmark and MPO helpers are available from `quasisymmetries.benchmark` and
 `BenchmarkData.save()` and `BenchmarkData.save_datasets()` use versioned JSON
 files. Existing pickle benchmark files remain readable for migration, but
 pickle files should only be loaded when their source is trusted.
+
+Clifford synthesis defaults to the historical X-string elimination route.
+For Z-native elimination, which can shorten circuits for Z-heavy symmetries:
+
+```python
+clifford = Clifford.from_symmetries(
+    symmetries,
+    n_qubits=n_qubits,
+    synthesis_basis="Z",
+)
+```
+
+To compare both routes using the saved MAY27 H2O/N2 beam symmetries:
+
+```bash
+python benchmark_clifford_routes.py
+```
+
+Results are written to `saved/results/JUL04/clifford_routes/`.
