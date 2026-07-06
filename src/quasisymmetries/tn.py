@@ -1,6 +1,9 @@
 from openfermion import QubitOperator
 from openfermion.utils import count_qubits
 from copy import deepcopy
+from pathlib import Path
+import tempfile
+
 from .op_utils import has_complex_entries
 import quimb.tensor as qtn
 import numpy as np
@@ -20,23 +23,58 @@ def _require_pyblock2():
             "Use find_dmrg_conv_bd_quimb for the quimb-only DMRG path."
         )
 
+
+def _create_block2_driver(*, scratch=None, scratch_prefix="quasisymmetries_block2_", **kwargs):
+    """Create a driver with an owned temporary scratch directory by default."""
+    _require_pyblock2()
+    scratch_obj = None
+    if scratch is None:
+        scratch_obj = tempfile.TemporaryDirectory(prefix=scratch_prefix)
+        scratch_path = Path(scratch_obj.name)
+    else:
+        scratch_path = Path(scratch)
+        scratch_path.mkdir(parents=True, exist_ok=True)
+
+    try:
+        driver = DMRGDriver(scratch=str(scratch_path), **kwargs)
+    except Exception:
+        if scratch_obj is not None:
+            scratch_obj.cleanup()
+        raise
+
+    # DMRGDriver accepts Python attributes. Keeping the TemporaryDirectory on
+    # the driver prevents premature deletion while Block2 objects are active.
+    driver._quasisymmetries_scratch_obj = scratch_obj
+    driver._quasisymmetries_scratch_path = scratch_path
+    return driver
+
+
+def cleanup_block2_driver(driver) -> bool:
+    """Delete scratch only when it was created and owned by this package.
+
+    Returns ``True`` when an owned temporary directory was removed. A scratch
+    path explicitly supplied by the caller is never removed.
+    """
+    scratch_obj = getattr(driver, "_quasisymmetries_scratch_obj", None)
+    if scratch_obj is None:
+        return False
+    scratch_obj.cleanup()
+    driver._quasisymmetries_scratch_obj = None
+    return True
+
+
 def QO_to_block2_Pauli(Operator: QubitOperator, n_qubits, tol=1e-5):
     """
     Returns Pauli term, constant for input to block2's mpo driver. Use the following code to initialize mpo
 
-    driver = DMRGDriver(
-        scratch="./tmp_block2_pauli",
-        symm_type=SymmetryTypes.SGB,
-        n_threads=4,
-    )
+    mpo, driver = QO_to_block2_MPO(Operator, n_qubits)
 
     # In Pauli mode, only n_sites is required.
     driver.initialize_system(n_sites=n_qubits, pauli_mode=True)
 
-    # Build MPO directly from the Pauli strings
-    mpo = driver.get_mpo_any_pauli(paulis, ecore=const)
-
-
+    The returned driver owns a unique temporary scratch directory unless the
+    caller supplies one explicitly. Call ``cleanup_block2_driver(driver)``
+    after a manual driver workflow.
     """
     op = deepcopy(Operator)
     terms, constant = [], op.constant
@@ -96,42 +134,56 @@ def get_mpo_any_pauli_complex(driver, op_list, ecore=None, **kwargs):
     return driver.get_mpo(expr, **kwargs)
 
 
-def QO_to_block2_MPO_complex(HQ: QubitOperator, n_qubits: int):
+def QO_to_block2_MPO_complex(
+    HQ: QubitOperator,
+    n_qubits: int,
+    scratch=None,
+):
     """
     Build a complex-compatible pyblock2 MPO from an OpenFermion QubitOperator.
     """
     _require_pyblock2()
     paulis, const = QO_to_block2_Pauli(HQ, n_qubits)
 
-    driver = DMRGDriver(
-        scratch="./tmp_block2_pauli",
+    driver = _create_block2_driver(
+        scratch=scratch,
+        scratch_prefix="quasisymmetries_block2_complex_",
         symm_type=SymmetryTypes.SGB | SymmetryTypes.CPX,
         n_threads=4,
         n_mkl_threads=1
     )
 
-    driver.initialize_system(n_sites=n_qubits, pauli_mode=True)
-    mpo = get_mpo_any_pauli_complex(driver, paulis, ecore=const)
+    try:
+        driver.initialize_system(n_sites=n_qubits, pauli_mode=True)
+        mpo = get_mpo_any_pauli_complex(driver, paulis, ecore=const)
+    except Exception:
+        cleanup_block2_driver(driver)
+        raise
 
     return mpo, driver
 
-def QO_to_block2_MPO(HQ, n_qubits):
+def QO_to_block2_MPO(HQ, n_qubits, scratch=None):
     """
     
     """
     _require_pyblock2()
     paulis, const = QO_to_block2_Pauli(HQ, n_qubits)
     
-    driver = DMRGDriver(
-        scratch="./tmp_block2_pauli",
+    driver = _create_block2_driver(
+        scratch=scratch,
+        scratch_prefix="quasisymmetries_block2_",
         symm_type=SymmetryTypes.SGB,
         n_threads=4,
         n_mkl_threads=1
     )
 
-    # In Pauli mode, only n_sites is required.
-    driver.initialize_system(n_sites=n_qubits, pauli_mode=True)
-    mpo = driver.get_mpo_any_pauli(paulis, ecore=const)
+    try:
+        # In Pauli mode, only n_sites is required.
+        driver.initialize_system(n_sites=n_qubits, pauli_mode=True)
+        mpo = driver.get_mpo_any_pauli(paulis, ecore=const)
+    except Exception:
+        cleanup_block2_driver(driver)
+        raise
 
     return mpo, driver
 
@@ -176,9 +228,11 @@ def find_dmrg_conv_bd(HQ, n_qubits, exact_energy, max_bd, tol=1e-3, n_sweeps=8, 
             if abs(energy - exact_energy) <= tol:
                 if verbose: print("DMRG converged at bond dimension: {}".format(bd))
 
+                cleanup_block2_driver(driver)
                 return bd
     
     print("Not converged to exact energy with {} bond dimension.".format(max_bd))
+    cleanup_block2_driver(driver)
     return False
 
 def find_dmrg_conv_bd_mod(HQ, n_qubits, exact_energy, max_bd, tol=1e-3, n_sweeps=8, reps=1, verbose=False):
@@ -232,6 +286,7 @@ def find_dmrg_conv_bd_mod(HQ, n_qubits, exact_energy, max_bd, tol=1e-3, n_sweeps
                 if abs(energy - exact_energy) <= tol:
                     if verbose: print("DMRG converged at bond dimension: {}".format(bd))
 
+                    cleanup_block2_driver(driver)
                     return bd
                 
         else:
@@ -256,9 +311,11 @@ def find_dmrg_conv_bd_mod(HQ, n_qubits, exact_energy, max_bd, tol=1e-3, n_sweeps
             if abs(energy - exact_energy) <= tol:
                 if verbose: print("DMRG converged at bond dimension: {}".format(bd))
 
+                cleanup_block2_driver(driver)
                 return bd
 
     print("Not converged to exact energy with {} bond dimension.".format(max_bd))
+    cleanup_block2_driver(driver)
     return False
 
 def MPO_from_QubitOperator(H, max_bond = None, mpo_cutoff = 1e-10, verbose = True,

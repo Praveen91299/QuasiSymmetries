@@ -11,12 +11,14 @@ from quasisymmetries.fiedler import do_fiedler_reordering
 from quasisymmetries.metrics import get_permuted_bipartite_entanglement
 from quasisymmetries.mpo import (
     build_qc_mpo_from_openfermion_molecule,
+    cleanup_qc_mpo_result,
     infer_largest_mpo_bond_dimension,
 )
 from quasisymmetries.tn import MPO_from_QubitOperator
 
 __all__ = [
     "build_qc_mpo_from_openfermion_molecule",
+    "cleanup_qc_mpo_result",
     "infer_largest_mpo_bond_dimension",
     "main",
 ]
@@ -139,6 +141,7 @@ def main():
             "./saved/beam_hct_mpo_bd_Jun24.csv",
             index=False,
         )
+        cleanup_qc_mpo_result(out)
 
 
 if __name__ == "__main__":

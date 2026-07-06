@@ -80,12 +80,138 @@ def test_term_mask_roundtrip():
     assert cs.masks_to_term(x, z, 6) == term
 
 
+# ---------------- independently specified gate matrices ----------------
+
+
+@pytest.mark.parametrize(
+    "description,expected",
+    [
+        (
+            "X(0)",
+            np.array([[0, 1], [1, 0]], dtype=complex),
+        ),
+        (
+            "H(0)",
+            np.array([[1, 1], [1, -1]], dtype=complex) / np.sqrt(2),
+        ),
+        (
+            "S(0)",
+            np.diag([1, 1j]).astype(complex),
+        ),
+        (
+            "Sdg(0)",
+            np.diag([1, -1j]).astype(complex),
+        ),
+    ],
+)
+def test_single_qubit_factor_matrices_against_canonical_matrices(
+    description,
+    expected,
+):
+    gate = cs.factor_from_parsed_gate(
+        cs.parse_factor_description(description)
+    )
+    actual = get_sparse_operator(gate, n_qubits=1).toarray()
+    assert np.allclose(actual, expected, atol=1e-12, rtol=0.0)
+
+
+@pytest.mark.parametrize(
+    "description,expected",
+    [
+        (
+            "CNOT(0->1)",
+            np.array(
+                [
+                    [1, 0, 0, 0],
+                    [0, 1, 0, 0],
+                    [0, 0, 0, 1],
+                    [0, 0, 1, 0],
+                ],
+                dtype=complex,
+            ),
+        ),
+        (
+            "CNOT(1->0)",
+            np.array(
+                [
+                    [1, 0, 0, 0],
+                    [0, 0, 0, 1],
+                    [0, 0, 1, 0],
+                    [0, 1, 0, 0],
+                ],
+                dtype=complex,
+            ),
+        ),
+    ],
+)
+def test_cnot_factor_matrices_against_canonical_matrices(
+    description,
+    expected,
+):
+    gate = cs.factor_from_parsed_gate(
+        cs.parse_factor_description(description)
+    )
+    actual = get_sparse_operator(gate, n_qubits=2).toarray()
+    assert np.allclose(actual, expected, atol=1e-12, rtol=0.0)
+
+
+def test_factor_matrices_are_unitary_and_inverse_pairs_are_exact():
+    descriptions = [
+        ("X(0)", 1),
+        ("H(0)", 1),
+        ("S(0)", 1),
+        ("Sdg(0)", 1),
+        ("CNOT(0->1)", 2),
+        ("CNOT(1->0)", 2),
+    ]
+    matrices = {}
+    for description, n_qubits in descriptions:
+        gate = cs.factor_from_parsed_gate(
+            cs.parse_factor_description(description)
+        )
+        matrix = get_sparse_operator(gate, n_qubits=n_qubits).toarray()
+        matrices[description] = matrix
+        identity = np.eye(1 << n_qubits, dtype=complex)
+        assert np.allclose(
+            matrix.conj().T @ matrix,
+            identity,
+            atol=1e-12,
+            rtol=0.0,
+        )
+
+    single_identity = np.eye(2, dtype=complex)
+    assert np.allclose(
+        matrices["Sdg(0)"] @ matrices["S(0)"],
+        single_identity,
+        atol=1e-12,
+        rtol=0.0,
+    )
+    for self_inverse in ("X(0)", "H(0)"):
+        assert np.allclose(
+            matrices[self_inverse] @ matrices[self_inverse],
+            single_identity,
+            atol=1e-12,
+            rtol=0.0,
+        )
+    two_qubit_identity = np.eye(4, dtype=complex)
+    for self_inverse in ("CNOT(0->1)", "CNOT(1->0)"):
+        assert np.allclose(
+            matrices[self_inverse] @ matrices[self_inverse],
+            two_qubit_identity,
+            atol=1e-12,
+            rtol=0.0,
+        )
+
+
 # ---------------- exact gate rules ----------------
 
 
 @pytest.mark.parametrize(
     "desc,input_op,expected",
     [
+        ("X(0)", QubitOperator("X0"), QubitOperator("X0")),
+        ("X(0)", QubitOperator("Y0"), -QubitOperator("Y0")),
+        ("X(0)", QubitOperator("Z0"), -QubitOperator("Z0")),
         ("H(0)", QubitOperator("X0"), QubitOperator("Z0")),
         ("H(0)", QubitOperator("Z0"), QubitOperator("X0")),
         ("H(0)", QubitOperator("Y0"), -QubitOperator("Y0")),
@@ -189,9 +315,41 @@ def test_synthesis_row_reduced_generator_contract():
     # generator maps to Z0. This codifies the intended row-reduced behavior.
     syms = [QubitOperator("X1"), QubitOperator("X0 X1")]
     res = cs.synthesize_ordered_symmetry_clifford(syms, n_qubits=2)
+    assert res.generator_mapping == "row_reduced"
     assert [str(g) for g in res.transformed_generators] == [str(QubitOperator("Z1")), str(QubitOperator("Z0"))]
     direct_second = cs.conjugate_qubit_operator_by_clifford_factors_exact(syms[1], res.parsed_gates, n_qubits=2)
     assert oq_equal(direct_second, QubitOperator("Z0 Z1"))
+
+
+@pytest.mark.parametrize("synthesis_basis", ["X", "Z"])
+def test_positive_z_maps_original_signed_generators_in_order(
+    synthesis_basis,
+):
+    syms = [QubitOperator("X1"), -QubitOperator("X0 X1")]
+    clifford = cs.Clifford.from_symmetries(
+        syms,
+        n_qubits=3,
+        synthesis_basis=synthesis_basis,
+        generator_mapping="positive_z",
+    )
+    assert clifford.generator_mapping == "positive_z"
+    assert np.array_equal(
+        clifford.generator_row_transform,
+        np.array([[1, 0], [1, 1]], dtype=np.uint8),
+    )
+    assert tuple(clifford.transformed_symmetries) == (
+        QubitOperator("Z0"),
+        QubitOperator("Z1"),
+    )
+    assert "X(0)" in clifford.factor_descriptions
+
+
+def test_generator_mapping_validation():
+    with pytest.raises(ValueError, match="generator_mapping"):
+        cs.Clifford.from_symmetries(
+            [QubitOperator("Z0")],
+            generator_mapping="unknown",
+        )
 
 
 def test_full_clifford_optional_and_matches_sequence():
@@ -415,6 +573,80 @@ def test_exhaustive_commuting_independent_pairs_two_qubits(
     assert checked > 0
 
 
+@pytest.mark.parametrize("synthesis_basis", ["X", "Z"])
+@pytest.mark.parametrize("signs", [(1, 1), (-1, 1), (1, -1), (-1, -1)])
+def test_exhaustive_positive_z_mapping_for_signed_commuting_pairs(
+    synthesis_basis,
+    signs,
+):
+    n = 2
+    paulis = list(all_nonidentity_paulis(n))
+    checked = 0
+    for a, b in itertools.combinations(paulis, 2):
+        if not commutes(a, b, n):
+            continue
+        signed = [signs[0] * a, signs[1] * b]
+        try:
+            clifford = cs.Clifford.from_symmetries(
+                signed,
+                n_qubits=n,
+                synthesis_basis=synthesis_basis,
+                generator_mapping="positive_z",
+            )
+        except ValueError as exc:
+            assert "dependent" in str(exc)
+            continue
+        assert all(
+            oq_equal(clifford.transform(symmetry), QubitOperator(f"Z{i}"))
+            for i, symmetry in enumerate(signed)
+        )
+        assert all(
+            oq_equal(
+                clifford.inverse_transform(QubitOperator(f"Z{i}")),
+                symmetry,
+            )
+            for i, symmetry in enumerate(signed)
+        )
+        checked += 1
+    assert checked > 0
+
+
+@pytest.mark.parametrize("synthesis_basis", ["X", "Z"])
+def test_random_higher_rank_positive_z_mapping(synthesis_basis):
+    rng = random.Random(90210)
+    n = 4
+    for rank in range(1, n + 1):
+        for _ in range(8):
+            gates = []
+            for _ in range(12):
+                name = rng.choice(["H", "S", "Sdg", "CNOT"])
+                if name == "CNOT":
+                    control, target = rng.sample(range(n), 2)
+                    gates.append(f"CNOT({control}->{target})")
+                else:
+                    gates.append(f"{name}({rng.randrange(n)})")
+            seed = cs.Clifford(n, gates)
+            symmetries = [
+                rng.choice([-1, 1]) * seed.inverse_transform(
+                    QubitOperator(f"Z{i}")
+                )
+                for i in range(rank)
+            ]
+            synthesized = cs.Clifford.from_symmetries(
+                symmetries,
+                n_qubits=n,
+                synthesis_basis=synthesis_basis,
+                generator_mapping="positive_z",
+            )
+            assert all(
+                oq_equal(
+                    synthesized.transform(symmetry),
+                    QubitOperator(f"Z{i}"),
+                )
+                for i, symmetry in enumerate(symmetries)
+            )
+
+
 # ---------------- unified Clifford class ----------------
 
 
@@ -443,7 +675,7 @@ def test_clifford_transform_matches_sparse_matrix_for_operator_sum():
     )
     clifford = cs.Clifford(
         n,
-        ["H(0)", "Sdg(2)", "CNOT(0->1)", "CNOT(2->0)"],
+        ["H(0)", "X(1)", "Sdg(2)", "CNOT(0->1)", "CNOT(2->0)"],
         [2, 0, 1],
     )
     transformed = clifford.transform(op)
@@ -531,6 +763,7 @@ def test_clifford_portable_description_roundtrip():
         ["Sdg(0)", "H(2)", "CNOT(2->1)"],
         [1, 2, 0],
         synthesis_basis="Z",
+        generator_mapping="positive_z",
         mapped_qubits=[2],
     )
     restored = cs.Clifford.from_dict(original.to_dict())

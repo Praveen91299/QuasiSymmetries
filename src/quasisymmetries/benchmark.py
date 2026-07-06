@@ -60,6 +60,7 @@ class BenchmarkData:
     dmrg_bd: int = 0
     single_sector_e: float = 0
     clifford_synthesis_basis: str = "X"
+    clifford_generator_mapping: str = "row_reduced"
 
     @staticmethod
     def _with_suffix(filename, suffix):
@@ -117,6 +118,7 @@ class BenchmarkData:
             "dmrg_bd": int(self.dmrg_bd),
             "single_sector_e": float(self.single_sector_e),
             "clifford_synthesis_basis": self.clifford_synthesis_basis,
+            "clifford_generator_mapping": self.clifford_generator_mapping,
         }
 
     @classmethod
@@ -182,6 +184,11 @@ class BenchmarkData:
             print(
                 "Clifford synthesis basis: ",
                 self.clifford_synthesis_basis,
+                file=f,
+            )
+            print(
+                "Clifford generator mapping: ",
+                self.clifford_generator_mapping,
                 file=f,
             )
     
@@ -392,11 +399,14 @@ def benchmark_syms(
     return_processed_data=False,
     log_base=np.e,
     synthesis_basis="X",
+    generator_mapping="row_reduced",
 ):
     """
     Run all benchmarks for symmetries
 
-    ``synthesis_basis`` selects the X-native or Z-native Clifford route.
+    ``synthesis_basis`` selects the X-native or Z-native Clifford route;
+    ``generator_mapping`` selects row-reduced or original-list positive-Z
+    targets.
     """
     import quimb.tensor as qtn
     from .metrics import (
@@ -424,8 +434,10 @@ def benchmark_syms(
         log_base=log_base,
         use_dmrg=False,
         synthesis_basis=synthesis_basis,
+        generator_mapping=generator_mapping,
     )
     synthesis_basis = clifford.synthesis_basis
+    generator_mapping = clifford.generator_mapping
     
     gs_rot_mps = qtn.MatrixProductState.from_dense(gs_rot, cutoff = 1e-20)     
     dmrg_bd, _, dmrg_data = find_dmrg_conv_bd_quimb(H_perm, n_qubits, fci_e, tol=1.6e-3, n_sweeps=100, 
@@ -441,13 +453,14 @@ def benchmark_syms(
             n_qubits,
             verbose=verbose,
             synthesis_basis=synthesis_basis,
+            generator_mapping=generator_mapping,
         )
         ss_e = np.min(ss_energies)
         #N/2 syms, single sector, BO energies TODO K and BO energies, but they are not really relevant here
 
-        data = BenchmarkData(tag=tag, symmetries=list_syms, non_commuting_l1 = nc_l1, num_commuting_terms=c,  sym_entropy=ent_N_2, cut_entropies=ent, dmrg_bd=dmrg_bd, single_sector_e=ss_e, clifford_synthesis_basis=synthesis_basis)
+        data = BenchmarkData(tag=tag, symmetries=list_syms, non_commuting_l1 = nc_l1, num_commuting_terms=c,  sym_entropy=ent_N_2, cut_entropies=ent, dmrg_bd=dmrg_bd, single_sector_e=ss_e, clifford_synthesis_basis=synthesis_basis, clifford_generator_mapping=generator_mapping)
     else:
-        data = BenchmarkData(tag=tag, symmetries=list_syms, non_commuting_l1 = nc_l1, num_commuting_terms=c, cut_entropies=ent, dmrg_bd=dmrg_bd, clifford_synthesis_basis=synthesis_basis)
+        data = BenchmarkData(tag=tag, symmetries=list_syms, non_commuting_l1 = nc_l1, num_commuting_terms=c, cut_entropies=ent, dmrg_bd=dmrg_bd, clifford_synthesis_basis=synthesis_basis, clifford_generator_mapping=generator_mapping)
     
     if print_to_file is not None:
         data.write_to_file(print_to_file)

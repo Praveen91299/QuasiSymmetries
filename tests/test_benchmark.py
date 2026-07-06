@@ -22,6 +22,7 @@ def sample_data(tag="sample"):
         dmrg_bd=12,
         single_sector_e=-2.5,
         clifford_synthesis_basis="Z",
+        clifford_generator_mapping="positive_z",
     )
 
 
@@ -37,6 +38,10 @@ def assert_data_equal(actual, expected):
     assert (
         actual.clifford_synthesis_basis
         == expected.clifford_synthesis_basis
+    )
+    assert (
+        actual.clifford_generator_mapping
+        == expected.clifford_generator_mapping
     )
 
 

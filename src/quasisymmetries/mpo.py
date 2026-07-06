@@ -322,3 +322,17 @@ def build_qc_mpo_from_openfermion_molecule(
         "largest_mpo_bond_dim": largest_mpo_bond_dim,
         "_scratch_obj": scratch_obj,  # keeps temp dir alive if scratch=None
     }
+
+
+def cleanup_qc_mpo_result(result):
+    """Remove the temporary scratch directory owned by an MPO result.
+
+    A caller-supplied scratch directory is not owned and is never removed.
+    Returns ``True`` when an owned temporary directory was cleaned.
+    """
+    scratch_obj = result.get("_scratch_obj")
+    if scratch_obj is None:
+        return False
+    scratch_obj.cleanup()
+    result["_scratch_obj"] = None
+    return True

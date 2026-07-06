@@ -17,6 +17,7 @@ def permute_sym_to_start(
     verbose=False,
     return_clifford_perm=False,
     synthesis_basis="X",
+    generator_mapping="row_reduced",
 ):
     """Map symmetry generators to leading Z qubits and transform an operator.
 
@@ -24,12 +25,15 @@ def permute_sym_to_start(
     final qubit permutation. When ``return_clifford_perm`` is true, this keeps
     the historical ``(operator, clifford, permutation)`` return shape.
     ``synthesis_basis`` selects X-string or Z-string Clifford elimination.
+    ``generator_mapping="positive_z"`` maps the original signed symmetry list
+    to individual positive Z operators.
     """
     clifford = Clifford.from_symmetries(
         symmetries,
         n_qubits=n_qubits,
         symmetry_qubits_first=True,
         synthesis_basis=synthesis_basis,
+        generator_mapping=generator_mapping,
     )
     transformed = clifford.transform(hamiltonian)
 
@@ -355,6 +359,7 @@ def taper_symmetries(
     n_qubits,
     verbose=False,
     synthesis_basis="X",
+    generator_mapping="positive_z",
 ):
     """
     Rotate symmetries to the start and then taper for given labels
@@ -362,6 +367,9 @@ def taper_symmetries(
     HQ: QubitOperator
     symmetries: list[QubitOperator]
     bra_labels, ket_labels: list[int] bra and ket labels of 0, 1
+
+    By default, the original signed symmetry at index ``i`` maps to ``+Zi``,
+    so labels are specified in the same order as ``symmetries``.
     
     """
     n_sym = len(symmetries)
@@ -374,6 +382,7 @@ def taper_symmetries(
         verbose=verbose,
         return_clifford_perm=True,
         synthesis_basis=synthesis_basis,
+        generator_mapping=generator_mapping,
     )
 
     HQ_tapered = taper_hamiltonian(HQ_perm, bra_labels, ket_labels, True)

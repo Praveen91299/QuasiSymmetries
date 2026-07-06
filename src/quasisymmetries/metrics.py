@@ -297,6 +297,7 @@ def get_ent(
     return_sparse_clifford=False,
     log_base='2',
     synthesis_basis="X",
+    generator_mapping="row_reduced",
 ):
     """
     Get bi-partite entanglement across all partitions after diagonalizing symmetries and localizing them to qubits 0, 1, 2, ... in order
@@ -309,6 +310,7 @@ def get_ent(
             n_qubits,
             verbose=verbose,
             synthesis_basis=synthesis_basis,
+            generator_mapping=generator_mapping,
         )
     else:
         if verbose: print("No symmetries passed, returning original bond entanglements.")
@@ -355,6 +357,7 @@ def get_single_sector_energies(
     n_qubits,
     verbose=False,
     synthesis_basis="X",
+    generator_mapping="row_reduced",
 ):
     """
     Find ground state in symmetry sectors
@@ -373,6 +376,7 @@ def get_single_sector_energies(
         n_qubits,
         False,
         synthesis_basis=synthesis_basis,
+        generator_mapping=generator_mapping,
     )
     frozen_qubits = list(range(n_sym))
 
@@ -431,12 +435,15 @@ def get_permuted_bipartite_entanglement(
     use_dmrg=False,
     return_clifford=False,
     synthesis_basis="X",
+    generator_mapping="row_reduced",
 ):
     """
     Get bi-partite entanglement across all partitions after diagonalizing symmetries and localizing them to qubits 0, 1, 2, ... in order
     *Modified version of get_ent with dmrg calculations for speed.*
 
-    ``synthesis_basis`` is forwarded to ``Clifford.from_symmetries``.
+    ``synthesis_basis`` and ``generator_mapping`` are forwarded to
+    ``Clifford.from_symmetries``. Their defaults preserve the historical
+    row-reduced mapping.
     """
     #permute
     if len(symmetries) > 0:
@@ -447,6 +454,7 @@ def get_permuted_bipartite_entanglement(
             verbose=verbose,
             return_clifford_perm=True,
             synthesis_basis=synthesis_basis,
+            generator_mapping=generator_mapping,
         )
     else:
         if verbose: print("No symmetries passed, returning original bond entanglements.")
@@ -454,6 +462,7 @@ def get_permuted_bipartite_entanglement(
         clifford = Clifford(
             n_qubits,
             synthesis_basis=synthesis_basis,
+            generator_mapping=generator_mapping,
         )
         perm = list(clifford.permutation)
     

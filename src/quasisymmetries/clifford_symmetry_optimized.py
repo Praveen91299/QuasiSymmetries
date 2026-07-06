@@ -152,6 +152,8 @@ def CNOT_factor(control: int, target: int) -> QubitOperator:
 
 def factor_from_parsed_gate(gate: Tuple[Union[str, int], ...]) -> QubitOperator:
     name = gate[0]
+    if name == "X":
+        return X_op(int(gate[1]))
     if name == "H":
         return H_factor(int(gate[1]))
     if name == "S":
@@ -193,6 +195,7 @@ def apply_CNOT_to_rows(xs: np.ndarray, zs: np.ndarray, control: int, target: int
 ParsedGate = Tuple[Union[str, int], ...]
 Term = Tuple[Tuple[int, str], ...]
 SynthesisBasis = Literal["X", "Z"]
+GeneratorMapping = Literal["row_reduced", "positive_z"]
 
 
 _LOCAL_CODE = {
@@ -267,6 +270,12 @@ def apply_H_to_masks(x: int, z: int, sign: int, q: int) -> Tuple[int, int, int]:
     return x, z, sign
 
 
+def apply_X_to_masks(x: int, z: int, sign: int, q: int) -> Tuple[int, int, int]:
+    if z & (1 << q):
+        sign = -sign  # X Y X = -Y and X Z X = -Z
+    return x, z, sign
+
+
 def apply_Sdg_to_masks(x: int, z: int, sign: int, q: int) -> Tuple[int, int, int]:
     bit = 1 << q
     xb = bool(x & bit)
@@ -304,11 +313,13 @@ def apply_CNOT_to_masks(x: int, z: int, sign: int, control: int, target: int) ->
 
 
 def parse_factor_description(desc: str) -> ParsedGate:
-    """Parse a factor description like 'H(0)', 'Sdg(2)', or 'CNOT(0->3)'."""
+    """Parse a description such as ``X(0)``, ``H(0)``, or ``CNOT(0->3)``."""
     if desc.startswith("Sdg("):
         return ("Sdg", int(desc[4:].strip("()")))
     if desc.startswith("H("):
         return ("H", int(desc[2:].strip("()")))
+    if desc.startswith("X("):
+        return ("X", int(desc[2:].strip("()")))
     if desc.startswith("S("):
         return ("S", int(desc[2:].strip("()")))
     if desc.startswith("CNOT("):
@@ -339,8 +350,8 @@ def invert_clifford_factor_sequence(
             inverse.append(("S", int(gate[1])))
         elif name == "S":
             inverse.append(("Sdg", int(gate[1])))
-        elif name == "H":
-            inverse.append(("H", int(gate[1])))
+        elif name in ("H", "X"):
+            inverse.append((name, int(gate[1])))
         elif name == "CNOT":
             inverse.append(("CNOT", int(gate[1]), int(gate[2])))
         else:
@@ -362,7 +373,9 @@ def conjugate_single_term_by_parsed_gates_exact(
 
     for gate in parsed_gates:
         name = gate[0]
-        if name == "H":
+        if name == "X":
+            x, z, sign = apply_X_to_masks(x, z, sign, int(gate[1]))
+        elif name == "H":
             x, z, sign = apply_H_to_masks(x, z, sign, int(gate[1]))
         elif name == "Sdg":
             x, z, sign = apply_Sdg_to_masks(x, z, sign, int(gate[1]))
@@ -465,6 +478,8 @@ class _CliffordSynthesisData:
     factor_descriptions: List[str]
     parsed_gates: List[ParsedGate]
     transformed_generators: List[QubitOperator]
+    generator_mapping: GeneratorMapping
+    generator_row_transform: np.ndarray
     elementary_factors: Optional[List[QubitOperator]] = None
     full_clifford: Optional[QubitOperator] = None
 
@@ -481,12 +496,48 @@ def _validate_synthesis_basis(synthesis_basis: str) -> SynthesisBasis:
     return basis  # type: ignore[return-value]
 
 
+def _validate_generator_mapping(
+    generator_mapping: str,
+) -> GeneratorMapping:
+    mapping = str(generator_mapping).lower()
+    if mapping not in {"row_reduced", "positive_z"}:
+        raise ValueError(
+            "generator_mapping must be either 'row_reduced' or 'positive_z'."
+        )
+    return mapping  # type: ignore[return-value]
+
+
+def _gf2_inverse(matrix: np.ndarray) -> np.ndarray:
+    """Invert a square binary matrix over GF(2)."""
+    matrix = np.asarray(matrix, dtype=np.uint8) % 2
+    if matrix.ndim != 2 or matrix.shape[0] != matrix.shape[1]:
+        raise ValueError("GF(2) inverse requires a square matrix.")
+
+    n = matrix.shape[0]
+    augmented = np.concatenate(
+        [matrix.copy(), np.eye(n, dtype=np.uint8)],
+        axis=1,
+    )
+    for column in range(n):
+        pivots = np.flatnonzero(augmented[column:, column])
+        if len(pivots) == 0:
+            raise ValueError("Generator row transformation is singular.")
+        pivot = column + int(pivots[0])
+        if pivot != column:
+            augmented[[column, pivot]] = augmented[[pivot, column]]
+        for row in range(n):
+            if row != column and augmented[row, column]:
+                augmented[row] ^= augmented[column]
+    return augmented[:, n:]
+
+
 def _synthesize_ordered_symmetry_clifford_data(
     symmetries: Sequence[QubitOperator],
     n_qubits: Optional[int] = None,
     return_full_clifford: bool = False,
     return_elementary_factors: bool = False,
     synthesis_basis: SynthesisBasis = "X",
+    generator_mapping: GeneratorMapping = "row_reduced",
 ) -> _CliffordSynthesisData:
     """Synthesize a Clifford mapping an ordered independent commuting set to Z pivots.
 
@@ -498,6 +549,7 @@ def _synthesize_ordered_symmetry_clifford_data(
         raise ValueError("Need at least one symmetry.")
 
     synthesis_basis = _validate_synthesis_basis(synthesis_basis)
+    generator_mapping = _validate_generator_mapping(generator_mapping)
 
     if n_qubits is None:
         n_qubits = max(qubit_operator_num_qubits(s) for s in symmetries)
@@ -516,6 +568,7 @@ def _synthesize_ordered_symmetry_clifford_data(
     xs = np.array(rows_x, dtype=np.uint8)
     zs = np.array(rows_z, dtype=np.uint8)
     m = len(symmetries)
+    generator_row_transform = np.eye(m, dtype=np.uint8)
 
     for i in range(m):
         for j in range(i + 1, m):
@@ -539,6 +592,7 @@ def _synthesize_ordered_symmetry_clifford_data(
             if zs[i, q_prev] == 1:
                 xs[i] ^= xs[j]
                 zs[i] ^= zs[j]
+                generator_row_transform[i] ^= generator_row_transform[j]
 
         support = [q for q in range(n_qubits) if (xs[i, q] or zs[i, q]) and q not in mapped_set]
         if not support:
@@ -609,10 +663,63 @@ def _synthesize_ordered_symmetry_clifford_data(
                 apply_CNOT_to_rows(xs, zs, q, pivot)
                 add_gate(f"CNOT({q}->{pivot})")
 
-    transformed_generators = [
-        pauli_dict_to_qubit_operator(pauli_map_from_binary(xs[i], zs[i]))
-        for i in range(m)
-    ]
+    if generator_mapping == "positive_z":
+        direct_image_matrix = _gf2_inverse(generator_row_transform)
+        if not np.array_equal(
+            np.triu(direct_image_matrix, k=1),
+            np.zeros_like(direct_image_matrix),
+        ):
+            raise RuntimeError(
+                "Expected a lower-triangular direct generator image matrix."
+            )
+
+        # CNOT(c -> t) performs z_c ^= z_t. These column operations
+        # reduce the direct images of the original generators to identity.
+        for column in range(m):
+            for row in range(column + 1, m):
+                if direct_image_matrix[row, column]:
+                    direct_image_matrix[:, column] ^= direct_image_matrix[:, row]
+                    add_gate(
+                        f"CNOT({mapped_qubits[column]}->{mapped_qubits[row]})"
+                    )
+        if not np.array_equal(
+            direct_image_matrix,
+            np.eye(m, dtype=np.uint8),
+        ):
+            raise RuntimeError(
+                "Failed to map the original symmetry generators independently."
+            )
+
+        # Check the exact image, including the input ±1 coefficient. An X gate
+        # flips -Z to +Z without changing any other isolated symmetry qubit.
+        for index, (symmetry, pivot) in enumerate(
+            zip(symmetries, mapped_qubits)
+        ):
+            transformed = conjugate_single_pauli_by_factor_sequence_exact(
+                symmetry,
+                parsed_gates,
+                n_qubits=n_qubits,
+            )
+            (term, coefficient), = transformed.terms.items()
+            expected_term = ((pivot, "Z"),)
+            if term != expected_term:
+                raise RuntimeError(
+                    "Generator correction did not produce an isolated Z: "
+                    f"generator {index} mapped to {transformed}."
+                )
+            if np.isclose(coefficient, -1.0, atol=1e-12):
+                add_gate(f"X({pivot})")
+            elif not np.isclose(coefficient, 1.0, atol=1e-12):
+                raise RuntimeError(
+                    "Generator correction produced an unexpected phase: "
+                    f"{coefficient!r}."
+                )
+        transformed_generators = [Z_op(q) for q in mapped_qubits]
+    else:
+        transformed_generators = [
+            pauli_dict_to_qubit_operator(pauli_map_from_binary(xs[i], zs[i]))
+            for i in range(m)
+        ]
 
     elementary_factors: Optional[List[QubitOperator]] = None
     if return_elementary_factors or return_full_clifford:
@@ -631,6 +738,8 @@ def _synthesize_ordered_symmetry_clifford_data(
         factor_descriptions=factor_descriptions,
         parsed_gates=parsed_gates,
         transformed_generators=transformed_generators,
+        generator_mapping=generator_mapping,
+        generator_row_transform=generator_row_transform,
         elementary_factors=elementary_factors,
         full_clifford=full_clifford,
     )
@@ -830,6 +939,7 @@ def build_symmetry_block_structure(
     n_qubits: Optional[int] = None,
     return_full_clifford: bool = False,
     synthesis_basis: SynthesisBasis = "X",
+    generator_mapping: GeneratorMapping = "row_reduced",
 ) -> SymmetryBlockStructureResult:
     if n_qubits is None:
         n_qubits = max(
@@ -841,6 +951,7 @@ def build_symmetry_block_structure(
         n_qubits=n_qubits,
         symmetry_qubits_first=False,
         synthesis_basis=synthesis_basis,
+        generator_mapping=generator_mapping,
     )
     _ = return_full_clifford
     transformed_hamiltonian = clifford.transform(hamiltonian)
@@ -964,12 +1075,14 @@ def build_symmetry_block_structure_with_packed_qubits(
     return_full_clifford: bool = False,
     reorder_sector: bool = False,
     synthesis_basis: SynthesisBasis = "X",
+    generator_mapping: GeneratorMapping = "row_reduced",
 ) -> SymmetryBlockStructurePackedResult:
     clifford = Clifford.from_symmetries(
         symmetries,
         n_qubits=n_qubits,
         symmetry_qubits_first=False,
         synthesis_basis=synthesis_basis,
+        generator_mapping=generator_mapping,
     )
     _ = return_full_clifford
     transformed_h = clifford.transform(hamiltonian)
@@ -1149,7 +1262,9 @@ def _apply_parsed_gates_to_masks(
     sign = 1
     for gate in gates:
         name = gate[0]
-        if name == "H":
+        if name == "X":
+            x, z, sign = apply_X_to_masks(x, z, sign, int(gate[1]))
+        elif name == "H":
             x, z, sign = apply_H_to_masks(x, z, sign, int(gate[1]))
         elif name == "Sdg":
             x, z, sign = apply_Sdg_to_masks(x, z, sign, int(gate[1]))
@@ -1182,7 +1297,9 @@ class Clifford:
         permutation: Optional[Sequence[int]] = None,
         *,
         synthesis_basis: SynthesisBasis = "X",
+        generator_mapping: GeneratorMapping = "row_reduced",
         mapped_qubits: Sequence[int] = (),
+        generator_row_transform: Optional[Sequence[Sequence[int]]] = None,
         transformed_generators: Sequence[QubitOperator] = (),
         source_symmetries: Sequence[QubitOperator] = (),
     ) -> None:
@@ -1198,7 +1315,26 @@ class Clifford:
             permutation if permutation is not None else range(self.n_qubits)
         )
         self.synthesis_basis = _validate_synthesis_basis(synthesis_basis)
+        self.generator_mapping = _validate_generator_mapping(
+            generator_mapping
+        )
         self.mapped_qubits = list(mapped_qubits)
+        if generator_row_transform is None:
+            self.generator_row_transform = np.eye(
+                len(self.mapped_qubits),
+                dtype=np.uint8,
+            )
+        else:
+            self.generator_row_transform = np.asarray(
+                generator_row_transform,
+                dtype=np.uint8,
+            ) % 2
+        expected_shape = (len(self.mapped_qubits),) * 2
+        if self.generator_row_transform.shape != expected_shape:
+            raise ValueError(
+                "generator_row_transform must have shape "
+                f"{expected_shape}, got {self.generator_row_transform.shape}."
+            )
         self.transformed_generators = list(transformed_generators)
         self.source_symmetries = list(source_symmetries)
         self._sparse_matrix_cache: Optional[sparse.csr_matrix] = None
@@ -1215,12 +1351,15 @@ class Clifford:
         *,
         symmetry_qubits_first: bool = True,
         synthesis_basis: SynthesisBasis = "X",
+        generator_mapping: GeneratorMapping = "row_reduced",
     ) -> "Clifford":
         """Synthesize a Clifford from commuting independent Pauli symmetries.
 
         ``synthesis_basis="X"`` uses the historical X-string elimination.
         ``synthesis_basis="Z"`` keeps Z terms fixed and eliminates Z strings
         directly using CNOTs directed toward each pivot.
+        ``generator_mapping="positive_z"`` appends a correction network so
+        each original signed symmetry maps to ``+Z`` in input-list order.
         """
         if n_qubits is None:
             n_qubits = max(
@@ -1231,6 +1370,7 @@ class Clifford:
             symmetries,
             n_qubits=n_qubits,
             synthesis_basis=synthesis_basis,
+            generator_mapping=generator_mapping,
         )
         if symmetry_qubits_first:
             mapped = synthesis.mapped_qubits
@@ -1247,14 +1387,16 @@ class Clifford:
             synthesis.parsed_gates,
             permutation,
             synthesis_basis=synthesis_basis,
+            generator_mapping=generator_mapping,
             mapped_qubits=synthesis.mapped_qubits,
+            generator_row_transform=synthesis.generator_row_transform,
             transformed_generators=synthesis.transformed_generators,
             source_symmetries=symmetries,
         )
 
     @staticmethod
     def _format_gate(gate: ParsedGate) -> str:
-        if gate[0] in ("H", "S", "Sdg"):
+        if gate[0] in ("X", "H", "S", "Sdg"):
             return f"{gate[0]}({gate[1]})"
         if gate[0] == "CNOT":
             return f"CNOT({gate[1]}->{gate[2]})"
@@ -1290,7 +1432,11 @@ class Clifford:
 
     @property
     def canonical_generators(self) -> Tuple[QubitOperator, ...]:
-        """Row-reduced synthesized generators after the stored permutation."""
+        """Selected canonical generator targets after the stored permutation.
+
+        These correspond to the row-reduced basis in ``row_reduced`` mode and
+        to the original input list in ``positive_z`` mode.
+        """
         return tuple(
             permute_qubits_in_qubit_operator(op, self._permutation)
             for op in self.transformed_generators
@@ -1518,7 +1664,9 @@ class Clifford:
             "factor_descriptions": list(self.factor_descriptions),
             "permutation": list(self.permutation),
             "synthesis_basis": self.synthesis_basis,
+            "generator_mapping": self.generator_mapping,
             "mapped_qubits": list(self.mapped_qubits),
+            "generator_row_transform": self.generator_row_transform.tolist(),
         }
 
     @classmethod
@@ -1528,7 +1676,9 @@ class Clifford:
             factor_descriptions=data.get("factor_descriptions", ()),  # type: ignore[arg-type]
             permutation=data.get("permutation"),  # type: ignore[arg-type]
             synthesis_basis=data.get("synthesis_basis", "X"),  # type: ignore[arg-type]
+            generator_mapping=data.get("generator_mapping", "row_reduced"),  # type: ignore[arg-type]
             mapped_qubits=data.get("mapped_qubits", ()),  # type: ignore[arg-type]
+            generator_row_transform=data.get("generator_row_transform"),  # type: ignore[arg-type]
         )
 
     @classmethod
@@ -1608,6 +1758,7 @@ class Clifford:
             f"Clifford(n_qubits={self.n_qubits}, "
             f"n_factors={len(self._parsed_gates)}, "
             f"synthesis_basis={self.synthesis_basis!r}, "
+            f"generator_mapping={self.generator_mapping!r}, "
             f"permutation={self._permutation})"
         )
 
@@ -1618,6 +1769,7 @@ def synthesize_ordered_symmetry_clifford(
     return_full_clifford: bool = False,
     return_elementary_factors: bool = False,
     synthesis_basis: SynthesisBasis = "X",
+    generator_mapping: GeneratorMapping = "row_reduced",
 ) -> Clifford:
     """Compatibility synthesis entry point returning the unified class.
 
@@ -1630,6 +1782,7 @@ def synthesize_ordered_symmetry_clifford(
         n_qubits=n_qubits,
         symmetry_qubits_first=False,
         synthesis_basis=synthesis_basis,
+        generator_mapping=generator_mapping,
     )
     if return_elementary_factors:
         _ = clifford.elementary_factors
