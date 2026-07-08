@@ -283,13 +283,13 @@ CISD entanglement after Clifford + Fiedler:
   5|6: 0.08433471621575485
   6|7: 0.16348502974797513
   7|8: 0.0010543616162374315
-DMRG Seniority: {'system': 'H4chain_eqm', 'benchmark': 'Seniority', 'dataset_tag': 'SEN N/2 Comm', 'fiedler': False, 'n_qubits': 8, 'dmrg_bd': 4, 'dmrg_energy': np.complex128(-2.180257317983139-2.032640583752112e-16j)}
-DMRG HCT N/2: {'system': 'H4chain_eqm', 'benchmark': 'HCT N/2', 'dataset_tag': 'HCT N/2 Comm', 'fiedler': False, 'n_qubits': 8, 'dmrg_bd': 3, 'dmrg_energy': np.complex128(-2.180057154362084+4.2706176248153953e-16j)}
-DMRG HCT N: {'system': 'H4chain_eqm', 'benchmark': 'HCT N', 'dataset_tag': 'HCT N Comm', 'fiedler': False, 'n_qubits': 8, 'dmrg_bd': 3, 'dmrg_energy': np.complex128(-2.1802057545164693+2.9847947951635487e-16j)}
-DMRG HCT+BLISS N: {'system': 'H4chain_eqm', 'benchmark': 'HCT+BLISS N', 'dataset_tag': 'Pauli BLISS+HCT N Comm', 'fiedler': False, 'n_qubits': 8, 'dmrg_bd': 3, 'dmrg_energy': np.complex128(-2.180205754516468+2.9963666249755875e-16j)}
-DMRG BS N/2: {'system': 'H4chain_eqm', 'benchmark': 'BS N/2', 'dataset_tag': 'BS N/2 Comm', 'fiedler': False, 'n_qubits': 8, 'dmrg_bd': 3, 'dmrg_energy': np.complex128(-2.1800571543620895+2.298948880223598e-16j)}
-DMRG BS N: {'system': 'H4chain_eqm', 'benchmark': 'BS N', 'dataset_tag': 'BS N Comm', 'fiedler': False, 'n_qubits': 8, 'dmrg_bd': 3, 'dmrg_energy': np.complex128(-2.1802479304064533-5.97973909196544e-16j)}
-DMRG BS N + Fiedler: {'system': 'H4chain_eqm', 'benchmark': 'BS N + Fiedler', 'dataset_tag': 'BS N Comm', 'fiedler': True, 'n_qubits': 8, 'dmrg_bd': 3, 'dmrg_energy': np.complex128(-2.1801520233424108-3.227998164685026e-16j)}
+DMRG Seniority: {'system': 'H4chain_eqm', 'benchmark': 'Seniority', 'dataset_tag': 'SEN N/2 Comm', 'fiedler': False, 'n_qubits': 8, 'dmrg_bd': 4, 'dmrg_energy': np.complex128(-2.180257317983139+1.6832913918788547e-16j)}
+DMRG HCT N/2: {'system': 'H4chain_eqm', 'benchmark': 'HCT N/2', 'dataset_tag': 'HCT N/2 Comm', 'fiedler': False, 'n_qubits': 8, 'dmrg_bd': 3, 'dmrg_energy': np.complex128(-2.1800571543620846+4.3861510800676425e-16j)}
+DMRG HCT N: {'system': 'H4chain_eqm', 'benchmark': 'HCT N', 'dataset_tag': 'HCT N Comm', 'fiedler': False, 'n_qubits': 8, 'dmrg_bd': 3, 'dmrg_energy': np.complex128(-2.1802057545164693+2.962971411683428e-16j)}
+DMRG HCT+BLISS N: {'system': 'H4chain_eqm', 'benchmark': 'HCT+BLISS N', 'dataset_tag': 'Pauli BLISS+HCT N Comm', 'fiedler': False, 'n_qubits': 8, 'dmrg_bd': 3, 'dmrg_energy': np.complex128(-2.1802057545164635+2.9513550497104616e-16j)}
+DMRG BS N/2: {'system': 'H4chain_eqm', 'benchmark': 'BS N/2', 'dataset_tag': 'BS N/2 Comm', 'fiedler': False, 'n_qubits': 8, 'dmrg_bd': 3, 'dmrg_energy': np.complex128(-2.180057154362091+2.2719832519025533e-16j)}
+DMRG BS N: {'system': 'H4chain_eqm', 'benchmark': 'BS N', 'dataset_tag': 'BS N Comm', 'fiedler': False, 'n_qubits': 8, 'dmrg_bd': 3, 'dmrg_energy': np.complex128(-2.180247930406452-5.978448024149615e-16j)}
+DMRG BS N + Fiedler: {'system': 'H4chain_eqm', 'benchmark': 'BS N + Fiedler', 'dataset_tag': 'BS N Comm', 'fiedler': True, 'n_qubits': 8, 'dmrg_bd': 3, 'dmrg_energy': np.complex128(-2.1801520233424108-3.2367133638887373e-16j)}
 MPO HCT N: {'system': 'H4chain_eqm', 'benchmark': 'HCT N', 'dataset_tag': 'HCT N Comm', 'fiedler': False, 'n_qubits': 8, 'mpo_bd': 30}
 MPO BS N: {'system': 'H4chain_eqm', 'benchmark': 'BS N', 'dataset_tag': 'BS N Comm', 'fiedler': False, 'n_qubits': 8, 'mpo_bd': 48}
 MPO HCT N + Fiedler: {'system': 'H4chain_eqm', 'benchmark': 'HCT N + Fiedler', 'dataset_tag': 'HCT N Comm', 'fiedler': True, 'n_qubits': 8, 'mpo_bd': 50}

@@ -35,7 +35,6 @@ from quasisymmetries.metrics import (
     get_permuted_bipartite_entanglement,
 )
 from quasisymmetries.sym import hct_mod
-from quasisymmetries.tn import MPO_from_QubitOperator, find_dmrg_conv_bd_quimb
 
 
 ham_dir = Path("./saved/hamiltonians")
@@ -137,6 +136,123 @@ def write_entropies(file_obj, label, entropies):
     print(label, file=file_obj)
     for i, ent in enumerate(entropies):
         print(f"  {i + 1}|{i + 2}: {ent}", file=file_obj)
+
+
+def get_coeffs_and_ops(of_op, n_qubits):
+    I = np.array([[1, 0], [0, 1]], dtype=complex)
+    X = np.array([[0, 1], [1, 0]], dtype=complex)
+    Y = np.array([[0, -1j], [1j, 0]], dtype=complex)
+    Z = np.array([[1, 0], [0, -1]], dtype=complex)
+    pauli_map = {"X": X, "Y": Y, "Z": Z}
+
+    coeffs = []
+    ops_list = []
+    for term, coeff in of_op.terms.items():
+        ops = [I.copy() for _ in range(n_qubits)]
+        for qubit, pauli in term:
+            ops[qubit] = pauli_map[pauli]
+        coeffs.append(coeff)
+        ops_list.append(ops)
+    return coeffs, ops_list
+
+
+def MPO_from_QubitOperator(
+    H,
+    max_bond=None,
+    mpo_cutoff=1e-10,
+    verbose=True,
+    compression_freq=20,
+):
+    """Quimb-only QubitOperator -> MPO helper.
+
+    Kept local so this script never imports ``quasisymmetries.tn``, whose
+    top-level imports intentionally try to discover the block2 backend.
+    """
+    n_qubits = count_qubits(H)
+    zero2 = np.zeros((2, 2), dtype=float)
+    mpo = qtn.MPO_product_operator([zero2] * n_qubits)
+
+    coeffs, ops = get_coeffs_and_ops(H, n_qubits)
+    for i, (coeff, op) in enumerate(zip(coeffs, ops)):
+        mpo += coeff * qtn.MPO_product_operator(op)
+        if mpo_cutoff is not None and i % compression_freq == 0:
+            mpo.compress(max_bond=max_bond, cutoff=mpo_cutoff)
+
+    if mpo_cutoff is not None:
+        mpo.compress(max_bond=max_bond, cutoff=mpo_cutoff)
+
+    if verbose:
+        print(f"Bond dimensions of MPO: {mpo.bond_sizes()}")
+    return mpo
+
+
+def find_dmrg_conv_bd_quimb(
+    Hq,
+    n_qubits,
+    exact_energy,
+    bd_list=None,
+    tol=1.6e-3,
+    n_sweeps=10,
+    reps=1,
+    verbose=False,
+    compress_cutoff=1e-10,
+    sweep_tol=1e-6,
+    noise=1e-3,
+    bsz=2,
+    guess_mps=None,
+    seed=None,
+):
+    """Quimb-only DMRG convergence helper."""
+    mpo = MPO_from_QubitOperator(
+        Hq,
+        max_bond=None,
+        mpo_cutoff=compress_cutoff,
+        verbose=verbose,
+        compression_freq=20,
+    )
+    verbosity = 2 if verbose else 0
+
+    if seed is not None:
+        np.random.seed(seed)
+
+    if bd_list is None:
+        bd_list = (
+            [i for i in range(1, 11, 1)]
+            + [i for i in range(12, 21, 2)]
+            + [i for i in range(30, 101, 10)]
+        )
+
+    last_energy = None
+    for bd in bd_list:
+        if verbose:
+            print(f"Starting max bd = {bd}")
+        for _ in range(reps):
+            if guess_mps is None:
+                guess_mps = qtn.MPS_rand_state(n_qubits, 1)
+            else:
+                guess_mps += noise * qtn.MPS_rand_state(n_qubits, bond_dim=1)
+                guess_mps.normalize()
+
+            dmrg = qtn.DMRG(mpo, bd, bsz=bsz, cutoffs=compress_cutoff, p0=guess_mps)
+            dmrg.opts["local_eig_tol"] = 1e-3
+            dmrg.opts["pempsriodic_compress_ham_eps"] = compress_cutoff
+            dmrg.opts["periodic_compress_norm_eps"] = compress_cutoff
+            dmrg.solve(
+                tol=sweep_tol,
+                bond_dims=bd,
+                max_sweeps=n_sweeps,
+                sweep_sequence="RL",
+                verbosity=verbosity,
+                suppress_warnings=False,
+                cutoffs=compress_cutoff,
+            )
+            last_energy = dmrg.energy
+            if abs(dmrg.energy - exact_energy) <= tol:
+                print(f"DMRG converged at bond dimension: {bd}")
+                return bd, dmrg.energy
+
+    print(f"DMRG not converged at bd = {bd_list[-1]}")
+    return bd_list[-1], last_energy
 
 
 def load_fermionic_runtime_data():
