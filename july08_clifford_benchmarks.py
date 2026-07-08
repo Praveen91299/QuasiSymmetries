@@ -201,6 +201,7 @@ def find_dmrg_conv_bd_quimb(
     bsz=2,
     guess_mps=None,
     seed=None,
+    return_data=False,
 ):
     """Quimb-only DMRG convergence helper."""
     mpo = MPO_from_QubitOperator(
@@ -249,9 +250,15 @@ def find_dmrg_conv_bd_quimb(
             last_energy = dmrg.energy
             if abs(dmrg.energy - exact_energy) <= tol:
                 print(f"DMRG converged at bond dimension: {bd}")
+                if return_data:
+                    print("Returning MPO...")
+                    return bd, dmrg.energy, {"mpo": mpo}
                 return bd, dmrg.energy
 
     print(f"DMRG not converged at bd = {bd_list[-1]}")
+    if return_data:
+        print("Returning MPO...")
+        return bd_list[-1], last_energy, {"mpo": mpo}
     return bd_list[-1], last_energy
 
 
@@ -648,11 +655,14 @@ def main():
                     dmrg_bd = ""
                     dmrg_energy = ""
                 else:
+                    # Match benchmark_syms: DMRG is seeded with the transformed
+                    # FCI state.  The transformed CISD state is used only for
+                    # choosing the Fiedler ordering.
                     guess_mps = qtn.MatrixProductState.from_dense(
-                        working["state"],
+                        working["fci_state"],
                         cutoff=1e-20,
                     )
-                    dmrg_bd, dmrg_energy = find_dmrg_conv_bd_quimb(
+                    dmrg_bd, dmrg_energy, _dmrg_data = find_dmrg_conv_bd_quimb(
                         working["H"],
                         n_qubits,
                         fci_e,
@@ -666,6 +676,7 @@ def main():
                         bsz=2,
                         guess_mps=guess_mps,
                         seed=0,
+                        return_data=True,
                     )
 
                 row = {

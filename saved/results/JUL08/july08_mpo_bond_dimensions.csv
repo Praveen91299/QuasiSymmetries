@@ -1,5 +1,5 @@
 system,benchmark,dataset_tag,fiedler,n_qubits,mpo_bd
-H4chain_eqm,HCT N,HCT N Comm,False,8,30
-H4chain_eqm,BS N,BS N Comm,False,8,48
-H4chain_eqm,HCT N + Fiedler,HCT N Comm,True,8,50
-H4chain_eqm,BS N + Fiedler,BS N Comm,True,8,54
+H4chain_eqm,HCT N,HCT N Comm,False,8,
+H4chain_eqm,BS N,BS N Comm,False,8,
+H4chain_eqm,HCT N + Fiedler,HCT N Comm,True,8,
+H4chain_eqm,BS N + Fiedler,BS N Comm,True,8,
