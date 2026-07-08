@@ -122,6 +122,10 @@ def variance(sym_ops, state, n_qubits, verbose=False):
 def find_commuting_paulis(H, sym_ops, verbose=False):
     """
     Finds Pauli products in H that commute with all sym_ops
+    returns list[QubitOperators] of commuting terms
+
+    H: QubitOperator
+    sym_ops: list[QubitOperator]
     """
     def is_commuting(op1, op2, tol):
         comm = commutator(op1, op2)
@@ -132,10 +136,10 @@ def find_commuting_paulis(H, sym_ops, verbose=False):
     c = HQ.constant
     HQ = HQ - c
     HQ.compress()
-    n_total_pauli =  len(H.terms.keys())
+    n_total_pauli =  len(HQ.terms.keys())
 
     commuting_terms = []
-    for term, coeff in H.terms.items():
+    for term, coeff in HQ.terms.items():
         Pauli =  QubitOperator(term, coeff)
 
         if all([is_commuting(sym_op, Pauli, 1e-5) for sym_op in sym_ops]):

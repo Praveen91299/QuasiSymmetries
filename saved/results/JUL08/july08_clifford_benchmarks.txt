@@ -1,0 +1,296 @@
+JUL08 Clifford/Fiedler benchmarks
+synthesis_basis = Z
+generator_mapping = positive_z
+Fiedler ordering state = transformed CISD state
+
+================================================================================
+H4chain_eqm
+
+Running Pauli BLISS before HCT...
+n_electrons used for BLISS: 4
+BLISS info: {'success': True, 'message': 'Optimization terminated successfully. (HiGHS Status 7: Optimal)', 'initial_pauli_l1': 7.715793450291508, 'final_pauli_l1': 5.283075353305375, 'pauli_l1_reduction': 2.4327180969861324, 'relative_pauli_l1_reduction': 0.31529072319765417, 'n_killers': 38, 'n_pauli_terms_initial': 185, 'n_pauli_terms_final': 167}
+
+FCI entanglement before Clifford:
+  1|2: 0.06368160380046392
+  2|3: 0.11012412253374489
+  3|4: 0.24166698391791042
+  4|5: 0.22636304780190866
+  5|6: 0.2372188994535616
+  6|7: 0.09813158828647393
+  7|8: 0.05379632241096038
+
+CISD entanglement before Clifford (Fiedler reference):
+  1|2: 0.06097200900645332
+  2|3: 0.1058746886655361
+  3|4: 0.2348642046861085
+  4|5: 0.22020796624589756
+  5|6: 0.23047282325659707
+  6|7: 0.09400991795388294
+  7|8: 0.051227920460697435
+
+--------------------------------------------------------------------------------
+BS N Comm
+Saved symmetries:
+  1.0 [Z0 Z3 Z4 Z7]
+  1.0 [Z1 Z3 Z5 Z7]
+  1.0 [Z2 Z3 Z6 Z7]
+  1.0 [Z0 Z3 Z5 Z6]
+  1.0 [Z7]
+  1.0 [Z6]
+  1.0 [Z0 Z5 Z6 Z7]
+  1.0 [Z0 Z7]
+Symmetries after Clifford:
+  1.0 [Z0]
+  1.0 [Z1]
+  1.0 [Z2]
+  1.0 [Z3]
+  1.0 [Z4]
+  1.0 [Z5]
+  1.0 [Z6]
+  1.0 [Z7]
+FCI entanglement after Clifford:
+  1|2: 4.440892098500623e-16
+  2|3: 4.440892098500623e-16
+  3|4: 4.440892098500623e-16
+  4|5: 0.0012571064088090713
+  5|6: 0.03260241584433903
+  6|7: 0.045519664223761074
+  7|8: 0.03261267126582617
+CISD entanglement after Clifford (Fiedler reference):
+  1|2: 0.0
+  2|3: 0.0
+  3|4: 0.0
+  4|5: 0.0011548432620988964
+  5|6: 0.030973748128753077
+  6|7: 0.045487575619645504
+  7|8: 0.031915988090300544
+
+--------------------------------------------------------------------------------
+BS N/2 Comm
+Saved symmetries:
+  1.0 [Z0 Z3 Z4 Z7]
+  1.0 [Z1 Z3 Z5 Z7]
+  1.0 [Z2 Z3 Z6 Z7]
+  1.0 [Z0 Z3 Z5 Z6]
+Symmetries after Clifford:
+  1.0 [Z0]
+  1.0 [Z1]
+  1.0 [Z2]
+  1.0 [Z3]
+FCI entanglement after Clifford:
+  1|2: 0.0
+  2|3: 0.0
+  3|4: 0.0
+  4|5: 0.000928181831788949
+  5|6: 0.14953201376474157
+  6|7: 0.07510299872047659
+  7|8: 0.04898761392934668
+CISD entanglement after Clifford (Fiedler reference):
+  1|2: 0.0
+  2|3: 0.0
+  3|4: 0.0
+  4|5: 0.000799433696842356
+  5|6: 0.14647632839743396
+  6|7: 0.07373853247225783
+  7|8: 0.04672312610062474
+
+--------------------------------------------------------------------------------
+HCT N Comm
+Saved symmetries:
+  1.0 [Z0 Z3 Z4 Z7]
+  1.0 [Z0 Z2 Z4 Z6]
+  1.0 [Z0 Z1 Z4 Z5]
+  1.0 [Z0 Z3 Z5 Z6]
+  1.0 [Z0 Z1 Z4 Z7]
+  1.0 [Z4 Z7]
+  1.0 [Z0]
+  1.0 [Z7]
+Symmetries after Clifford:
+  1.0 [Z0]
+  1.0 [Z1]
+  1.0 [Z2]
+  1.0 [Z3]
+  1.0 [Z4]
+  1.0 [Z5]
+  1.0 [Z6]
+  1.0 [Z7]
+FCI entanglement after Clifford:
+  1|2: 4.440892098500623e-16
+  2|3: 4.440892098500623e-16
+  3|4: 4.440892098500623e-16
+  4|5: 0.0011422443798284319
+  5|6: 0.1657933757451905
+  6|7: 0.08528422297397911
+  7|8: 0.053743977255362174
+CISD entanglement after Clifford (Fiedler reference):
+  1|2: 0.0
+  2|3: 0.0
+  3|4: 0.0
+  4|5: 0.0010543616162369868
+  5|6: 0.16348502974797435
+  6|7: 0.0843347162157547
+  7|8: 0.05117674702159955
+
+--------------------------------------------------------------------------------
+HCT N/2 Comm
+Saved symmetries:
+  1.0 [Z0 Z3 Z4 Z7]
+  1.0 [Z0 Z2 Z4 Z6]
+  1.0 [Z0 Z1 Z4 Z5]
+  1.0 [Z0 Z3 Z5 Z6]
+Symmetries after Clifford:
+  1.0 [Z0]
+  1.0 [Z1]
+  1.0 [Z2]
+  1.0 [Z3]
+FCI entanglement after Clifford:
+  1|2: 0.0
+  2|3: 0.0
+  3|4: 0.0
+  4|5: 0.0009281818317876161
+  5|6: 0.14953201376474157
+  6|7: 0.07510299872047659
+  7|8: 0.04898761392934668
+CISD entanglement after Clifford (Fiedler reference):
+  1|2: 0.0
+  2|3: 0.0
+  3|4: 0.0
+  4|5: 0.000799433696842356
+  5|6: 0.14647632839743396
+  6|7: 0.07373853247225783
+  7|8: 0.04672312610062474
+
+--------------------------------------------------------------------------------
+Pauli BLISS+HCT N Comm
+Saved symmetries:
+  1.0 [Z0 Z3 Z4 Z7]
+  1.0 [Z0 Z2 Z4 Z6]
+  1.0 [Z0 Z1 Z4 Z5]
+  1.0 [Z0 Z3 Z5 Z6]
+  1.0 [Z0 Z1 Z4 Z7]
+  1.0 [Z4 Z7]
+  1.0 [Z0]
+  1.0 [Z7]
+Symmetries after Clifford:
+  1.0 [Z0]
+  1.0 [Z1]
+  1.0 [Z2]
+  1.0 [Z3]
+  1.0 [Z4]
+  1.0 [Z5]
+  1.0 [Z6]
+  1.0 [Z7]
+FCI entanglement after Clifford:
+  1|2: 4.440892098500623e-16
+  2|3: 4.440892098500623e-16
+  3|4: 4.440892098500623e-16
+  4|5: 0.0011422443798284319
+  5|6: 0.1657933757451905
+  6|7: 0.08528422297397911
+  7|8: 0.053743977255362174
+CISD entanglement after Clifford (Fiedler reference):
+  1|2: 0.0
+  2|3: 0.0
+  3|4: 0.0
+  4|5: 0.0010543616162369868
+  5|6: 0.16348502974797435
+  6|7: 0.0843347162157547
+  7|8: 0.05117674702159955
+
+--------------------------------------------------------------------------------
+SEN N/2 Comm
+Saved symmetries:
+  1.0 [Z0 Z1]
+  1.0 [Z2 Z3]
+  1.0 [Z4 Z5]
+  1.0 [Z6 Z7]
+Symmetries after Clifford:
+  1.0 [Z0]
+  1.0 [Z1]
+  1.0 [Z2]
+  1.0 [Z3]
+FCI entanglement after Clifford:
+  1|2: 0.06805649849940032
+  2|3: 0.06900752468642687
+  3|4: 0.06858805791613215
+  4|5: 0.0654281655317104
+  5|6: 0.10622123844615487
+  6|7: 0.20906376436177582
+  7|8: 0.05379632241096083
+CISD entanglement after Clifford (Fiedler reference):
+  1|2: 0.06614900952920215
+  2|3: 0.06701929416889868
+  3|4: 0.06651382224460879
+  4|5: 0.06348880100844423
+  5|6: 0.10223326705010483
+  6|7: 0.20362054584887176
+  7|8: 0.051227920460697435
+
+--------------------------------------------------------------------------------
+BS N Comm + Fiedler
+Fiedler ordering: [0, 1, 2, 5, 7, 4, 6, 3]
+Symmetries after Clifford + Fiedler:
+  1.0 [Z0]
+  1.0 [Z1]
+  1.0 [Z2]
+  1.0 [Z7]
+  1.0 [Z5]
+  1.0 [Z3]
+  1.0 [Z6]
+  1.0 [Z4]
+FCI entanglement after Clifford + Fiedler:
+  1|2: 4.440892098500623e-16
+  2|3: 4.440892098500623e-16
+  3|4: 4.440892098500623e-16
+  4|5: 0.03163640395079248
+  5|6: 0.04650380885649744
+  6|7: 0.03370169882729669
+  7|8: 0.0012571064088099596
+CISD entanglement after Clifford + Fiedler:
+  1|2: 0.0
+  2|3: 0.0
+  3|4: 0.0
+  4|5: 0.030207422492484915
+  5|6: 0.044132693919349215
+  6|7: 0.03350857363025353
+  7|8: 0.0011548432620984534
+
+--------------------------------------------------------------------------------
+HCT N Comm + Fiedler
+Fiedler ordering: [0, 1, 2, 7, 6, 5, 4, 3]
+Symmetries after Clifford + Fiedler:
+  1.0 [Z0]
+  1.0 [Z1]
+  1.0 [Z2]
+  1.0 [Z7]
+  1.0 [Z6]
+  1.0 [Z5]
+  1.0 [Z4]
+  1.0 [Z3]
+FCI entanglement after Clifford + Fiedler:
+  1|2: 4.440892098500623e-16
+  2|3: 4.440892098500623e-16
+  3|4: 4.440892098500623e-16
+  4|5: 0.053743977255361314
+  5|6: 0.08528422297398014
+  6|7: 0.1657933757451919
+  7|8: 0.001142244379829098
+CISD entanglement after Clifford + Fiedler:
+  1|2: 0.0
+  2|3: 0.0
+  3|4: 0.0
+  4|5: 0.05117674702159887
+  5|6: 0.08433471621575485
+  6|7: 0.16348502974797513
+  7|8: 0.0010543616162374315
+DMRG Seniority: {'system': 'H4chain_eqm', 'benchmark': 'Seniority', 'dataset_tag': 'SEN N/2 Comm', 'fiedler': False, 'n_qubits': 8, 'dmrg_bd': 4, 'dmrg_energy': np.complex128(-2.180257317983139-2.032640583752112e-16j)}
+DMRG HCT N/2: {'system': 'H4chain_eqm', 'benchmark': 'HCT N/2', 'dataset_tag': 'HCT N/2 Comm', 'fiedler': False, 'n_qubits': 8, 'dmrg_bd': 3, 'dmrg_energy': np.complex128(-2.180057154362084+4.2706176248153953e-16j)}
+DMRG HCT N: {'system': 'H4chain_eqm', 'benchmark': 'HCT N', 'dataset_tag': 'HCT N Comm', 'fiedler': False, 'n_qubits': 8, 'dmrg_bd': 3, 'dmrg_energy': np.complex128(-2.1802057545164693+2.9847947951635487e-16j)}
+DMRG HCT+BLISS N: {'system': 'H4chain_eqm', 'benchmark': 'HCT+BLISS N', 'dataset_tag': 'Pauli BLISS+HCT N Comm', 'fiedler': False, 'n_qubits': 8, 'dmrg_bd': 3, 'dmrg_energy': np.complex128(-2.180205754516468+2.9963666249755875e-16j)}
+DMRG BS N/2: {'system': 'H4chain_eqm', 'benchmark': 'BS N/2', 'dataset_tag': 'BS N/2 Comm', 'fiedler': False, 'n_qubits': 8, 'dmrg_bd': 3, 'dmrg_energy': np.complex128(-2.1800571543620895+2.298948880223598e-16j)}
+DMRG BS N: {'system': 'H4chain_eqm', 'benchmark': 'BS N', 'dataset_tag': 'BS N Comm', 'fiedler': False, 'n_qubits': 8, 'dmrg_bd': 3, 'dmrg_energy': np.complex128(-2.1802479304064533-5.97973909196544e-16j)}
+DMRG BS N + Fiedler: {'system': 'H4chain_eqm', 'benchmark': 'BS N + Fiedler', 'dataset_tag': 'BS N Comm', 'fiedler': True, 'n_qubits': 8, 'dmrg_bd': 3, 'dmrg_energy': np.complex128(-2.1801520233424108-3.227998164685026e-16j)}
+MPO HCT N: {'system': 'H4chain_eqm', 'benchmark': 'HCT N', 'dataset_tag': 'HCT N Comm', 'fiedler': False, 'n_qubits': 8, 'mpo_bd': 30}
+MPO BS N: {'system': 'H4chain_eqm', 'benchmark': 'BS N', 'dataset_tag': 'BS N Comm', 'fiedler': False, 'n_qubits': 8, 'mpo_bd': 48}
+MPO HCT N + Fiedler: {'system': 'H4chain_eqm', 'benchmark': 'HCT N + Fiedler', 'dataset_tag': 'HCT N Comm', 'fiedler': True, 'n_qubits': 8, 'mpo_bd': 50}
+MPO BS N + Fiedler: {'system': 'H4chain_eqm', 'benchmark': 'BS N + Fiedler', 'dataset_tag': 'BS N Comm', 'fiedler': True, 'n_qubits': 8, 'mpo_bd': 54}

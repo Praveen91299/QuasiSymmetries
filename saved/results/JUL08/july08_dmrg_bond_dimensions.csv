@@ -1,0 +1,8 @@
+system,benchmark,dataset_tag,fiedler,n_qubits,dmrg_bd,dmrg_energy
+H4chain_eqm,Seniority,SEN N/2 Comm,False,8,4,(-2.180257317983139-2.032640583752112e-16j)
+H4chain_eqm,HCT N/2,HCT N/2 Comm,False,8,3,(-2.180057154362084+4.2706176248153953e-16j)
+H4chain_eqm,HCT N,HCT N Comm,False,8,3,(-2.1802057545164693+2.9847947951635487e-16j)
+H4chain_eqm,HCT+BLISS N,Pauli BLISS+HCT N Comm,False,8,3,(-2.180205754516468+2.9963666249755875e-16j)
+H4chain_eqm,BS N/2,BS N/2 Comm,False,8,3,(-2.1800571543620895+2.298948880223598e-16j)
+H4chain_eqm,BS N,BS N Comm,False,8,3,(-2.1802479304064533-5.97973909196544e-16j)
+H4chain_eqm,BS N + Fiedler,BS N Comm,True,8,3,(-2.1801520233424108-3.227998164685026e-16j)

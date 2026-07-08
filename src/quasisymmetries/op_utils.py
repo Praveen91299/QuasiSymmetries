@@ -442,6 +442,74 @@ def split_diagonal_paulis(op: QubitOperator) -> tuple[QubitOperator, QubitOperat
 
     return diagonal, non_diagonal
 
+def is_diagonal_qubit_operator(op: QubitOperator) -> bool:
+    return all(all(pauli == "Z" for _, pauli in term) for term in op.terms)
+
+def separate_H(
+    HQ: QubitOperator,
+    symmetries: list[QubitOperator],
+    n_qubits: int,
+    verify: bool = True,
+):
+    """
+    Split H = Z0 + V0 + V and return the Clifford used for the diagonal frame.
+
+    Z0: terms commuting with a completed full-rank Pauli set.
+    V0: remaining terms commuting with the input symmetries.
+    V:  non-commuting remainder.
+    U:  Clifford synthesized from the completed full-rank Pauli set.
+    """
+    # Local imports avoid a circular import: metrics imports helpers from this
+    # module, while this reusable routine also needs find_commuting_paulis.
+    from .metrics import find_commuting_paulis
+    from .pt import complete_S_sorted_insertion
+
+    S_lag = complete_S_sorted_insertion(symmetries, HQ, n_qubits, target_rank=n_qubits)
+    U = Clifford.from_symmetries(
+        S_lag,
+        n_qubits,
+        synthesis_basis="Z",
+        generator_mapping="positive_z",
+    )
+
+    const = HQ.constant
+    HQ_mod = HQ - const
+    HQ_mod.compress()
+
+    comm_paulis = find_commuting_paulis(HQ_mod, symmetries, verbose=False)
+    comm_diag_paulis = find_commuting_paulis(HQ_mod, S_lag, verbose=False)
+
+    Z0_no_const = QubitOperator.zero()
+    for pauli in comm_diag_paulis:
+        Z0_no_const += pauli
+    Z0_no_const.compress()
+
+    comm_part = QubitOperator.zero()
+    for pauli in comm_paulis:
+        comm_part += pauli
+    comm_part.compress()
+
+    Z0 = Z0_no_const + const
+    V0 = comm_part - Z0_no_const
+    V = HQ_mod - V0 - Z0_no_const
+    Z0.compress()
+    V0.compress()
+    V.compress()
+
+    if verify:
+        residual = Z0 + V0 + V - HQ
+        residual.compress()
+        residual_l1 = np.sum(np.abs(list(residual.terms.values())))
+        assert np.isclose(residual_l1, 0.0, atol=1e-10), (
+            f"separate_H error: residual L1 = {residual_l1}"
+        )
+        Z0_rot = U.transform(Z0)
+        assert is_diagonal_qubit_operator(Z0_rot), (
+            "separate_H error: Clifford does not diagonalize Z0"
+        )
+
+    return Z0, V0, V, U
+
 class PauliStringAction:
     """
     Fast action of a single QubitOperator Pauli product on state vectors.

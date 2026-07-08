@@ -2,9 +2,18 @@
 utils for PT based sector identification
 
 """
-from typing import Sequence, Set, Tuple
+from typing import List, Optional, Sequence, Set, Tuple
+
 from openfermion import QubitOperator
-import numpy as np
+
+from .bs.utils import (
+    PauliMask,
+    combine_mask,
+    symplectic_commutes,
+    term_to_masks,
+    try_add_to_span,
+)
+from .metrics import find_commuting_paulis
 
 def coupled_computational_basis_states(
     op: QubitOperator,
@@ -124,3 +133,118 @@ def computational_basis_matrix_element(
             matrix_element += coeff * phase
 
     return matrix_element
+
+def complete_S_sorted_insertion(
+    symmetries: Sequence[QubitOperator],
+    HQ: QubitOperator,
+    n_qubits: int,
+    target_rank: Optional[int] = None,
+) -> List[QubitOperator]:
+    """Extend a commuting Pauli basis with large commuting terms from ``HQ``.
+
+    Hamiltonian terms are considered in descending absolute-coefficient order.
+    A term is inserted only when it commutes with every generator selected so
+    far and increases their binary symplectic GF(2) rank. Inserted terms are
+    normalized to coefficient ``+1``.
+
+    The input generators must already be nonidentity, mutually commuting, and
+    independent. The input sequence itself is never mutated.
+    """
+    if n_qubits < 0:
+        raise ValueError("n_qubits must be nonnegative.")
+    if target_rank is None:
+        target_rank = n_qubits
+    if not 0 <= target_rank <= n_qubits:
+        raise ValueError(
+            "target_rank must satisfy 0 <= target_rank <= n_qubits."
+        )
+
+    def single_mask(
+        operator: QubitOperator,
+        *,
+        label: str,
+    ) -> Tuple[Tuple[Tuple[int, str], ...], PauliMask]:
+        if len(operator.terms) != 1:
+            raise ValueError(f"{label} must be a single Pauli string.")
+        (term, coefficient), = operator.terms.items()
+        if abs(complex(coefficient)) <= 1e-12:
+            raise ValueError(f"{label} must have a nonzero coefficient.")
+        if any(q < 0 or q >= n_qubits for q, _ in term):
+            raise ValueError(
+                f"{label} acts outside n_qubits={n_qubits}."
+            )
+        mask = term_to_masks(term, n_qubits)
+        if mask == (0, 0):
+            raise ValueError(f"{label} cannot be the identity.")
+        return term, mask
+
+    extended_symmetries = list(symmetries)
+    selected_masks: List[PauliMask] = []
+    rref_rows: List[int] = []
+    n_bits = 2 * n_qubits
+
+    for index, symmetry in enumerate(extended_symmetries):
+        _, mask = single_mask(symmetry, label=f"symmetries[{index}]")
+        if not all(
+            symplectic_commutes(mask, previous)
+            for previous in selected_masks
+        ):
+            raise ValueError("Input symmetries must mutually commute.")
+        new_rows = try_add_to_span(
+            combine_mask(mask, n_qubits),
+            rref_rows,
+            n_bits,
+        )
+        if new_rows is None:
+            raise ValueError("Input symmetries must be independent.")
+        rref_rows = new_rows
+        selected_masks.append(mask)
+
+    current_rank = len(rref_rows)
+    if current_rank >= target_rank:
+        return extended_symmetries
+
+    commuting_terms = find_commuting_paulis(
+        HQ,
+        extended_symmetries,
+        verbose=False,
+    )
+    commuting_terms.sort(
+        key=lambda operator: sum(
+            abs(coefficient) for coefficient in operator.terms.values()
+        ),
+        reverse=True,
+    )
+
+    for candidate_index, candidate in enumerate(commuting_terms):
+        if len(candidate.terms) == 1:
+            (candidate_term, _), = candidate.terms.items()
+            if not candidate_term:
+                continue
+        term, mask = single_mask(
+            candidate,
+            label=f"Hamiltonian candidate {candidate_index}",
+        )
+        if not all(
+            symplectic_commutes(mask, selected)
+            for selected in selected_masks
+        ):
+            continue
+
+        new_rows = try_add_to_span(
+            combine_mask(mask, n_qubits),
+            rref_rows,
+            n_bits,
+        )
+        if new_rows is None:
+            continue
+
+        extended_symmetries.append(QubitOperator(term, 1.0))
+        selected_masks.append(mask)
+        rref_rows = new_rows
+        current_rank += 1
+        if current_rank == target_rank:
+            return extended_symmetries
+
+    print("Insufficient generators identified: ", current_rank)
+    return extended_symmetries

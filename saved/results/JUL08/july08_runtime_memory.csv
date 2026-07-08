@@ -1,0 +1,14 @@
+system,T Ferm,M Ferm,T BS,M BS,T BS + Fiedler,M BS + Fiedler
+H4chain_eqm,1679616,46656,1327104,73728,1679616,93312
+H4chain_corr,1679616,46656,,,,
+H4chain_diss,1679616,46656,,,,
+H4rect_corr,2985984,46656,,,,
+H4rect_diss,1679616,46656,,,,
+LIH_eqm,5992704,166464,,,,
+LIH_corr,2663424,166464,,,,
+H2O_eqm,17977600,179776,,,,
+H2O_corr,17977600,179776,,,,
+H2O_diss,2876416,179776,,,,
+N2frozen_eqm,705433600,440896,,,,
+N2frozen_corr,1587225600,440896,,,,
+N2frozen_diss,1587225600,440896,,,,
