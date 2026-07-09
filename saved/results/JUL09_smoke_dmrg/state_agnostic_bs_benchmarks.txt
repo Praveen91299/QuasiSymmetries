@@ -1,0 +1,41 @@
+State-agnostic BS(n) benchmarks
+Systems: ['H4chain_eqm']
+Objectives: ['commuting_weight']
+Beam width: 2
+DMRG skipped: False
+Clifford synthesis basis: Z
+Clifford generator mapping: positive_z
+
+
+================================================================================
+H4chain_eqm
+================================================================================
+n_qubits: 8
+fci_energy: -2.1803166143238575
+cisd_energy: -2.1795507519996784
+
+--------------------------------------------------------------------------------
+Objective: commuting_weight
+Default retained Hamiltonian coefficient 1-norm commuting with the full generator set.
+Search seconds: 0.030388
+Search diagnostics:
+  n_qubits: 8
+  target_rank: 4
+  num_generators: 8
+  independent_rank: 8
+  pairwise_commuting: True
+  all_exact_symmetries: False
+  retained_weight: 4.73576551214134
+  total_weight: 7.656960838927873
+  retained_fraction: 0.6184915414566025
+  requested_target_rank: 8
+  search_seconds: 0.03038849999999993
+Symmetries found:
+  1.0 [Z0 Z3 Z4 Z7]
+  1.0 [Z1 Z3 Z5 Z7]
+  1.0 [Z2 Z3 Z6 Z7]
+  1.0 [Z1]
+  1.0 [Z0]
+  1.0 [Z4]
+  1.0 [Z7]
+  1.0 [Z6]
