@@ -1,0 +1,14 @@
+system,HCT($n_q$),Pauli BLISS+HCT($n_q$)
+H4chain_eqm,3,3
+H4chain_corr,3,3
+H4chain_diss,3,2
+H4rect_corr,3,3
+H4rect_diss,3,2
+LIH_eqm,4,4
+LIH_corr,4,3
+H2O_eqm,5,12
+H2O_corr,4,6
+H2O_diss,1,2
+N2frozen_eqm,16,18
+N2frozen_corr,30,30
+N2frozen_diss,12,12

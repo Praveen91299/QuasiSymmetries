@@ -1,5 +1,53 @@
 system,benchmark,dataset_tag,fiedler,n_qubits,mpo_bd
-H4chain_eqm,HCT N,HCT N Comm,False,8,
-H4chain_eqm,BS N,BS N Comm,False,8,
-H4chain_eqm,HCT N + Fiedler,HCT N Comm,True,8,
-H4chain_eqm,BS N + Fiedler,BS N Comm,True,8,
+H4chain_eqm,HCT N,HCT N Comm,False,8,30
+H4chain_eqm,BS N,BS N Comm,False,8,48
+H4chain_eqm,HCT N + Fiedler,HCT N Comm,True,8,50
+H4chain_eqm,BS N + Fiedler,BS N Comm,True,8,54
+H4chain_corr,HCT N,HCT N Comm,False,8,34
+H4chain_corr,BS N,BS N Comm,False,8,41
+H4chain_corr,HCT N + Fiedler,HCT N Comm,True,8,45
+H4chain_corr,BS N + Fiedler,BS N Comm,True,8,42
+H4chain_diss,HCT N,HCT N Comm,False,8,34
+H4chain_diss,BS N,BS N Comm,False,8,31
+H4chain_diss,HCT N + Fiedler,HCT N Comm,True,8,47
+H4chain_diss,BS N + Fiedler,BS N Comm,True,8,30
+H4rect_corr,HCT N,HCT N Comm,False,8,22
+H4rect_corr,BS N,BS N Comm,False,8,33
+H4rect_corr,HCT N + Fiedler,HCT N Comm,True,8,33
+H4rect_corr,BS N + Fiedler,BS N Comm,True,8,27
+H4rect_diss,HCT N,HCT N Comm,False,8,23
+H4rect_diss,BS N,BS N Comm,False,8,27
+H4rect_diss,HCT N + Fiedler,HCT N Comm,True,8,31
+H4rect_diss,BS N + Fiedler,BS N Comm,True,8,27
+LIH_eqm,HCT N,HCT N Comm,False,12,117
+LIH_eqm,BS N,BS N Comm,False,12,123
+LIH_eqm,HCT N + Fiedler,HCT N Comm,True,12,206
+LIH_eqm,BS N + Fiedler,BS N Comm,True,12,196
+LIH_corr,HCT N,HCT N Comm,False,12,58
+LIH_corr,BS N,BS N Comm,False,12,82
+LIH_corr,HCT N + Fiedler,HCT N Comm,True,12,126
+LIH_corr,BS N + Fiedler,BS N Comm,True,12,156
+H2O_eqm,HCT N,HCT N Comm,False,14,219
+H2O_eqm,BS N,BS N Comm,False,14,299
+H2O_eqm,HCT N + Fiedler,HCT N Comm,True,14,167
+H2O_eqm,BS N + Fiedler,BS N Comm,True,14,242
+H2O_corr,HCT N,HCT N Comm,False,14,254
+H2O_corr,BS N,BS N Comm,False,14,274
+H2O_corr,HCT N + Fiedler,HCT N Comm,True,14,261
+H2O_corr,BS N + Fiedler,BS N Comm,True,14,354
+H2O_diss,HCT N,HCT N Comm,False,14,268
+H2O_diss,BS N,BS N Comm,False,14,240
+H2O_diss,HCT N + Fiedler,HCT N Comm,True,14,213
+H2O_diss,BS N + Fiedler,BS N Comm,True,14,246
+N2frozen_eqm,HCT N,HCT N Comm,False,16,300
+N2frozen_eqm,BS N,BS N Comm,False,16,506
+N2frozen_eqm,HCT N + Fiedler,HCT N Comm,True,16,252
+N2frozen_eqm,BS N + Fiedler,BS N Comm,True,16,351
+N2frozen_corr,HCT N,HCT N Comm,False,16,498
+N2frozen_corr,BS N,BS N Comm,False,16,276
+N2frozen_corr,HCT N + Fiedler,HCT N Comm,True,16,329
+N2frozen_corr,BS N + Fiedler,BS N Comm,True,16,436
+N2frozen_diss,HCT N,HCT N Comm,False,16,498
+N2frozen_diss,BS N,BS N Comm,False,16,490
+N2frozen_diss,HCT N + Fiedler,HCT N Comm,True,16,656
+N2frozen_diss,BS N + Fiedler,BS N Comm,True,16,605
