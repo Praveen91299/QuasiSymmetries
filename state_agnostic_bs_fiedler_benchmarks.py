@@ -91,11 +91,11 @@ def write_csv(path: Path, rows: list[dict]) -> None:
 
 def jsonable(value):
     if isinstance(value, np.ndarray):
-        return value.tolist()
-    if isinstance(value, np.generic):
-        return value.item()
+        return jsonable(value.tolist())
     if isinstance(value, complex):
         return {"real": float(value.real), "imag": float(value.imag)}
+    if isinstance(value, np.generic):
+        return jsonable(value.item())
     if isinstance(value, dict):
         return {str(key): jsonable(val) for key, val in value.items()}
     if isinstance(value, (list, tuple)):

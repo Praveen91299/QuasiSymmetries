@@ -14,8 +14,8 @@ Fiedler reference: cisd
 DMRG BD before Fiedler: 3
 DMRG BD after Fiedler: 
 DMRG energy after Fiedler: 
-Transform seconds: 0.053953
-Fiedler seconds: 0.107057
+Transform seconds: 0.057530
+Fiedler seconds: 0.151766
 DMRG seconds: 0.000000
 Fiedler ordering: [0, 1, 2, 3, 4, 6, 5, 7]
 Original symmetries:

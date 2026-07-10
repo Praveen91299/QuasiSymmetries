@@ -1,0 +1,728 @@
+State-agnostic BS(n) + Fiedler benchmarks
+Input datasets: /Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/JUL09/state_agnostic_bs_benchmark_datasets
+Systems: ['H4chain_eqm', 'H4chain_corr', 'H4chain_diss', 'H4rect_corr', 'H4rect_diss', 'LIH_eqm', 'LIH_corr', 'H2O_eqm', 'H2O_corr', 'H2O_diss', 'N2frozen_eqm', 'N2frozen_corr', 'N2frozen_diss']
+Objectives: ['commuting_weight', 'summed_single_commuting_weight']
+Fiedler reference: cisd
+DMRG skipped: False
+Clifford synthesis basis: Z
+Clifford generator mapping: positive_z
+
+--------------------------------------------------------------------------------
+H4chain_eqm | commuting_weight
+Dataset tag: BS N commuting_weight
+Fiedler reference: cisd
+DMRG BD before Fiedler: 3
+DMRG BD after Fiedler: 3
+DMRG energy after Fiedler: (-2.180216349046887-2.1912774534136044e-16j)
+Transform seconds: 0.043540
+Fiedler seconds: 0.011758
+DMRG seconds: 1.797558
+Fiedler ordering: [0, 1, 2, 3, 4, 6, 5, 7]
+Original symmetries:
+  (1+0j) [Z0 Z3 Z4 Z7]
+  (1+0j) [Z1 Z3 Z5 Z7]
+  (1+0j) [Z2 Z3 Z6 Z7]
+  (1+0j) [Z1]
+  (1+0j) [Z0]
+  (1+0j) [Z0 Z5]
+  (1+0j) [Z4 Z6]
+  (1+0j) [Z0 Z3 Z5 Z6]
+Symmetries after Clifford:
+  1.0 [Z0]
+  1.0 [Z1]
+  1.0 [Z2]
+  1.0 [Z3]
+  1.0 [Z4]
+  1.0 [Z5]
+  1.0 [Z6]
+  1.0 [Z7]
+Original symmetries in Fiedler order:
+  (1+0j) [Z0 Z3 Z4 Z7]
+  (1+0j) [Z1 Z3 Z5 Z7]
+  (1+0j) [Z2 Z3 Z6 Z7]
+  (1+0j) [Z1]
+  (1+0j) [Z0]
+  (1+0j) [Z4 Z6]
+  (1+0j) [Z0 Z5]
+  (1+0j) [Z0 Z3 Z5 Z6]
+Transformed single-Z symmetries after Clifford + Fiedler:
+  1.0 [Z0]
+  1.0 [Z1]
+  1.0 [Z2]
+  1.0 [Z3]
+  1.0 [Z4]
+  1.0 [Z6]
+  1.0 [Z5]
+  1.0 [Z7]
+FCI entanglement after Clifford:
+  1|2: 0.0
+  2|3: 0.0
+  3|4: 0.0
+  4|5: 0.06325940058797072
+  5|6: 0.09806993627884268
+  6|7: 0.17602134706452682
+  7|8: 0.0011422443798291078
+CISD entanglement after Clifford:
+  1|2: 0.0
+  2|3: 0.0
+  3|4: 0.0
+  4|5: 0.06056190846410282
+  5|6: 0.09648645710246173
+  6|7: 0.1732966400346192
+  7|8: 0.001054361616237432
+FCI entanglement after Clifford + Fiedler:
+  1|2: 0.0
+  2|3: 0.0
+  3|4: 0.0
+  4|5: 0.06325940058797073
+  5|6: 0.09806993627884204
+  6|7: 0.16221670383986342
+  7|8: 0.001142244379828664
+CISD entanglement after Clifford + Fiedler:
+  1|2: 0.0
+  2|3: 0.0
+  3|4: 0.0
+  4|5: 0.06056190846410283
+  5|6: 0.09648645710246241
+  6|7: 0.15963764909606454
+  7|8: 0.001054361616237432
+
+--------------------------------------------------------------------------------
+H4chain_eqm | summed_single_commuting_weight
+Dataset tag: BS N summed_single_commuting_weight
+Fiedler reference: cisd
+DMRG BD before Fiedler: 4
+DMRG BD after Fiedler: 4
+DMRG energy after Fiedler: (-2.180316614323857-1.6968669707102992e-16j)
+Transform seconds: 0.032873
+Fiedler seconds: 0.006242
+DMRG seconds: 1.975531
+Fiedler ordering: [0, 1, 2, 7, 4, 5, 3, 6]
+Original symmetries:
+  (1+0j) [Z0 Z3 Z4 Z7]
+  (1+0j) [Z1 Z3 Z5 Z7]
+  (1+0j) [Z2 Z3 Z6 Z7]
+  (1+0j) [Z1]
+  (1+0j) [Z0]
+  (1+0j) [Z7]
+  (1+0j) [Z6]
+  (1+0j) [Z4]
+Symmetries after Clifford:
+  1.0 [Z0]
+  1.0 [Z1]
+  1.0 [Z2]
+  1.0 [Z3]
+  1.0 [Z4]
+  1.0 [Z5]
+  1.0 [Z6]
+  1.0 [Z7]
+Original symmetries in Fiedler order:
+  (1+0j) [Z0 Z3 Z4 Z7]
+  (1+0j) [Z1 Z3 Z5 Z7]
+  (1+0j) [Z2 Z3 Z6 Z7]
+  (1+0j) [Z4]
+  (1+0j) [Z0]
+  (1+0j) [Z7]
+  (1+0j) [Z1]
+  (1+0j) [Z6]
+Transformed single-Z symmetries after Clifford + Fiedler:
+  1.0 [Z0]
+  1.0 [Z1]
+  1.0 [Z2]
+  1.0 [Z6]
+  1.0 [Z4]
+  1.0 [Z5]
+  1.0 [Z7]
+  1.0 [Z3]
+FCI entanglement after Clifford:
+  1|2: 0.0
+  2|3: 0.0
+  3|4: 0.0
+  4|5: 0.06351338441831435
+  5|6: 0.10507079736888414
+  6|7: 0.10868068763601683
+  7|8: 0.05795004016717152
+CISD entanglement after Clifford:
+  1|2: 0.0
+  2|3: 0.0
+  3|4: 0.0
+  4|5: 0.06078930351431671
+  5|6: 0.10100597123313548
+  6|7: 0.10371929038550534
+  7|8: 0.05619384941510942
+FCI entanglement after Clifford + Fiedler:
+  1|2: 4.440892098500623e-16
+  2|3: 4.440892098500623e-16
+  3|4: 4.440892098500623e-16
+  4|5: 0.05795004016717239
+  5|6: 0.08379612793135106
+  6|7: 0.0694966040713081
+  7|8: 0.05373122290507929
+CISD entanglement after Clifford + Fiedler:
+  1|2: 0.0
+  2|3: 0.0
+  3|4: 0.0
+  4|5: 0.05619384941510989
+  5|6: 0.08013489122011061
+  6|7: 0.06680255093226474
+  7|8: 0.05116839132755266
+
+--------------------------------------------------------------------------------
+H4chain_corr | commuting_weight
+Dataset tag: BS N commuting_weight
+Fiedler reference: cisd
+DMRG BD before Fiedler: 3
+DMRG BD after Fiedler: 4
+DMRG energy after Fiedler: (-1.8977806459898376-1.402888464045636e-16j)
+Transform seconds: 0.037219
+Fiedler seconds: 0.002144
+DMRG seconds: 1.243918
+Fiedler ordering: [0, 1, 2, 7, 4, 6, 5, 3]
+Original symmetries:
+  (1+0j) [Z0 Z3 Z4 Z7]
+  (1+0j) [Z1 Z3 Z5 Z7]
+  (1+0j) [Z2 Z3 Z6 Z7]
+  (1+0j) [Z0 Z3 Z5 Z6]
+  (1+0j) [Z1]
+  (1+0j) [Z0]
+  (1+0j) [Z0 Z1 Z4 Z7]
+  (1+0j) [Z7]
+Symmetries after Clifford:
+  1.0 [Z0]
+  1.0 [Z1]
+  1.0 [Z2]
+  1.0 [Z3]
+  1.0 [Z4]
+  1.0 [Z5]
+  1.0 [Z6]
+  1.0 [Z7]
+Original symmetries in Fiedler order:
+  (1+0j) [Z0 Z3 Z4 Z7]
+  (1+0j) [Z1 Z3 Z5 Z7]
+  (1+0j) [Z2 Z3 Z6 Z7]
+  (1+0j) [Z7]
+  (1+0j) [Z1]
+  (1+0j) [Z0 Z1 Z4 Z7]
+  (1+0j) [Z0]
+  (1+0j) [Z0 Z3 Z5 Z6]
+Transformed single-Z symmetries after Clifford + Fiedler:
+  1.0 [Z0]
+  1.0 [Z1]
+  1.0 [Z2]
+  1.0 [Z7]
+  1.0 [Z4]
+  1.0 [Z6]
+  1.0 [Z5]
+  1.0 [Z3]
+FCI entanglement after Clifford:
+  1|2: 1.7763568394002457e-15
+  2|3: 1.7763568394002457e-15
+  3|4: 1.7763568394002457e-15
+  4|5: 0.03160840860121376
+  5|6: 0.5538833448583358
+  6|7: 0.8574640107722087
+  7|8: 0.5598879546577752
+CISD entanglement after Clifford:
+  1|2: 4.440892098500623e-16
+  2|3: 4.440892098500623e-16
+  3|4: 4.440892098500623e-16
+  4|5: 0.17425042151018852
+  5|6: 0.6185727015246778
+  6|7: 0.7613672654153026
+  7|8: 0.48957479964548867
+FCI entanglement after Clifford + Fiedler:
+  1|2: 1.7763568394002457e-15
+  2|3: 1.7763568394002457e-15
+  3|4: 1.7763568394002457e-15
+  4|5: 0.5598879546577751
+  5|6: 0.8637876006202198
+  6|7: 0.5884449070132913
+  7|8: 0.03160840860121334
+CISD entanglement after Clifford + Fiedler:
+  1|2: 2.2204460492503123e-16
+  2|3: 2.2204460492503123e-16
+  3|4: 2.2204460492503123e-16
+  4|5: 0.48957479964548867
+  5|6: 0.664745593138735
+  6|7: 0.6711692803526608
+  7|8: 0.17425042151018832
+
+--------------------------------------------------------------------------------
+H4chain_corr | summed_single_commuting_weight
+Dataset tag: BS N summed_single_commuting_weight
+Fiedler reference: cisd
+DMRG BD before Fiedler: 3
+DMRG BD after Fiedler: 4
+DMRG energy after Fiedler: (-1.8977806459898312+2.854825445617441e-16j)
+Transform seconds: 0.072015
+Fiedler seconds: 0.002548
+DMRG seconds: 1.278742
+Fiedler ordering: [0, 1, 2, 6, 5, 4, 7, 3]
+Original symmetries:
+  (1+0j) [Z0 Z3 Z4 Z7]
+  (1+0j) [Z1 Z3 Z5 Z7]
+  (1+0j) [Z2 Z3 Z6 Z7]
+  (1+0j) [Z0 Z3 Z5 Z6]
+  (1+0j) [Z1]
+  (1+0j) [Z0]
+  (1+0j) [Z7]
+  (1+0j) [Z2]
+Symmetries after Clifford:
+  1.0 [Z0]
+  1.0 [Z1]
+  1.0 [Z2]
+  1.0 [Z3]
+  1.0 [Z4]
+  1.0 [Z5]
+  1.0 [Z6]
+  1.0 [Z7]
+Original symmetries in Fiedler order:
+  (1+0j) [Z0 Z3 Z4 Z7]
+  (1+0j) [Z1 Z3 Z5 Z7]
+  (1+0j) [Z2 Z3 Z6 Z7]
+  (1+0j) [Z7]
+  (1+0j) [Z0]
+  (1+0j) [Z1]
+  (1+0j) [Z2]
+  (1+0j) [Z0 Z3 Z5 Z6]
+Transformed single-Z symmetries after Clifford + Fiedler:
+  1.0 [Z0]
+  1.0 [Z1]
+  1.0 [Z2]
+  1.0 [Z7]
+  1.0 [Z5]
+  1.0 [Z4]
+  1.0 [Z3]
+  1.0 [Z6]
+FCI entanglement after Clifford:
+  1|2: 1.7763568394002457e-15
+  2|3: 1.7763568394002457e-15
+  3|4: 1.7763568394002457e-15
+  4|5: 0.029116267334150507
+  5|6: 0.5521830193943609
+  6|7: 0.8371013479535745
+  7|8: 0.42475790213902254
+CISD entanglement after Clifford:
+  1|2: 2.2204460492503123e-16
+  2|3: 2.2204460492503123e-16
+  3|4: 2.2204460492503123e-16
+  4|5: 0.16247618127082808
+  5|6: 0.5742656392907649
+  6|7: 0.6734747566480423
+  7|8: 0.5093344862828626
+FCI entanglement after Clifford + Fiedler:
+  1|2: 1.7763568394002457e-15
+  2|3: 1.7763568394002457e-15
+  3|4: 1.7763568394002457e-15
+  4|5: 0.5598879546577752
+  5|6: 0.6600408015890245
+  6|7: 0.4505124738348853
+  7|8: 0.029116267334150726
+CISD entanglement after Clifford + Fiedler:
+  1|2: 2.2204460492503123e-16
+  2|3: 2.2204460492503123e-16
+  3|4: 2.2204460492503123e-16
+  4|5: 0.48957479964548867
+  5|6: 0.6608821827338578
+  6|7: 0.5901734345468259
+  7|8: 0.1624761812708283
+
+--------------------------------------------------------------------------------
+H4chain_diss | commuting_weight
+Dataset tag: BS N commuting_weight
+Fiedler reference: cisd
+DMRG BD before Fiedler: 2
+DMRG BD after Fiedler: 3
+DMRG energy after Fiedler: (-1.8669555008983205+1.491759843354269e-15j)
+Transform seconds: 0.051012
+Fiedler seconds: 0.004206
+DMRG seconds: 1.177228
+Fiedler ordering: [3, 1, 0, 7, 5, 4, 6, 2]
+Original symmetries:
+  (1+0j) [Z0 Z3 Z4 Z7]
+  (1+0j) [Z1 Z3 Z5 Z7]
+  (1+0j) [Z2 Z3 Z6 Z7]
+  (1+0j) [Z0 Z3 Z5 Z6]
+  (1+0j) [Z1]
+  (1+0j) [Z0]
+  (1+0j) [Z0 Z1 Z4 Z7]
+  (1+0j) [Z7]
+Symmetries after Clifford:
+  1.0 [Z0]
+  1.0 [Z1]
+  1.0 [Z2]
+  1.0 [Z3]
+  1.0 [Z4]
+  1.0 [Z5]
+  1.0 [Z6]
+  1.0 [Z7]
+Original symmetries in Fiedler order:
+  (1+0j) [Z0 Z3 Z5 Z6]
+  (1+0j) [Z1 Z3 Z5 Z7]
+  (1+0j) [Z0 Z3 Z4 Z7]
+  (1+0j) [Z7]
+  (1+0j) [Z0]
+  (1+0j) [Z1]
+  (1+0j) [Z0 Z1 Z4 Z7]
+  (1+0j) [Z2 Z3 Z6 Z7]
+Transformed single-Z symmetries after Clifford + Fiedler:
+  1.0 [Z2]
+  1.0 [Z1]
+  1.0 [Z7]
+  1.0 [Z0]
+  1.0 [Z5]
+  1.0 [Z4]
+  1.0 [Z6]
+  1.0 [Z3]
+FCI entanglement after Clifford:
+  1|2: 1.3322676295501853e-15
+  2|3: 1.3322676295501853e-15
+  3|4: 1.3322676295501853e-15
+  4|5: 0.017130026735964025
+  5|6: 0.6592253826511469
+  6|7: 1.028787914110689
+  7|8: 0.6878128768493237
+CISD entanglement after Clifford:
+  1|2: 0.03308280117161618
+  2|3: 0.03308280117161618
+  3|4: 0.033082801171616404
+  4|5: 0.02636136474992478
+  5|6: 0.5962445858094989
+  6|7: 0.35182271244238456
+  7|8: 0.3386752211190331
+FCI entanglement after Clifford + Fiedler:
+  1|2: 0.017130026735962263
+  2|3: 0.017130026735962263
+  3|4: 0.01713002673596226
+  4|5: 0.7024477499839551
+  5|6: 0.9298606715029123
+  6|7: 0.4871708147448339
+  7|8: 1.3322676295501853e-15
+CISD entanglement after Clifford + Fiedler:
+  1|2: 0.033082801171616195
+  2|3: 0.03308280117161598
+  3|4: 0.02636136474992526
+  4|5: 0.34866404276952295
+  5|6: 0.8213032796316425
+  6|7: 0.4833871913487503
+  7|8: -4.440892098500629e-16
+
+--------------------------------------------------------------------------------
+H4chain_diss | summed_single_commuting_weight
+Dataset tag: BS N summed_single_commuting_weight
+Fiedler reference: cisd
+DMRG BD before Fiedler: 3
+DMRG BD after Fiedler: 3
+DMRG energy after Fiedler: (-1.8670818217659026+8.014155992390851e-16j)
+Transform seconds: 0.039540
+Fiedler seconds: 0.003860
+DMRG seconds: 1.185878
+Fiedler ordering: [1, 0, 3, 7, 6, 4, 5, 2]
+Original symmetries:
+  (1+0j) [Z0 Z3 Z4 Z7]
+  (1+0j) [Z1 Z3 Z5 Z7]
+  (1+0j) [Z2 Z3 Z6 Z7]
+  (1+0j) [Z0 Z3 Z5 Z6]
+  (1+0j) [Z1]
+  (1+0j) [Z0]
+  (1+0j) [Z7]
+  (1+0j) [Z2]
+Symmetries after Clifford:
+  1.0 [Z0]
+  1.0 [Z1]
+  1.0 [Z2]
+  1.0 [Z3]
+  1.0 [Z4]
+  1.0 [Z5]
+  1.0 [Z6]
+  1.0 [Z7]
+Original symmetries in Fiedler order:
+  (1+0j) [Z1 Z3 Z5 Z7]
+  (1+0j) [Z0 Z3 Z4 Z7]
+  (1+0j) [Z0 Z3 Z5 Z6]
+  (1+0j) [Z2]
+  (1+0j) [Z7]
+  (1+0j) [Z1]
+  (1+0j) [Z0]
+  (1+0j) [Z2 Z3 Z6 Z7]
+Transformed single-Z symmetries after Clifford + Fiedler:
+  1.0 [Z1]
+  1.0 [Z0]
+  1.0 [Z7]
+  1.0 [Z2]
+  1.0 [Z5]
+  1.0 [Z6]
+  1.0 [Z4]
+  1.0 [Z3]
+FCI entanglement after Clifford:
+  1|2: 1.3322676295501853e-15
+  2|3: 1.3322676295501853e-15
+  3|4: 1.3322676295501853e-15
+  4|5: 0.015297641627192923
+  5|6: 0.6589322958309202
+  6|7: 1.0109795734673337
+  7|8: 0.48667436671417796
+CISD entanglement after Clifford:
+  1|2: 0.03308280117161618
+  2|3: 0.03308280117161618
+  3|4: 0.03308280117161662
+  4|5: 0.026361364749924836
+  5|6: 0.5962445858094988
+  6|7: 0.351822712442383
+  7|8: 0.33867522111903287
+FCI entanglement after Clifford + Fiedler:
+  1|2: 1.3322676295501853e-15
+  2|3: 1.3322676295501853e-15
+  3|4: 0.015297641627192703
+  4|5: 0.5009690747658457
+  5|6: 1.0109335015897172
+  6|7: 0.6484728956526962
+  7|8: 1.3322676295501853e-15
+CISD entanglement after Clifford + Fiedler:
+  1|2: 0.03308280117161618
+  2|3: 0.03308280117161618
+  3|4: 0.02636136474992481
+  4|5: 0.35182271244238333
+  5|6: 0.33867522111903337
+  6|7: 0.5728362055618241
+  7|8: -4.440892098500629e-16
+
+--------------------------------------------------------------------------------
+H4rect_corr | commuting_weight
+Dataset tag: BS N commuting_weight
+Fiedler reference: cisd
+DMRG BD before Fiedler: 3
+DMRG BD after Fiedler: 3
+DMRG energy after Fiedler: (-1.9151065495118036-4.810071468272029e-16j)
+Transform seconds: 0.041285
+Fiedler seconds: 0.004020
+DMRG seconds: 1.057321
+Fiedler ordering: [0, 1, 2, 3, 5, 6, 7, 4]
+Original symmetries:
+  (1+0j) [Z0 Z3 Z5 Z6]
+  (1+0j) [Z1 Z3 Z5 Z7]
+  (1+0j) [Z2 Z3]
+  (1+0j) [Z4 Z5]
+  (1+0j) [Z5]
+  (1+0j) [Z2 Z5 Z7]
+  (1+0j) [Z0 Z3 Z5 Z7]
+  (1+0j) [Z3]
+Symmetries after Clifford:
+  1.0 [Z0]
+  1.0 [Z1]
+  1.0 [Z2]
+  1.0 [Z3]
+  1.0 [Z4]
+  1.0 [Z5]
+  1.0 [Z6]
+  1.0 [Z7]
+Original symmetries in Fiedler order:
+  (1+0j) [Z0 Z3 Z5 Z6]
+  (1+0j) [Z1 Z3 Z5 Z7]
+  (1+0j) [Z2 Z3]
+  (1+0j) [Z4 Z5]
+  (1+0j) [Z2 Z5 Z7]
+  (1+0j) [Z0 Z3 Z5 Z7]
+  (1+0j) [Z3]
+  (1+0j) [Z5]
+Transformed single-Z symmetries after Clifford + Fiedler:
+  1.0 [Z0]
+  1.0 [Z1]
+  1.0 [Z2]
+  1.0 [Z3]
+  1.0 [Z7]
+  1.0 [Z4]
+  1.0 [Z5]
+  1.0 [Z6]
+FCI entanglement after Clifford:
+  1|2: -8.881784197001264e-16
+  2|3: -8.881784197001264e-16
+  3|4: -4.440892098500629e-16
+  4|5: -8.881784197001264e-16
+  5|6: 0.6925153326986564
+  6|7: 0.7884678830661722
+  7|8: 0.6928733843682888
+CISD entanglement after Clifford:
+  1|2: -4.440892098500629e-16
+  2|3: -4.440892098500629e-16
+  3|4: 0.0
+  4|5: 0.0
+  5|6: 0.6926160119434872
+  6|7: 0.7793448495485855
+  7|8: 0.6929380845525899
+FCI entanglement after Clifford + Fiedler:
+  1|2: -8.881784197001264e-16
+  2|3: -8.881784197001264e-16
+  3|4: -4.440892098500629e-16
+  4|5: -8.881784197001264e-16
+  5|6: 0.11052887016378939
+  6|7: 0.2091933935006292
+  7|8: 0.6925153326986564
+CISD entanglement after Clifford + Fiedler:
+  1|2: -4.440892098500629e-16
+  2|3: -4.440892098500629e-16
+  3|4: -4.440892098500629e-16
+  4|5: -4.440892098500629e-16
+  5|6: 0.09880157063136334
+  6|7: 0.1925222351790175
+  7|8: 0.692616011943487
+
+--------------------------------------------------------------------------------
+H4rect_corr | summed_single_commuting_weight
+Dataset tag: BS N summed_single_commuting_weight
+Fiedler reference: cisd
+DMRG BD before Fiedler: 3
+DMRG BD after Fiedler: 4
+DMRG energy after Fiedler: (-1.9151065495117867-2.1130066259030737e-16j)
+Transform seconds: 0.026004
+Fiedler seconds: 0.002586
+DMRG seconds: 1.404855
+Fiedler ordering: [0, 1, 2, 3, 6, 5, 4, 7]
+Original symmetries:
+  (1+0j) [Z0 Z3 Z5 Z6]
+  (1+0j) [Z1 Z3 Z5 Z7]
+  (1+0j) [Z2 Z3]
+  (1+0j) [Z4 Z5]
+  (1+0j) [Z3]
+  (1+0j) [Z5]
+  (1+0j) [Z2 Z5 Z7]
+  (1+0j) [Z0]
+Symmetries after Clifford:
+  1.0 [Z0]
+  1.0 [Z1]
+  1.0 [Z2]
+  1.0 [Z3]
+  1.0 [Z4]
+  1.0 [Z5]
+  1.0 [Z6]
+  1.0 [Z7]
+Original symmetries in Fiedler order:
+  (1+0j) [Z0 Z3 Z5 Z6]
+  (1+0j) [Z1 Z3 Z5 Z7]
+  (1+0j) [Z2 Z3]
+  (1+0j) [Z4 Z5]
+  (1+0j) [Z2 Z5 Z7]
+  (1+0j) [Z5]
+  (1+0j) [Z3]
+  (1+0j) [Z0]
+Transformed single-Z symmetries after Clifford + Fiedler:
+  1.0 [Z0]
+  1.0 [Z1]
+  1.0 [Z2]
+  1.0 [Z3]
+  1.0 [Z6]
+  1.0 [Z5]
+  1.0 [Z4]
+  1.0 [Z7]
+FCI entanglement after Clifford:
+  1|2: -8.881784197001264e-16
+  2|3: -8.881784197001264e-16
+  3|4: -4.440892098500629e-16
+  4|5: -8.881784197001264e-16
+  5|6: 0.6928733843682886
+  6|7: 0.20919339350062924
+  7|8: 0.12074791714398567
+CISD entanglement after Clifford:
+  1|2: -4.440892098500629e-16
+  2|3: -4.440892098500629e-16
+  3|4: -1.7763568394002552e-15
+  4|5: 0.0
+  5|6: 0.6929380845525899
+  6|7: 0.19252223517901781
+  7|8: 0.0976106973538796
+FCI entanglement after Clifford + Fiedler:
+  1|2: -8.881784197001264e-16
+  2|3: -8.881784197001264e-16
+  3|4: -4.440892098500629e-16
+  4|5: -8.881784197001264e-16
+  5|6: 0.12074791714398518
+  6|7: 0.7149351524051131
+  7|8: 0.1207479171439857
+CISD entanglement after Clifford + Fiedler:
+  1|2: -4.440892098500629e-16
+  2|3: -4.440892098500629e-16
+  3|4: -4.440892098500629e-16
+  4|5: -4.440892098500629e-16
+  5|6: 0.09761069735387877
+  6|7: 0.6960025204182846
+  7|8: 0.0976106973538796
+
+--------------------------------------------------------------------------------
+H4rect_diss | commuting_weight
+Dataset tag: BS N commuting_weight
+Fiedler reference: cisd
+DMRG BD before Fiedler: 3
+DMRG BD after Fiedler: 3
+DMRG energy after Fiedler: (-2.2018243342457438+4.0856765428816194e-17j)
+Transform seconds: 0.040980
+Fiedler seconds: 0.001894
+DMRG seconds: 1.003062
+Fiedler ordering: [0, 1, 2, 3, 6, 7, 4, 5]
+Original symmetries:
+  (1+0j) [Z0 Z3 Z5 Z6]
+  (1+0j) [Z1 Z3 Z5 Z7]
+  (1+0j) [Z2 Z3 Z6 Z7]
+  (1+0j) [Z4 Z5 Z6 Z7]
+  (1+0j) [Z0 Z1 Z4 Z7]
+  (1+0j) [Z1]
+  (1+0j) [Z4 Z7]
+  (1+0j) [Z5]
+Symmetries after Clifford:
+  1.0 [Z0]
+  1.0 [Z1]
+  1.0 [Z2]
+  1.0 [Z3]
+  1.0 [Z4]
+  1.0 [Z5]
+  1.0 [Z6]
+  1.0 [Z7]
+Original symmetries in Fiedler order:
+  (1+0j) [Z0 Z3 Z5 Z6]
+  (1+0j) [Z1 Z3 Z5 Z7]
+  (1+0j) [Z2 Z3 Z6 Z7]
+  (1+0j) [Z4 Z5 Z6 Z7]
+  (1+0j) [Z4 Z7]
+  (1+0j) [Z5]
+  (1+0j) [Z0 Z1 Z4 Z7]
+  (1+0j) [Z1]
+Transformed single-Z symmetries after Clifford + Fiedler:
+  1.0 [Z0]
+  1.0 [Z1]
+  1.0 [Z2]
+  1.0 [Z3]
+  1.0 [Z6]
+  1.0 [Z7]
+  1.0 [Z4]
+  1.0 [Z5]
+FCI entanglement after Clifford:
+  1|2: 2.2204460492503123e-16
+  2|3: 2.2204460492503123e-16
+  3|4: 2.2204460492503123e-16
+  4|5: 2.2204460492503123e-16
+  5|6: 0.20125961502824183
+  6|7: 0.2141916107747598
+  7|8: 0.13839934192610914
+CISD entanglement after Clifford:
+  1|2: 0.0
+  2|3: 0.0
+  3|4: 0.0
+  4|5: 4.440892098500623e-16
+  5|6: 0.19480366888321615
+  6|7: 0.20150637208875366
+  7|8: 0.12950893907573363
+FCI entanglement after Clifford + Fiedler:
+  1|2: 2.2204460492503123e-16
+  2|3: 2.2204460492503123e-16
+  3|4: 2.2204460492503123e-16
+  4|5: 2.2204460492503123e-16
+  5|6: 0.13421414593297598
+  6|7: 0.2141916107747594
+  7|8: 0.13505108603863725
+CISD entanglement after Clifford + Fiedler:
+  1|2: 0.0
+  2|3: 0.0
+  3|4: 0.0
+  4|5: 4.440892098500623e-16
+  5|6: 0.1286584672752044
+  6|7: 0.20150637208875408
+  7|8: 0.12621676963604517

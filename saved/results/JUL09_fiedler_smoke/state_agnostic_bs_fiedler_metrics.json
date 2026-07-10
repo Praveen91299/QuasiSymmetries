@@ -18,8 +18,8 @@
           "dmrg_bd_before_fiedler": 3,
           "dmrg_bd_after_fiedler": "",
           "dmrg_energy_after_fiedler": "",
-          "transform_seconds": 0.053952624999999976,
-          "fiedler_seconds": 0.10705683400000021,
+          "transform_seconds": 0.05753012499999999,
+          "fiedler_seconds": 0.15176629099999994,
           "dmrg_seconds": 0.0,
           "original_symmetries": [
             "(1+0j) [Z0 Z3 Z4 Z7]",

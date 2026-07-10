@@ -1,0 +1,5 @@
+system,commuting_weight_before_fiedler,commuting_weight_after_fiedler,commuting_weight_dmrg_energy_after_fiedler,summed_single_commuting_weight_before_fiedler,summed_single_commuting_weight_after_fiedler,summed_single_commuting_weight_dmrg_energy_after_fiedler
+H4chain_eqm,3,3,(-2.180216349046887-2.1912774534136044e-16j),4,4,(-2.180316614323857-1.6968669707102992e-16j)
+H4chain_corr,3,4,(-1.8977806459898376-1.402888464045636e-16j),3,4,(-1.8977806459898312+2.854825445617441e-16j)
+H4chain_diss,2,3,(-1.8669555008983205+1.491759843354269e-15j),3,3,(-1.8670818217659026+8.014155992390851e-16j)
+H4rect_corr,3,3,(-1.9151065495118036-4.810071468272029e-16j),3,4,(-1.9151065495117867-2.1130066259030737e-16j)
