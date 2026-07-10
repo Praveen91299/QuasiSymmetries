@@ -1,0 +1,88 @@
+State-agnostic BS(n) + Fiedler benchmarks
+Input datasets: /Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/JUL09/state_agnostic_bs_benchmark_datasets
+Systems: ['H4chain_eqm']
+Objectives: ['commuting_weight']
+Fiedler reference: cisd
+DMRG skipped: True
+Clifford synthesis basis: Z
+Clifford generator mapping: positive_z
+
+--------------------------------------------------------------------------------
+H4chain_eqm | commuting_weight
+Dataset tag: BS N commuting_weight
+Fiedler reference: cisd
+DMRG BD before Fiedler: 3
+DMRG BD after Fiedler: 
+DMRG energy after Fiedler: 
+Transform seconds: 0.053953
+Fiedler seconds: 0.107057
+DMRG seconds: 0.000000
+Fiedler ordering: [0, 1, 2, 3, 4, 6, 5, 7]
+Original symmetries:
+  (1+0j) [Z0 Z3 Z4 Z7]
+  (1+0j) [Z1 Z3 Z5 Z7]
+  (1+0j) [Z2 Z3 Z6 Z7]
+  (1+0j) [Z1]
+  (1+0j) [Z0]
+  (1+0j) [Z0 Z5]
+  (1+0j) [Z4 Z6]
+  (1+0j) [Z0 Z3 Z5 Z6]
+Symmetries after Clifford:
+  1.0 [Z0]
+  1.0 [Z1]
+  1.0 [Z2]
+  1.0 [Z3]
+  1.0 [Z4]
+  1.0 [Z5]
+  1.0 [Z6]
+  1.0 [Z7]
+Original symmetries in Fiedler order:
+  (1+0j) [Z0 Z3 Z4 Z7]
+  (1+0j) [Z1 Z3 Z5 Z7]
+  (1+0j) [Z2 Z3 Z6 Z7]
+  (1+0j) [Z1]
+  (1+0j) [Z0]
+  (1+0j) [Z4 Z6]
+  (1+0j) [Z0 Z5]
+  (1+0j) [Z0 Z3 Z5 Z6]
+Transformed single-Z symmetries after Clifford + Fiedler:
+  1.0 [Z0]
+  1.0 [Z1]
+  1.0 [Z2]
+  1.0 [Z3]
+  1.0 [Z4]
+  1.0 [Z6]
+  1.0 [Z5]
+  1.0 [Z7]
+FCI entanglement after Clifford:
+  1|2: 0.0
+  2|3: 0.0
+  3|4: 0.0
+  4|5: 0.06325940058797072
+  5|6: 0.09806993627884249
+  6|7: 0.17602134706452682
+  7|8: 0.0011422443798291078
+CISD entanglement after Clifford:
+  1|2: 0.0
+  2|3: 0.0
+  3|4: 0.0
+  4|5: 0.06056190846410282
+  5|6: 0.09648645710246173
+  6|7: 0.1732966400346192
+  7|8: 0.001054361616237432
+FCI entanglement after Clifford + Fiedler:
+  1|2: 0.0
+  2|3: 0.0
+  3|4: 0.0
+  4|5: 0.06325940058797073
+  5|6: 0.09806993627884207
+  6|7: 0.16221670383986342
+  7|8: 0.001142244379828664
+CISD entanglement after Clifford + Fiedler:
+  1|2: 0.0
+  2|3: 0.0
+  3|4: 0.0
+  4|5: 0.06056190846410283
+  5|6: 0.09648645710246241
+  6|7: 0.15963764909606454
+  7|8: 0.001054361616237432
