@@ -1,0 +1,212 @@
+{
+  "schema": "quasisymmetries.BenchmarkData",
+  "version": 1,
+  "kind": "collection",
+  "datasets": [
+    {
+      "tag": "Pauli BLISS+HCT N Comm",
+      "symmetries": [
+        {
+          "terms": [
+            {
+              "pauli": [
+                [
+                  0,
+                  "Z"
+                ],
+                [
+                  3,
+                  "Z"
+                ],
+                [
+                  4,
+                  "Z"
+                ],
+                [
+                  7,
+                  "Z"
+                ]
+              ],
+              "coefficient": {
+                "real": 1.0,
+                "imag": 0.0
+              }
+            }
+          ]
+        },
+        {
+          "terms": [
+            {
+              "pauli": [
+                [
+                  0,
+                  "Z"
+                ],
+                [
+                  2,
+                  "Z"
+                ],
+                [
+                  4,
+                  "Z"
+                ],
+                [
+                  6,
+                  "Z"
+                ]
+              ],
+              "coefficient": {
+                "real": 1.0,
+                "imag": 0.0
+              }
+            }
+          ]
+        },
+        {
+          "terms": [
+            {
+              "pauli": [
+                [
+                  0,
+                  "Z"
+                ],
+                [
+                  1,
+                  "Z"
+                ],
+                [
+                  4,
+                  "Z"
+                ],
+                [
+                  5,
+                  "Z"
+                ]
+              ],
+              "coefficient": {
+                "real": 1.0,
+                "imag": 0.0
+              }
+            }
+          ]
+        },
+        {
+          "terms": [
+            {
+              "pauli": [
+                [
+                  0,
+                  "Z"
+                ],
+                [
+                  3,
+                  "Z"
+                ],
+                [
+                  5,
+                  "Z"
+                ],
+                [
+                  6,
+                  "Z"
+                ]
+              ],
+              "coefficient": {
+                "real": 1.0,
+                "imag": 0.0
+              }
+            }
+          ]
+        },
+        {
+          "terms": [
+            {
+              "pauli": [
+                [
+                  0,
+                  "Z"
+                ],
+                [
+                  1,
+                  "Z"
+                ],
+                [
+                  4,
+                  "Z"
+                ],
+                [
+                  7,
+                  "Z"
+                ]
+              ],
+              "coefficient": {
+                "real": 1.0,
+                "imag": 0.0
+              }
+            }
+          ]
+        },
+        {
+          "terms": [
+            {
+              "pauli": [
+                [
+                  4,
+                  "Z"
+                ],
+                [
+                  7,
+                  "Z"
+                ]
+              ],
+              "coefficient": {
+                "real": 1.0,
+                "imag": 0.0
+              }
+            }
+          ]
+        },
+        {
+          "terms": [
+            {
+              "pauli": [
+                [
+                  0,
+                  "Z"
+                ]
+              ],
+              "coefficient": {
+                "real": 1.0,
+                "imag": 0.0
+              }
+            }
+          ]
+        },
+        {
+          "terms": [
+            {
+              "pauli": [
+                [
+                  7,
+                  "Z"
+                ]
+              ],
+              "coefficient": {
+                "real": 1.0,
+                "imag": 0.0
+              }
+            }
+          ]
+        }
+      ],
+      "non_commuting_l1": 0.0,
+      "num_commuting_terms": 0,
+      "sym_entropy": 0.0,
+      "cut_entropies": [],
+      "dmrg_bd": 0,
+      "single_sector_e": 0.0,
+      "clifford_synthesis_basis": "Z",
+      "clifford_generator_mapping": "positive_z"
+    }
+  ]
+}

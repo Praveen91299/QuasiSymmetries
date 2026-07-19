@@ -1,0 +1,562 @@
+% Auto-generated from saved/results/JUL08/july08_clifford_benchmarks.json
+% Exact symmetry annotations computed by direct commutator checks against saved Hamiltonians.
+% Verified: JUL08 non-BLISS Comm symmetry lists match MAY27 datasets for all requested tags.
+
+\section{Saved HCT and beam-search symmetry generators}
+All Pauli operators are written with one-indexed qubit labels. The HCT($\nqubits/2$) lists are not shown separately because, in each case, they are the first $n/2$ generators of the corresponding HCT($\nqubits$) list. This prefix relation is not assumed for beam search: beam search ($\nqubits/2$) is therefore listed separately from beam search ($\nqubits$). The tables below list HCT($\nqubits$), the additional non-exact generators introduced by HCT($\nqubits$)+BLISS, beam search ($\nqubits/2$), and the additional non-exact generators in beam search ($\nqubits$) after the shared exact generators. For the $\nqubits$-generator HCT and beam-search lists, the reported Fiedler ordering is a permutation of the generator labels in the immediately following list; for example, $(3,1,2)$ means that the reordered symmetry-coordinate order is $S_3,S_1,S_2$.
+
+\begingroup
+\small
+\setlength{\arraycolsep}{2pt}
+
+\medskip
+\noindent\textbf{\underline{H$_4$ chain, equilibrium}}\par
+
+\paragraph{HCT($\nqubits$).}
+Fiedler ordering: $(1, 2, 3, 8, 7, 6, 5, 4)$.
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{1} &=& \hat z_{1}\hat z_{4}\hat z_{5}\hat z_{8} & S_{3} &=& \hat z_{1}\hat z_{2}\hat z_{5}\hat z_{6} & S_{5} &=& \hat z_{1}\hat z_{2}\hat z_{5}\hat z_{8} & S_{7} &=& \hat z_{1} \\
+S_{2} &=& \hat z_{1}\hat z_{3}\hat z_{5}\hat z_{7} & S_{4} &=& \hat z_{1}\hat z_{4}\hat z_{6}\hat z_{7} & S_{6} &=& \hat z_{5}\hat z_{8} & S_{8} &=& \hat z_{8}
+\end{array}
+\]
+
+Exact Hamiltonian symmetries in this list: $S_{1}$, $S_{2}$, $S_{3}$.
+
+\paragraph{HCT($\nqubits$)+BLISS.}
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{4} &=& \hat z_{1}\hat z_{4}\hat z_{6}\hat z_{7} & S_{6} &=& \hat z_{5}\hat z_{8} & S_{8} &=& \hat z_{8} & {} && {} \\
+S_{5} &=& \hat z_{1}\hat z_{2}\hat z_{5}\hat z_{8} & S_{7} &=& \hat z_{1} & {} && {} & {} && {}
+\end{array}
+\]
+
+\paragraph{Beam search ($\nqubits/2$).}
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{1} &=& \hat z_{1}\hat z_{4}\hat z_{5}\hat z_{8} & S_{2} &=& \hat z_{2}\hat z_{4}\hat z_{6}\hat z_{8} & S_{3} &=& \hat z_{3}\hat z_{4}\hat z_{7}\hat z_{8} & S_{4} &=& \hat z_{1}\hat z_{4}\hat z_{6}\hat z_{7}
+\end{array}
+\]
+
+Exact Hamiltonian symmetries in this list: $S_{1}$, $S_{2}$, $S_{3}$.
+
+\paragraph{Beam search ($\nqubits$).}
+Fiedler ordering: $(1, 2, 3, 6, 8, 5, 7, 4)$.
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{4} &=& \hat z_{1}\hat z_{4}\hat z_{6}\hat z_{7} & S_{6} &=& \hat z_{7} & S_{8} &=& \hat z_{1}\hat z_{8} & {} && {} \\
+S_{5} &=& \hat z_{8} & S_{7} &=& \hat z_{1}\hat z_{6}\hat z_{7}\hat z_{8} & {} && {} & {} && {}
+\end{array}
+\]
+
+\medskip
+\noindent\textbf{\underline{H$_4$ chain, correlated}}\par
+
+\paragraph{HCT($\nqubits$).}
+Fiedler ordering: $(1, 2, 3, 8, 6, 5, 7, 4)$.
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{1} &=& \hat z_{1}\hat z_{4}\hat z_{5}\hat z_{8} & S_{3} &=& \hat z_{1}\hat z_{2}\hat z_{5}\hat z_{6} & S_{5} &=& \hat z_{1}\hat z_{2}\hat z_{5}\hat z_{8} & S_{7} &=& \hat z_{1} \\
+S_{2} &=& \hat z_{1}\hat z_{3}\hat z_{5}\hat z_{7} & S_{4} &=& \hat z_{1}\hat z_{4}\hat z_{6}\hat z_{7} & S_{6} &=& \hat z_{2} & S_{8} &=& \hat z_{8}
+\end{array}
+\]
+
+Exact Hamiltonian symmetries in this list: $S_{1}$, $S_{2}$, $S_{3}$.
+
+\paragraph{HCT($\nqubits$)+BLISS.}
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{4} &=& \hat z_{1}\hat z_{4}\hat z_{6}\hat z_{7} & S_{6} &=& \hat z_{2} & S_{8} &=& \hat z_{8} & {} && {} \\
+S_{5} &=& \hat z_{1}\hat z_{2}\hat z_{5}\hat z_{8} & S_{7} &=& \hat z_{1} & {} && {} & {} && {}
+\end{array}
+\]
+
+\paragraph{Beam search ($\nqubits/2$).}
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{1} &=& \hat z_{1}\hat z_{4}\hat z_{5}\hat z_{8} & S_{2} &=& \hat z_{2}\hat z_{4}\hat z_{6}\hat z_{8} & S_{3} &=& \hat z_{3}\hat z_{4}\hat z_{7}\hat z_{8} & S_{4} &=& \hat y_{1}\hat z_{2}\hat y_{3}\hat y_{5}\hat z_{6}\hat y_{7}
+\end{array}
+\]
+
+Exact Hamiltonian symmetries in this list: $S_{1}$, $S_{2}$, $S_{3}$.
+
+\paragraph{Beam search ($\nqubits$).}
+Fiedler ordering: $(1, 2, 3, 5, 6, 7, 8, 4)$.
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{4} &=& \hat y_{1}\hat z_{2}\hat y_{3}\hat y_{5}\hat z_{6}\hat y_{7} & S_{6} &=& \hat z_{8} & S_{8} &=& \hat z_{1}\hat z_{6}\hat z_{7} & {} && {} \\
+S_{5} &=& \hat z_{1}\hat z_{4}\hat z_{6}\hat z_{7} & S_{7} &=& \hat x_{2}\hat x_{3}\hat x_{6}\hat x_{7} & {} && {} & {} && {}
+\end{array}
+\]
+
+\medskip
+\noindent\textbf{\underline{H$_4$ chain, dissociated}}\par
+
+\paragraph{HCT($\nqubits$).}
+Fiedler ordering: $(5, 6, 7, 8, 1, 2, 4, 3)$.
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{1} &=& \hat z_{1}\hat z_{4}\hat z_{5}\hat z_{8} & S_{3} &=& \hat z_{1}\hat z_{2}\hat z_{5}\hat z_{6} & S_{5} &=& \hat z_{1}\hat z_{2}\hat z_{5}\hat z_{8} & S_{7} &=& \hat z_{1} \\
+S_{2} &=& \hat z_{1}\hat z_{3}\hat z_{5}\hat z_{7} & S_{4} &=& \hat z_{1}\hat z_{4}\hat z_{6}\hat z_{7} & S_{6} &=& \hat z_{2} & S_{8} &=& \hat z_{8}
+\end{array}
+\]
+
+Exact Hamiltonian symmetries in this list: $S_{1}$, $S_{2}$, $S_{3}$.
+
+\paragraph{HCT($\nqubits$)+BLISS.}
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{4} &=& \hat z_{1}\hat z_{4}\hat z_{6}\hat z_{7} & S_{6} &=& \hat z_{1}\hat z_{2}\hat z_{5}\hat z_{8} & S_{8} &=& \hat z_{2}\hat z_{7} & {} && {} \\
+S_{5} &=& \hat x_{1}\hat x_{2}\hat x_{3}\hat x_{4}\hat x_{5}\hat x_{6}\hat x_{7}\hat x_{8} & S_{7} &=& \hat x_{2}\hat y_{4}\hat x_{5}\hat y_{7} & {} && {} & {} && {}
+\end{array}
+\]
+
+\paragraph{Beam search ($\nqubits/2$).}
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{1} &=& \hat z_{1}\hat z_{4}\hat z_{5}\hat z_{8} & S_{2} &=& \hat z_{2}\hat z_{4}\hat z_{6}\hat z_{8} & S_{3} &=& \hat z_{3}\hat z_{4}\hat z_{7}\hat z_{8} & S_{4} &=& \hat z_{1}\hat z_{4}\hat z_{6}\hat z_{7}
+\end{array}
+\]
+
+Exact Hamiltonian symmetries in this list: $S_{1}$, $S_{2}$, $S_{3}$.
+
+\paragraph{Beam search ($\nqubits$).}
+Fiedler ordering: $(8, 7, 6, 4, 2, 1, 3, 5)$.
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{4} &=& \hat z_{1}\hat z_{4}\hat z_{6}\hat z_{7} & S_{6} &=& \hat y_{5}\hat y_{6}\hat x_{7}\hat x_{8} & S_{8} &=& \hat y_{1}\hat y_{2}\hat x_{5}\hat x_{6} & {} && {} \\
+S_{5} &=& \hat z_{1}\hat z_{2} & S_{7} &=& \hat y_{1}\hat y_{2}\hat x_{3}\hat x_{4} & {} && {} & {} && {}
+\end{array}
+\]
+
+\medskip
+\noindent\textbf{\underline{H$_4$ rectangle, correlated}}\par
+
+\paragraph{HCT($\nqubits$).}
+Fiedler ordering: $(1, 2, 3, 4, 6, 5, 8, 7)$.
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{1} &=& \hat z_{2}\hat z_{3}\hat z_{5}\hat z_{8} & S_{3} &=& \hat z_{5}\hat z_{6} & S_{5} &=& \hat z_{1}\hat z_{4}\hat z_{6}\hat z_{8} & S_{7} &=& \hat z_{6} \\
+S_{2} &=& \hat z_{1}\hat z_{3}\hat z_{5}\hat z_{7} & S_{4} &=& \hat z_{3}\hat z_{4} & S_{6} &=& \hat z_{1} & S_{8} &=& \hat z_{4}
+\end{array}
+\]
+
+Exact Hamiltonian symmetries in this list: $S_{1}$, $S_{2}$, $S_{3}$, $S_{4}$.
+
+\paragraph{HCT($\nqubits$)+BLISS.}
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{5} &=& \hat z_{1}\hat z_{4}\hat z_{6}\hat z_{8} & S_{6} &=& \hat z_{1} & S_{7} &=& \hat z_{6} & S_{8} &=& \hat z_{4}
+\end{array}
+\]
+
+\paragraph{Beam search ($\nqubits/2$).}
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{1} &=& \hat z_{1}\hat z_{4}\hat z_{6}\hat z_{7} & S_{2} &=& \hat z_{2}\hat z_{4}\hat z_{6}\hat z_{8} & S_{3} &=& \hat z_{3}\hat z_{4} & S_{4} &=& \hat z_{5}\hat z_{6}
+\end{array}
+\]
+
+Exact Hamiltonian symmetries in this list: $S_{1}$, $S_{2}$, $S_{3}$, $S_{4}$.
+
+\paragraph{Beam search ($\nqubits$).}
+Fiedler ordering: $(1, 2, 3, 4, 7, 8, 5, 6)$.
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{5} &=& \hat z_{6} & S_{6} &=& \hat z_{4} & S_{7} &=& \hat z_{1}\hat z_{8} & S_{8} &=& \hat z_{3}\hat z_{8}
+\end{array}
+\]
+
+\medskip
+\noindent\textbf{\underline{H$_4$ rectangle, dissociated}}\par
+
+\paragraph{HCT($\nqubits$).}
+Fiedler ordering: $(1, 2, 3, 4, 7, 5, 8, 6)$.
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{1} &=& \hat z_{2}\hat z_{3}\hat z_{5}\hat z_{8} & S_{3} &=& \hat z_{1}\hat z_{2}\hat z_{5}\hat z_{6} & S_{5} &=& \hat z_{1}\hat z_{2}\hat z_{5}\hat z_{8} & S_{7} &=& \hat z_{1} \\
+S_{2} &=& \hat z_{1}\hat z_{3}\hat z_{5}\hat z_{7} & S_{4} &=& \hat z_{1}\hat z_{2}\hat z_{3}\hat z_{4} & S_{6} &=& \hat z_{5}\hat z_{8} & S_{8} &=& \hat z_{5}
+\end{array}
+\]
+
+Exact Hamiltonian symmetries in this list: $S_{1}$, $S_{2}$, $S_{3}$, $S_{4}$.
+
+\paragraph{HCT($\nqubits$)+BLISS.}
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{5} &=& \hat z_{1}\hat z_{2}\hat z_{5}\hat z_{8} & S_{6} &=& \hat x_{1}\hat x_{2}\hat x_{3}\hat x_{4}\hat z_{7}\hat z_{8} & S_{7} &=& \hat z_{5}\hat z_{8} & S_{8} &=& \hat z_{5}
+\end{array}
+\]
+
+\paragraph{Beam search ($\nqubits/2$).}
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{1} &=& \hat z_{1}\hat z_{4}\hat z_{6}\hat z_{7} & S_{2} &=& \hat z_{2}\hat z_{4}\hat z_{6}\hat z_{8} & S_{3} &=& \hat z_{3}\hat z_{4}\hat z_{7}\hat z_{8} & S_{4} &=& \hat z_{5}\hat z_{6}\hat z_{7}\hat z_{8}
+\end{array}
+\]
+
+Exact Hamiltonian symmetries in this list: $S_{1}$, $S_{2}$, $S_{3}$, $S_{4}$.
+
+\paragraph{Beam search ($\nqubits$).}
+Fiedler ordering: $(1, 2, 3, 4, 5, 8, 7, 6)$.
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{5} &=& \hat z_{3}\hat z_{8} & S_{6} &=& \hat z_{3}\hat z_{6} & S_{7} &=& \hat z_{3}\hat z_{7} & S_{8} &=& \hat z_{5}
+\end{array}
+\]
+
+\medskip
+\noindent\textbf{\underline{LiH, equilibrium}}\par
+
+\paragraph{HCT($\nqubits$).}
+Fiedler ordering: $(1, 2, 3, 4, 12, 11, 6, 5, 8, 7, 9, 10)$.
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{1} &=& \hat z_{2}\hat z_{4}\hat z_{6}\hat z_{7}\hat z_{9}\hat z_{12} & S_{4} &=& \hat z_{7}\hat z_{8} & S_{7} &=& \hat z_{1}\hat z_{5} & S_{10} &=& \hat z_{12} \\
+S_{2} &=& \hat z_{1}\hat z_{3}\hat z_{5}\hat z_{7}\hat z_{9}\hat z_{11} & S_{5} &=& \hat z_{2}\hat z_{4}\hat z_{6}\hat z_{8}\hat z_{12} & S_{8} &=& \hat z_{2}\hat z_{6} & S_{11} &=& \hat z_{2} \\
+S_{3} &=& \hat z_{9}\hat z_{10} & S_{6} &=& \hat z_{8} & S_{9} &=& \hat z_{11} & S_{12} &=& \hat z_{1}
+\end{array}
+\]
+
+Exact Hamiltonian symmetries in this list: $S_{1}$, $S_{2}$, $S_{3}$, $S_{4}$.
+
+\paragraph{HCT($\nqubits$)+BLISS.}
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{5} &=& \hat z_{2}\hat z_{4}\hat z_{6}\hat z_{8}\hat z_{12} & S_{7} &=& \hat z_{1}\hat z_{5} & S_{9} &=& \hat z_{11} & S_{11} &=& \hat z_{2} \\
+S_{6} &=& \hat z_{8} & S_{8} &=& \hat z_{2}\hat z_{6} & S_{10} &=& \hat z_{12} & S_{12} &=& \hat z_{1}
+\end{array}
+\]
+
+\paragraph{Beam search ($\nqubits/2$).}
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{1} &=& \hat z_{1}\hat z_{3}\hat z_{5}\hat z_{8}\hat z_{10}\hat z_{11} & S_{3} &=& \hat z_{7}\hat z_{8} & S_{5} &=& \hat z_{1}\hat z_{2}\hat z_{3}\hat z_{4} & {} && {} \\
+S_{2} &=& \hat z_{2}\hat z_{4}\hat z_{6}\hat z_{8}\hat z_{10}\hat z_{12} & S_{4} &=& \hat z_{9}\hat z_{10} & S_{6} &=& \hat z_{1}\hat z_{2} & {} && {}
+\end{array}
+\]
+
+Exact Hamiltonian symmetries in this list: $S_{1}$, $S_{2}$, $S_{3}$, $S_{4}$.
+
+\paragraph{Beam search ($\nqubits$).}
+Fiedler ordering: $(1, 2, 3, 4, 5, 10, 12, 11, 6, 7, 9, 8)$.
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{5} &=& \hat z_{1}\hat z_{2}\hat z_{3}\hat z_{4} & S_{7} &=& \hat z_{8} & S_{9} &=& \hat z_{1}\hat z_{2} & S_{11} &=& \hat z_{2}\hat z_{5} \\
+S_{6} &=& \hat z_{2}\hat z_{4}\hat z_{6}\hat z_{8}\hat z_{12} & S_{8} &=& \hat z_{2} & S_{10} &=& \hat z_{1}\hat z_{6} & S_{12} &=& \hat z_{11}
+\end{array}
+\]
+
+\medskip
+\noindent\textbf{\underline{LiH, correlated}}\par
+
+\paragraph{HCT($\nqubits$).}
+Fiedler ordering: $(1, 2, 3, 4, 8, 7, 12, 9, 10, 11, 6, 5)$.
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{1} &=& \hat z_{2}\hat z_{4}\hat z_{6}\hat z_{7}\hat z_{9}\hat z_{12} & S_{4} &=& \hat z_{7}\hat z_{8} & S_{7} &=& \hat z_{12} & S_{10} &=& \hat z_{1} \\
+S_{2} &=& \hat z_{1}\hat z_{3}\hat z_{5}\hat z_{7}\hat z_{9}\hat z_{11} & S_{5} &=& \hat z_{2}\hat z_{4}\hat z_{6}\hat z_{10}\hat z_{12} & S_{8} &=& \hat z_{11} & S_{11} &=& \hat z_{2} \\
+S_{3} &=& \hat z_{9}\hat z_{10} & S_{6} &=& \hat z_{10} & S_{9} &=& \hat z_{3}\hat z_{4} & S_{12} &=& \hat z_{5}
+\end{array}
+\]
+
+Exact Hamiltonian symmetries in this list: $S_{1}$, $S_{2}$, $S_{3}$, $S_{4}$.
+
+\paragraph{HCT($\nqubits$)+BLISS.}
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{5} &=& \hat z_{2}\hat z_{4}\hat z_{6}\hat z_{10}\hat z_{12} & S_{7} &=& \hat z_{11} & S_{9} &=& \hat z_{1} & S_{11} &=& \hat x_{3}\hat x_{4}\hat x_{5}\hat x_{6} \\
+S_{6} &=& \hat z_{10} & S_{8} &=& \hat z_{12} & S_{10} &=& \hat z_{2} & S_{12} &=& \hat z_{3}\hat z_{6}
+\end{array}
+\]
+
+\paragraph{Beam search ($\nqubits/2$).}
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{1} &=& \hat z_{1}\hat z_{3}\hat z_{5}\hat z_{8}\hat z_{10}\hat z_{11} & S_{3} &=& \hat z_{7}\hat z_{8} & S_{5} &=& \hat z_{2}\hat z_{4}\hat z_{6}\hat z_{10}\hat z_{12} & {} && {} \\
+S_{2} &=& \hat z_{2}\hat z_{4}\hat z_{6}\hat z_{8}\hat z_{10}\hat z_{12} & S_{4} &=& \hat z_{9}\hat z_{10} & S_{6} &=& \hat z_{10} & {} && {}
+\end{array}
+\]
+
+Exact Hamiltonian symmetries in this list: $S_{1}$, $S_{2}$, $S_{3}$, $S_{4}$.
+
+\paragraph{Beam search ($\nqubits$).}
+Fiedler ordering: $(1, 2, 3, 4, 12, 10, 9, 11, 7, 8, 6, 5)$.
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{5} &=& \hat z_{2}\hat z_{4}\hat z_{6}\hat z_{10}\hat z_{12} & S_{7} &=& \hat z_{1}\hat z_{10} & S_{9} &=& \hat y_{4}\hat z_{5}\hat y_{6} & S_{11} &=& \hat y_{3}\hat z_{4}\hat y_{5} \\
+S_{6} &=& \hat z_{10} & S_{8} &=& \hat z_{2}\hat z_{9} & S_{10} &=& \hat x_{4}\hat z_{5}\hat x_{6} & S_{12} &=& \hat x_{3}\hat z_{4}\hat x_{5}
+\end{array}
+\]
+
+\medskip
+\noindent\textbf{\underline{H$_2$O, equilibrium}}\par
+
+\paragraph{HCT($\nqubits$).}
+Fiedler ordering: $(1, 2, 3, 4, 7, 8, 12, 11, 13, 14, 5, 9, 10, 6)$.
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{1} &=& \hat z_{1}\hat z_{3}\hat z_{6}\hat z_{7}\hat z_{9}\hat z_{11}\hat z_{14} & S_{5} &=& \hat z_{6}\hat z_{14} & S_{9} &=& \hat z_{8} & S_{13} &=& \hat z_{5} \\
+S_{2} &=& \hat z_{1}\hat z_{3}\hat z_{5}\hat z_{7}\hat z_{9}\hat z_{11}\hat z_{13} & S_{6} &=& \hat z_{10} & S_{10} &=& \hat z_{7} & S_{14} &=& \hat z_{6} \\
+S_{3} &=& \hat z_{1}\hat z_{2}\hat z_{3}\hat z_{4}\hat z_{7}\hat z_{8}\hat z_{11}\hat z_{12} & S_{7} &=& \hat z_{2} & S_{11} &=& \hat z_{4} & {} && {} \\
+S_{4} &=& \hat z_{9}\hat z_{10} & S_{8} &=& \hat z_{1} & S_{12} &=& \hat z_{3} & {} && {}
+\end{array}
+\]
+
+Exact Hamiltonian symmetries in this list: $S_{1}$, $S_{2}$, $S_{3}$, $S_{4}$.
+
+\paragraph{HCT($\nqubits$)+BLISS.}
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{5} &=& \hat z_{6}\hat z_{14} & S_{8} &=& \hat z_{7} & S_{11} &=& \hat z_{2} & S_{14} &=& \hat z_{6} \\
+S_{6} &=& \hat z_{10} & S_{9} &=& \hat z_{2}\hat z_{4} & S_{12} &=& \hat z_{1} & {} && {} \\
+S_{7} &=& \hat z_{8} & S_{10} &=& \hat z_{1}\hat z_{3} & S_{13} &=& \hat z_{5} & {} && {}
+\end{array}
+\]
+
+\paragraph{Beam search ($\nqubits/2$).}
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{1} &=& \hat z_{1}\hat z_{3}\hat z_{6}\hat z_{7}\hat z_{10}\hat z_{11}\hat z_{14} & S_{3} &=& \hat z_{5}\hat z_{6}\hat z_{13}\hat z_{14} & S_{5} &=& \hat z_{1}\hat z_{2} & S_{7} &=& \hat z_{2} \\
+S_{2} &=& \hat z_{2}\hat z_{4}\hat z_{6}\hat z_{8}\hat z_{10}\hat z_{12}\hat z_{14} & S_{4} &=& \hat z_{9}\hat z_{10} & S_{6} &=& \hat z_{10} & {} && {}
+\end{array}
+\]
+
+Exact Hamiltonian symmetries in this list: $S_{1}$, $S_{2}$, $S_{3}$, $S_{4}$.
+
+\paragraph{Beam search ($\nqubits$).}
+Fiedler ordering: $(1, 2, 3, 4, 7, 5, 8, 11, 12, 10, 9, 13, 14, 6)$.
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{5} &=& \hat z_{1}\hat z_{2} & S_{8} &=& \hat z_{6}\hat z_{14} & S_{11} &=& \hat z_{5}\hat z_{14} & S_{14} &=& \hat z_{5} \\
+S_{6} &=& \hat z_{10} & S_{9} &=& \hat z_{4} & S_{12} &=& \hat z_{3} & {} && {} \\
+S_{7} &=& \hat z_{2} & S_{10} &=& \hat z_{7} & S_{13} &=& \hat z_{8} & {} && {}
+\end{array}
+\]
+
+\medskip
+\noindent\textbf{\underline{H$_2$O, correlated}}\par
+
+\paragraph{HCT($\nqubits$).}
+Fiedler ordering: $(10, 7, 13, 14, 2, 1, 5, 12, 11, 8, 9, 3, 4, 6)$.
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{1} &=& \hat z_{1}\hat z_{3}\hat z_{5}\hat z_{8}\hat z_{9}\hat z_{11}\hat z_{14} & S_{5} &=& \hat z_{8}\hat z_{14} & S_{9} &=& \hat z_{1} & S_{13} &=& \hat z_{7} \\
+S_{2} &=& \hat z_{1}\hat z_{3}\hat z_{5}\hat z_{7}\hat z_{9}\hat z_{11}\hat z_{13} & S_{6} &=& \hat z_{6} & S_{10} &=& \hat z_{2} & S_{14} &=& \hat z_{8} \\
+S_{3} &=& \hat z_{1}\hat z_{2}\hat z_{3}\hat z_{4}\hat z_{9}\hat z_{10}\hat z_{11}\hat z_{12} & S_{7} &=& \hat z_{2}\hat z_{4} & S_{11} &=& \hat z_{9} & {} && {} \\
+S_{4} &=& \hat z_{5}\hat z_{6} & S_{8} &=& \hat z_{1}\hat z_{3} & S_{12} &=& \hat z_{10} & {} && {}
+\end{array}
+\]
+
+Exact Hamiltonian symmetries in this list: $S_{1}$, $S_{2}$, $S_{3}$, $S_{4}$.
+
+\paragraph{HCT($\nqubits$)+BLISS.}
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{5} &=& \hat z_{9}\hat z_{10}\hat z_{11}\hat z_{12} & S_{8} &=& \hat z_{6} & S_{11} &=& \hat x_{7}\hat x_{8}\hat x_{13}\hat x_{14} & S_{14} &=& \hat z_{2} \\
+S_{6} &=& \hat z_{1}\hat z_{3}\hat z_{6} & S_{9} &=& \hat x_{7}\hat x_{8}\hat x_{9}\hat x_{10}\hat y_{11}\hat y_{12}\hat y_{13}\hat y_{14} & S_{12} &=& \hat x_{9}\hat x_{10}\hat x_{11}\hat x_{12} & {} && {} \\
+S_{7} &=& \hat z_{8}\hat z_{14} & S_{10} &=& \hat x_{7}\hat x_{8}\hat y_{13}\hat y_{14} & S_{13} &=& \hat z_{1} & {} && {}
+\end{array}
+\]
+
+\paragraph{Beam search ($\nqubits/2$).}
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{1} &=& \hat z_{1}\hat z_{3}\hat z_{6}\hat z_{8}\hat z_{9}\hat z_{11}\hat z_{14} & S_{3} &=& \hat z_{5}\hat z_{6} & S_{5} &=& \hat z_{6} & S_{7} &=& \hat z_{1}\hat z_{6} \\
+S_{2} &=& \hat z_{2}\hat z_{4}\hat z_{6}\hat z_{8}\hat z_{10}\hat z_{12}\hat z_{14} & S_{4} &=& \hat z_{7}\hat z_{8}\hat z_{13}\hat z_{14} & S_{6} &=& \hat z_{7}\hat z_{8} & {} && {}
+\end{array}
+\]
+
+Exact Hamiltonian symmetries in this list: $S_{1}$, $S_{2}$, $S_{3}$, $S_{4}$.
+
+\paragraph{Beam search ($\nqubits$).}
+Fiedler ordering: $(7, 2, 1, 13, 14, 12, 8, 9, 6, 3, 4, 5, 10, 11)$.
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{5} &=& \hat z_{6} & S_{8} &=& \hat z_{9}\hat z_{10} & S_{11} &=& \hat z_{7}\hat z_{8} & S_{14} &=& \hat x_{9}\hat x_{10}\hat x_{11}\hat x_{12} \\
+S_{6} &=& \hat z_{1}\hat z_{6} & S_{9} &=& \hat z_{3}\hat z_{6} & S_{12} &=& \hat y_{7}\hat x_{8}\hat x_{13}\hat y_{14} & {} && {} \\
+S_{7} &=& \hat z_{2} & S_{10} &=& \hat z_{11}\hat z_{12} & S_{13} &=& \hat x_{7}\hat x_{8}\hat x_{13}\hat x_{14} & {} && {}
+\end{array}
+\]
+
+\medskip
+\noindent\textbf{\underline{H$_2$O, dissociated}}\par
+
+\paragraph{HCT($\nqubits$).}
+Fiedler ordering: $(1, 2, 3, 4, 13, 11, 10, 7, 12, 6, 5, 8, 9, 14)$.
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{1} &=& \hat z_{1}\hat z_{3}\hat z_{5}\hat z_{7}\hat z_{9}\hat z_{12}\hat z_{14} & S_{5} &=& \hat z_{5}\hat z_{6}\hat z_{9}\hat z_{10} & S_{9} &=& \hat z_{8} & S_{13} &=& \hat z_{1} \\
+S_{2} &=& \hat z_{1}\hat z_{3}\hat z_{5}\hat z_{7}\hat z_{9}\hat z_{11}\hat z_{13} & S_{6} &=& \hat z_{5}\hat z_{6} & S_{10} &=& \hat z_{9}\hat z_{12} & S_{14} &=& \hat z_{2} \\
+S_{3} &=& \hat z_{1}\hat z_{2}\hat z_{3}\hat z_{4}\hat z_{5}\hat z_{6}\hat z_{9}\hat z_{10} & S_{7} &=& \hat z_{9}\hat z_{12}\hat z_{14} & S_{11} &=& \hat z_{9}\hat z_{11} & {} && {} \\
+S_{4} &=& \hat z_{7}\hat z_{8} & S_{8} &=& \hat z_{1}\hat z_{3}\hat z_{8} & S_{12} &=& \hat z_{10} & {} && {}
+\end{array}
+\]
+
+Exact Hamiltonian symmetries in this list: $S_{1}$, $S_{2}$, $S_{3}$, $S_{4}$.
+
+\paragraph{HCT($\nqubits$)+BLISS.}
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{5} &=& \hat z_{5}\hat z_{6}\hat z_{9}\hat z_{10} & S_{8} &=& \hat z_{1}\hat z_{3}\hat z_{6}\hat z_{8}\hat z_{13} & S_{11} &=& \hat z_{8} & S_{14} &=& \hat z_{2} \\
+S_{6} &=& \hat z_{5}\hat z_{6} & S_{9} &=& \hat z_{1}\hat z_{3}\hat z_{6}\hat z_{8} & S_{12} &=& \hat x_{9}\hat x_{10}\hat x_{11}\hat x_{12} & {} && {} \\
+S_{7} &=& \hat z_{9}\hat z_{12} & S_{10} &=& \hat z_{1}\hat z_{3}\hat z_{8} & S_{13} &=& \hat z_{1} & {} && {}
+\end{array}
+\]
+
+\paragraph{Beam search ($\nqubits/2$).}
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{1} &=& \hat z_{1}\hat z_{3}\hat z_{5}\hat z_{8}\hat z_{9}\hat z_{12}\hat z_{14} & S_{3} &=& \hat z_{7}\hat z_{8} & S_{5} &=& \hat z_{7} & S_{7} &=& \hat z_{2} \\
+S_{2} &=& \hat z_{2}\hat z_{4}\hat z_{6}\hat z_{8}\hat z_{10}\hat z_{12}\hat z_{14} & S_{4} &=& \hat z_{11}\hat z_{12}\hat z_{13}\hat z_{14} & S_{6} &=& \hat z_{1} & {} && {}
+\end{array}
+\]
+
+Exact Hamiltonian symmetries in this list: $S_{1}$, $S_{2}$, $S_{3}$, $S_{4}$.
+
+\paragraph{Beam search ($\nqubits$).}
+Fiedler ordering: $(1, 2, 3, 4, 14, 9, 10, 13, 12, 7, 8, 5, 6, 11)$.
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{5} &=& \hat z_{8} & S_{8} &=& \hat z_{2}\hat z_{3} & S_{11} &=& \hat z_{2} & S_{14} &=& \hat x_{9}\hat x_{10}\hat x_{11}\hat x_{12} \\
+S_{6} &=& \hat z_{1} & S_{9} &=& \hat z_{6} & S_{12} &=& \hat z_{10}\hat z_{11} & {} && {} \\
+S_{7} &=& \hat z_{5}\hat z_{6}\hat z_{9}\hat z_{10} & S_{10} &=& \hat z_{5} & S_{13} &=& \hat z_{9}\hat z_{12} & {} && {}
+\end{array}
+\]
+
+\medskip
+\noindent\textbf{\underline{N$_2$ frozen-core, equilibrium}}\par
+
+\paragraph{HCT($\nqubits$).}
+Fiedler ordering: $(1, 2, 3, 4, 10, 11, 9, 7, 13, 12, 16, 8, 6, 15, 14, 5)$.
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{1} &=& \hat z_{2}\hat z_{4}\hat z_{6}\hat z_{7}\hat z_{9}\hat z_{11}\hat z_{13}\hat z_{16} & S_{5} &=& \hat z_{9}\hat z_{10}\hat z_{13}\hat z_{14} & S_{9} &=& \hat z_{1}\hat z_{4}\hat z_{5}\hat z_{16} & S_{13} &=& \hat z_{4}\hat z_{6} \\
+S_{2} &=& \hat z_{1}\hat z_{3}\hat z_{5}\hat z_{7}\hat z_{9}\hat z_{11}\hat z_{13}\hat z_{15} & S_{6} &=& \hat z_{10}\hat z_{14} & S_{10} &=& \hat z_{1} & S_{14} &=& \hat z_{10} \\
+S_{3} &=& \hat z_{1}\hat z_{2}\hat z_{5}\hat z_{6}\hat z_{11}\hat z_{12}\hat z_{13}\hat z_{14} & S_{7} &=& \hat z_{2}\hat z_{4}\hat z_{6}\hat z_{16} & S_{11} &=& \hat z_{2} & S_{15} &=& \hat z_{8} \\
+S_{4} &=& \hat z_{1}\hat z_{2}\hat z_{5}\hat z_{6}\hat z_{7}\hat z_{8}\hat z_{9}\hat z_{10} & S_{8} &=& \hat z_{9}\hat z_{14} & S_{12} &=& \hat z_{3}\hat z_{6} & S_{16} &=& \hat z_{3}
+\end{array}
+\]
+
+Exact Hamiltonian symmetries in this list: $S_{1}$, $S_{2}$, $S_{3}$, $S_{4}$.
+
+\paragraph{HCT($\nqubits$)+BLISS.}
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{5} &=& \hat z_{9}\hat z_{10}\hat z_{13}\hat z_{14} & S_{8} &=& \hat z_{2} & S_{11} &=& \hat z_{15} & S_{14} &=& \hat z_{10} \\
+S_{6} &=& \hat z_{10}\hat z_{14} & S_{9} &=& \hat z_{1} & S_{12} &=& \hat z_{9}\hat z_{14} & S_{15} &=& \hat z_{8} \\
+S_{7} &=& \hat z_{2}\hat z_{4}\hat z_{6}\hat z_{16} & S_{10} &=& \hat z_{4}\hat z_{6} & S_{13} &=& \hat z_{3}\hat z_{6} & S_{16} &=& \hat z_{3}
+\end{array}
+\]
+
+\paragraph{Beam search ($\nqubits/2$).}
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{1} &=& \hat z_{1}\hat z_{4}\hat z_{5}\hat z_{8}\hat z_{10}\hat z_{11}\hat z_{13}\hat z_{16} & S_{3} &=& \hat z_{3}\hat z_{4}\hat z_{11}\hat z_{12}\hat z_{13}\hat z_{14}\hat z_{15}\hat z_{16} & S_{5} &=& \hat z_{3}\hat z_{4} & S_{7} &=& \hat z_{10}\hat z_{14} \\
+S_{2} &=& \hat z_{2}\hat z_{4}\hat z_{6}\hat z_{8}\hat z_{10}\hat z_{12}\hat z_{14}\hat z_{16} & S_{4} &=& \hat z_{7}\hat z_{8}\hat z_{9}\hat z_{10}\hat z_{11}\hat z_{12}\hat z_{13}\hat z_{14} & S_{6} &=& \hat z_{3} & S_{8} &=& \hat z_{1}\hat z_{4}\hat z_{5}\hat z_{8}\hat z_{9}\hat z_{10}\hat z_{11}\hat z_{16}
+\end{array}
+\]
+
+Exact Hamiltonian symmetries in this list: $S_{1}$, $S_{2}$, $S_{3}$, $S_{4}$.
+
+\paragraph{Beam search ($\nqubits$).}
+Fiedler ordering: $(1, 2, 3, 4, 9, 12, 11, 14, 16, 13, 15, 10, 8, 6, 5, 7)$.
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{5} &=& \hat z_{3} & S_{8} &=& \hat z_{10}\hat z_{14} & S_{11} &=& \hat z_{5} & S_{14} &=& \hat z_{6} \\
+S_{6} &=& \hat z_{8}\hat z_{12} & S_{9} &=& \hat z_{2} & S_{12} &=& \hat z_{1} & S_{15} &=& \hat z_{8} \\
+S_{7} &=& \hat z_{3}\hat z_{4} & S_{10} &=& \hat z_{1}\hat z_{4}\hat z_{5}\hat z_{8}\hat z_{9}\hat z_{10}\hat z_{11}\hat z_{16} & S_{13} &=& \hat z_{9} & S_{16} &=& \hat z_{10}
+\end{array}
+\]
+
+\medskip
+\noindent\textbf{\underline{N$_2$ frozen-core, correlated}}\par
+
+\paragraph{HCT($\nqubits$).}
+Fiedler ordering: $(1, 2, 3, 4, 10, 9, 5, 8, 14, 15, 16, 6, 7, 11, 13, 12)$.
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{1} &=& \hat z_{2}\hat z_{4}\hat z_{6}\hat z_{7}\hat z_{9}\hat z_{11}\hat z_{13}\hat z_{16} & S_{5} &=& \hat z_{2}\hat z_{4}\hat z_{6}\hat z_{16} & S_{9} &=& \hat z_{2} & S_{13} &=& \hat z_{10} \\
+S_{2} &=& \hat z_{1}\hat z_{3}\hat z_{5}\hat z_{7}\hat z_{9}\hat z_{11}\hat z_{13}\hat z_{15} & S_{6} &=& \hat z_{7}\hat z_{11} & S_{10} &=& \hat z_{1} & S_{14} &=& \hat z_{3}\hat z_{6} \\
+S_{3} &=& \hat z_{1}\hat z_{2}\hat z_{5}\hat z_{6}\hat z_{11}\hat z_{12}\hat z_{13}\hat z_{14} & S_{7} &=& \hat z_{8}\hat z_{12} & S_{11} &=& \hat z_{7}\hat z_{13} & S_{15} &=& \hat z_{4}\hat z_{6} \\
+S_{4} &=& \hat z_{1}\hat z_{2}\hat z_{5}\hat z_{6}\hat z_{7}\hat z_{8}\hat z_{9}\hat z_{10} & S_{8} &=& \hat z_{1}\hat z_{4}\hat z_{5}\hat z_{16} & S_{12} &=& \hat z_{7} & S_{16} &=& \hat z_{4}
+\end{array}
+\]
+
+Exact Hamiltonian symmetries in this list: $S_{1}$, $S_{2}$, $S_{3}$, $S_{4}$.
+
+\paragraph{HCT($\nqubits$)+BLISS.}
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{5} &=& \hat z_{2}\hat z_{4}\hat z_{6}\hat z_{16} & S_{8} &=& \hat z_{1}\hat z_{4}\hat z_{5}\hat z_{16} & S_{11} &=& \hat z_{3}\hat z_{6}\hat z_{16} & S_{14} &=& \hat z_{7} \\
+S_{6} &=& \hat z_{7}\hat z_{11} & S_{9} &=& \hat z_{2} & S_{12} &=& \hat z_{3}\hat z_{6} & S_{15} &=& \hat z_{10} \\
+S_{7} &=& \hat z_{8}\hat z_{12} & S_{10} &=& \hat z_{1} & S_{13} &=& \hat z_{7}\hat z_{13} & S_{16} &=& \hat z_{4}
+\end{array}
+\]
+
+\paragraph{Beam search ($\nqubits/2$).}
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{1} &=& \hat z_{1}\hat z_{4}\hat z_{5}\hat z_{8}\hat z_{10}\hat z_{11}\hat z_{13}\hat z_{16} & S_{3} &=& \hat z_{3}\hat z_{4}\hat z_{11}\hat z_{12}\hat z_{13}\hat z_{14}\hat z_{15}\hat z_{16} & S_{5} &=& \hat z_{4} & S_{7} &=& \hat z_{3}\hat z_{4} \\
+S_{2} &=& \hat z_{2}\hat z_{4}\hat z_{6}\hat z_{8}\hat z_{10}\hat z_{12}\hat z_{14}\hat z_{16} & S_{4} &=& \hat z_{7}\hat z_{8}\hat z_{9}\hat z_{10}\hat z_{11}\hat z_{12}\hat z_{13}\hat z_{14} & S_{6} &=& \hat z_{2}\hat z_{4}\hat z_{6}\hat z_{16} & S_{8} &=& \hat z_{2}
+\end{array}
+\]
+
+Exact Hamiltonian symmetries in this list: $S_{1}$, $S_{2}$, $S_{3}$, $S_{4}$.
+
+\paragraph{Beam search ($\nqubits$).}
+Fiedler ordering: $(1, 2, 3, 4, 8, 10, 11, 9, 15, 16, 14, 13, 12, 6, 5, 7)$.
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{5} &=& \hat z_{4} & S_{8} &=& \hat z_{2} & S_{11} &=& \hat z_{5} & S_{14} &=& \hat y_{8}\hat z_{9}\hat x_{10}\hat x_{12}\hat z_{13}\hat y_{14} \\
+S_{6} &=& \hat z_{2}\hat z_{4}\hat z_{6}\hat z_{16} & S_{9} &=& \hat z_{1} & S_{12} &=& \hat z_{7}\hat z_{11} & S_{15} &=& \hat z_{7} \\
+S_{7} &=& \hat z_{3}\hat z_{4} & S_{10} &=& \hat z_{6} & S_{13} &=& \hat z_{8}\hat z_{12} & S_{16} &=& \hat z_{9}
+\end{array}
+\]
+
+\medskip
+\noindent\textbf{\underline{N$_2$ frozen-core, dissociated}}\par
+
+\paragraph{HCT($\nqubits$).}
+Fiedler ordering: $(8, 13, 10, 2, 1, 16, 7, 15, 6, 9, 14, 12, 11, 5, 3, 4)$.
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{1} &=& \hat z_{2}\hat z_{4}\hat z_{6}\hat z_{7}\hat z_{9}\hat z_{11}\hat z_{13}\hat z_{16} & S_{5} &=& \hat z_{9}\hat z_{10}\hat z_{13}\hat z_{14} & S_{9} &=& \hat z_{5}\hat z_{15} & S_{13} &=& \hat z_{2} \\
+S_{2} &=& \hat z_{1}\hat z_{3}\hat z_{5}\hat z_{7}\hat z_{9}\hat z_{11}\hat z_{13}\hat z_{15} & S_{6} &=& \hat z_{1}\hat z_{4}\hat z_{5}\hat z_{8}\hat z_{9}\hat z_{10}\hat z_{11}\hat z_{16} & S_{10} &=& \hat z_{5}\hat z_{16} & S_{14} &=& \hat z_{5} \\
+S_{3} &=& \hat z_{1}\hat z_{2}\hat z_{5}\hat z_{6}\hat z_{11}\hat z_{12}\hat z_{13}\hat z_{14} & S_{7} &=& \hat z_{7}\hat z_{11} & S_{11} &=& \hat z_{9}\hat z_{14} & S_{15} &=& \hat z_{9} \\
+S_{4} &=& \hat z_{1}\hat z_{2}\hat z_{5}\hat z_{6}\hat z_{7}\hat z_{8}\hat z_{9}\hat z_{10} & S_{8} &=& \hat z_{2}\hat z_{4} & S_{12} &=& \hat z_{7}\hat z_{12} & S_{16} &=& \hat z_{7}
+\end{array}
+\]
+
+Exact Hamiltonian symmetries in this list: $S_{1}$, $S_{2}$, $S_{3}$, $S_{4}$.
+
+\paragraph{HCT($\nqubits$)+BLISS.}
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{5} &=& \hat z_{9}\hat z_{10}\hat z_{13}\hat z_{14} & S_{8} &=& \hat y_{9}\hat x_{10}\hat x_{13}\hat y_{14} & S_{11} &=& \hat y_{7}\hat x_{10}\hat x_{11}\hat y_{14} & S_{14} &=& \hat x_{6}\hat x_{10}\hat z_{11}\hat z_{12}\hat z_{13}\hat x_{14}\hat z_{15}\hat x_{16} \\
+S_{6} &=& \hat z_{1}\hat z_{4}\hat z_{6}\hat z_{8}\hat z_{10}\hat z_{11}\hat z_{13}\hat z_{15} & S_{9} &=& \hat z_{7}\hat z_{11} & S_{12} &=& \hat z_{2}\hat z_{4} & S_{15} &=& \hat z_{2} \\
+S_{7} &=& \hat z_{9}\hat z_{13} & S_{10} &=& \hat y_{7}\hat x_{8}\hat x_{11}\hat y_{12} & S_{13} &=& \hat x_{5}\hat x_{10}\hat z_{11}\hat z_{12}\hat z_{13}\hat x_{14}\hat x_{15}\hat z_{16} & S_{16} &=& \hat z_{3}
+\end{array}
+\]
+
+\paragraph{Beam search ($\nqubits/2$).}
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{1} &=& \hat z_{1}\hat z_{4}\hat z_{5}\hat z_{8}\hat z_{10}\hat z_{11}\hat z_{13}\hat z_{16} & S_{3} &=& \hat z_{3}\hat z_{4}\hat z_{11}\hat z_{12}\hat z_{13}\hat z_{14}\hat z_{15}\hat z_{16} & S_{5} &=& \hat z_{9}\hat z_{10}\hat z_{13}\hat z_{14} & S_{7} &=& \hat z_{7}\hat z_{12} \\
+S_{2} &=& \hat z_{2}\hat z_{4}\hat z_{6}\hat z_{8}\hat z_{10}\hat z_{12}\hat z_{14}\hat z_{16} & S_{4} &=& \hat z_{7}\hat z_{8}\hat z_{9}\hat z_{10}\hat z_{11}\hat z_{12}\hat z_{13}\hat z_{14} & S_{6} &=& \hat z_{9}\hat z_{14} & S_{8} &=& \hat z_{3}\hat z_{4}
+\end{array}
+\]
+
+Exact Hamiltonian symmetries in this list: $S_{1}$, $S_{2}$, $S_{3}$, $S_{4}$.
+
+\paragraph{Beam search ($\nqubits$).}
+Fiedler ordering: $(14, 11, 9, 12, 16, 13, 10, 2, 1, 7, 6, 5, 3, 4, 8, 15)$.
+\[
+\begin{array}{r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l@{\quad}r@{\;}c@{\;}l}
+S_{5} &=& \hat z_{9}\hat z_{10}\hat z_{13}\hat z_{14} & S_{8} &=& \hat z_{3}\hat z_{4} & S_{11} &=& \hat z_{1}\hat z_{2} & S_{14} &=& \hat z_{2} \\
+S_{6} &=& \hat z_{9}\hat z_{14} & S_{9} &=& \hat z_{9}\hat z_{10} & S_{12} &=& \hat z_{11}\hat z_{12} & S_{15} &=& \hat z_{4} \\
+S_{7} &=& \hat z_{7}\hat z_{12} & S_{10} &=& \hat z_{7} & S_{13} &=& \hat z_{9} & S_{16} &=& \hat y_{5}\hat x_{6}\hat x_{15}\hat y_{16}
+\end{array}
+\]
+
+\endgroup

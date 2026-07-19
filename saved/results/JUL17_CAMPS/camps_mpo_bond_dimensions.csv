@@ -1,0 +1,3 @@
+system,benchmark,n_qubits,mpo_bd
+H2O_corr,CAMPS,14,214
+H2O_corr,CAMPS + Fiedler,14,486

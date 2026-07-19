@@ -1,0 +1,537 @@
+{
+  "schema": "quasisymmetries.BenchmarkData",
+  "version": 1,
+  "kind": "collection",
+  "datasets": [
+    {
+      "tag": "CAMPS",
+      "symmetries": [
+        {
+          "terms": [
+            {
+              "pauli": [
+                [
+                  0,
+                  "Z"
+                ],
+                [
+                  2,
+                  "Z"
+                ],
+                [
+                  4,
+                  "Z"
+                ],
+                [
+                  6,
+                  "Z"
+                ]
+              ],
+              "coefficient": {
+                "real": -1.0,
+                "imag": 0.0
+              }
+            }
+          ]
+        },
+        {
+          "terms": [
+            {
+              "pauli": [
+                [
+                  0,
+                  "X"
+                ],
+                [
+                  1,
+                  "Z"
+                ],
+                [
+                  2,
+                  "X"
+                ],
+                [
+                  3,
+                  "X"
+                ],
+                [
+                  4,
+                  "Z"
+                ],
+                [
+                  6,
+                  "Z"
+                ]
+              ],
+              "coefficient": {
+                "real": -1.0,
+                "imag": 0.0
+              }
+            }
+          ]
+        },
+        {
+          "terms": [
+            {
+              "pauli": [
+                [
+                  4,
+                  "Z"
+                ],
+                [
+                  5,
+                  "Z"
+                ],
+                [
+                  6,
+                  "Z"
+                ]
+              ],
+              "coefficient": {
+                "real": 1.0,
+                "imag": 0.0
+              }
+            }
+          ]
+        },
+        {
+          "terms": [
+            {
+              "pauli": [
+                [
+                  1,
+                  "X"
+                ],
+                [
+                  2,
+                  "X"
+                ],
+                [
+                  5,
+                  "X"
+                ],
+                [
+                  6,
+                  "X"
+                ]
+              ],
+              "coefficient": {
+                "real": -1.0,
+                "imag": 0.0
+              }
+            }
+          ]
+        },
+        {
+          "terms": [
+            {
+              "pauli": [
+                [
+                  1,
+                  "Z"
+                ],
+                [
+                  2,
+                  "Z"
+                ],
+                [
+                  3,
+                  "Z"
+                ],
+                [
+                  4,
+                  "Z"
+                ],
+                [
+                  5,
+                  "Z"
+                ],
+                [
+                  6,
+                  "Z"
+                ]
+              ],
+              "coefficient": {
+                "real": -1.0,
+                "imag": 0.0
+              }
+            }
+          ]
+        },
+        {
+          "terms": [
+            {
+              "pauli": [
+                [
+                  1,
+                  "Z"
+                ],
+                [
+                  2,
+                  "Z"
+                ],
+                [
+                  3,
+                  "Z"
+                ],
+                [
+                  4,
+                  "Z"
+                ]
+              ],
+              "coefficient": {
+                "real": 1.0,
+                "imag": 0.0
+              }
+            }
+          ]
+        },
+        {
+          "terms": [
+            {
+              "pauli": [
+                [
+                  4,
+                  "Z"
+                ],
+                [
+                  5,
+                  "Z"
+                ],
+                [
+                  6,
+                  "Z"
+                ],
+                [
+                  7,
+                  "Z"
+                ]
+              ],
+              "coefficient": {
+                "real": 1.0,
+                "imag": 0.0
+              }
+            }
+          ]
+        },
+        {
+          "terms": [
+            {
+              "pauli": [
+                [
+                  1,
+                  "X"
+                ],
+                [
+                  2,
+                  "Z"
+                ],
+                [
+                  3,
+                  "X"
+                ],
+                [
+                  4,
+                  "Z"
+                ],
+                [
+                  5,
+                  "Z"
+                ],
+                [
+                  7,
+                  "Z"
+                ]
+              ],
+              "coefficient": {
+                "real": -1.0,
+                "imag": 0.0
+              }
+            }
+          ]
+        }
+      ],
+      "non_commuting_l1": 0.0,
+      "num_commuting_terms": 0,
+      "sym_entropy": 0.0,
+      "cut_entropies": [
+        1.5543122344752156e-15,
+        0.0012663779270978767,
+        0.03279986848473891,
+        0.04601903680869412,
+        0.027032224645526428,
+        0.001266377927097655,
+        8.88178419700124e-16
+      ],
+      "dmrg_bd": 3,
+      "single_sector_e": 0.0,
+      "clifford_synthesis_basis": "CAMPS",
+      "clifford_generator_mapping": "inverse_Z"
+    },
+    {
+      "tag": "CAMPS + Fiedler",
+      "symmetries": [
+        {
+          "terms": [
+            {
+              "pauli": [
+                [
+                  0,
+                  "Z"
+                ],
+                [
+                  2,
+                  "Z"
+                ],
+                [
+                  3,
+                  "Z"
+                ],
+                [
+                  6,
+                  "Z"
+                ]
+              ],
+              "coefficient": {
+                "real": -1.0,
+                "imag": 0.0
+              }
+            }
+          ]
+        },
+        {
+          "terms": [
+            {
+              "pauli": [
+                [
+                  0,
+                  "X"
+                ],
+                [
+                  1,
+                  "X"
+                ],
+                [
+                  2,
+                  "Z"
+                ],
+                [
+                  3,
+                  "X"
+                ],
+                [
+                  5,
+                  "Z"
+                ],
+                [
+                  6,
+                  "Z"
+                ]
+              ],
+              "coefficient": {
+                "real": -1.0,
+                "imag": 0.0
+              }
+            }
+          ]
+        },
+        {
+          "terms": [
+            {
+              "pauli": [
+                [
+                  2,
+                  "Z"
+                ],
+                [
+                  4,
+                  "Z"
+                ],
+                [
+                  6,
+                  "Z"
+                ]
+              ],
+              "coefficient": {
+                "real": 1.0,
+                "imag": 0.0
+              }
+            }
+          ]
+        },
+        {
+          "terms": [
+            {
+              "pauli": [
+                [
+                  3,
+                  "X"
+                ],
+                [
+                  4,
+                  "X"
+                ],
+                [
+                  5,
+                  "X"
+                ],
+                [
+                  6,
+                  "X"
+                ]
+              ],
+              "coefficient": {
+                "real": -1.0,
+                "imag": 0.0
+              }
+            }
+          ]
+        },
+        {
+          "terms": [
+            {
+              "pauli": [
+                [
+                  1,
+                  "Z"
+                ],
+                [
+                  2,
+                  "Z"
+                ],
+                [
+                  3,
+                  "Z"
+                ],
+                [
+                  4,
+                  "Z"
+                ],
+                [
+                  5,
+                  "Z"
+                ],
+                [
+                  6,
+                  "Z"
+                ]
+              ],
+              "coefficient": {
+                "real": -1.0,
+                "imag": 0.0
+              }
+            }
+          ]
+        },
+        {
+          "terms": [
+            {
+              "pauli": [
+                [
+                  1,
+                  "Z"
+                ],
+                [
+                  2,
+                  "Z"
+                ],
+                [
+                  3,
+                  "Z"
+                ],
+                [
+                  5,
+                  "Z"
+                ]
+              ],
+              "coefficient": {
+                "real": 1.0,
+                "imag": 0.0
+              }
+            }
+          ]
+        },
+        {
+          "terms": [
+            {
+              "pauli": [
+                [
+                  2,
+                  "Z"
+                ],
+                [
+                  4,
+                  "Z"
+                ],
+                [
+                  6,
+                  "Z"
+                ],
+                [
+                  7,
+                  "Z"
+                ]
+              ],
+              "coefficient": {
+                "real": 1.0,
+                "imag": 0.0
+              }
+            }
+          ]
+        },
+        {
+          "terms": [
+            {
+              "pauli": [
+                [
+                  1,
+                  "X"
+                ],
+                [
+                  2,
+                  "Z"
+                ],
+                [
+                  3,
+                  "Z"
+                ],
+                [
+                  4,
+                  "Z"
+                ],
+                [
+                  5,
+                  "X"
+                ],
+                [
+                  7,
+                  "Z"
+                ]
+              ],
+              "coefficient": {
+                "real": -1.0,
+                "imag": 0.0
+              }
+            }
+          ]
+        }
+      ],
+      "non_commuting_l1": 0.0,
+      "num_commuting_terms": 0,
+      "sym_entropy": 0.0,
+      "cut_entropies": [
+        4.440892098500623e-16,
+        0.03163640395079248,
+        0.04200613122024139,
+        0.026892698874386736,
+        0.0012662991864934678,
+        0.0012663779270976545,
+        4.440892098500623e-16
+      ],
+      "dmrg_bd": 8,
+      "single_sector_e": 0.0,
+      "clifford_synthesis_basis": "CAMPS",
+      "clifford_generator_mapping": "inverse_Z"
+    }
+  ]
+}

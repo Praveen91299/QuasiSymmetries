@@ -1,0 +1,3 @@
+system,benchmark,n_qubits,dmrg_bd,dmrg_energy
+H2O_corr,CAMPS,14,100,(-74.74369977527638-3.932777781108266e-14j)
+H2O_corr,CAMPS + Fiedler,14,12,(-74.75374977993107-6.723158957633601e-14j)

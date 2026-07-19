@@ -1,0 +1,61 @@
+CAMPS Clifford/Fiedler benchmarks
+systems = ['H2O_corr']
+n_dim = 2
+use_orb = False
+CAMPS reference state = fci
+Fiedler reference = exact ground state after CAMPS
+
+================================================================================
+H2O_corr
+
+Equivalent original-frame Pauli generators from CAMPS:
+  S_1: (1+0j) [Y0 Z1 Z2 Z3 X4 Z5]
+  S_2: (-1+0j) [X1 Z2 X3]
+  S_3: (1+0j) [X0 Z4 Z5]
+  S_4: (1+0j) [Z1 Y2 X3 Y4 Y5]
+  S_5: (1+0j) [Z1 X2 Z4 X6 Y7 X9 X10 Y11 Y12 X13]
+  S_6: (-1+0j) [Z1 Z2 Y3 Z4 Z5 Z6 Z7 Z8 Z9]
+  S_7: (1+0j) [Z1 Z2 Z3 Y6 X7 Z8 Y9 X10 Y11 Y12 X13]
+  S_8: (-1+0j) [Z6 Z13]
+  S_9: (1+0j) [X6 Y7 X8 X9 Y10 Y11 Y12 Y13]
+  S_10: (-1+0j) [X6 Z7 X9 X10 Z12 X13]
+  S_11: (1+0j) [X6 Y8 Z9 Y11 Y13]
+  S_12: (-1+0j) [Y7 Y8 Z9 X10 X11 X12 Z13]
+  S_13: (1+0j) [Z6 X7 Y8 Z9 Y10 X12 Z13]
+  S_14: (-1+0j) [Z6 Z7 Z12 Z13]
+
+FCI entanglement after CAMPS:
+  1|2: -2.3092638912211253e-13
+  2|3: 1.9602303456511436e-07
+  3|4: 3.7743270901022543e-07
+  4|5: 0.0012633300424101286
+  5|6: 0.009687809890387694
+  6|7: 0.01768901604075551
+  7|8: 0.027819907091209406
+  8|9: 0.13817216895946915
+  9|10: 0.21859665071760237
+  10|11: 0.17112664199876468
+  11|12: 0.02289340991409842
+  12|13: 0.009797260827357138
+  13|14: -2.389199948994193e-13
+DMRG CAMPS: {'system': 'H2O_corr', 'benchmark': 'CAMPS', 'n_qubits': 14, 'dmrg_bd': 100, 'dmrg_energy': np.complex128(-74.74369977527638-3.932777781108266e-14j)}
+MPO CAMPS: {'system': 'H2O_corr', 'benchmark': 'CAMPS', 'n_qubits': 14, 'mpo_bd': 214}
+
+CAMPS + Fiedler
+Fiedler ordering: [0, 2, 5, 12, 6, 8, 7, 10, 9, 11, 4, 3, 1, 13]
+FCI entanglement after CAMPS + Fiedler:
+  1|2: -2.3092638912211253e-13
+  2|3: 1.9611646244221665e-07
+  3|4: 0.009796556875298923
+  4|5: 0.00979657478970983
+  5|6: 0.02251397832972412
+  6|7: 0.14601740598984067
+  7|8: 0.2163982971348514
+  8|9: 0.2091980373229091
+  9|10: 0.022633210432587755
+  10|11: 0.009687630034342943
+  11|12: 0.0012631488581928852
+  12|13: 1.9602303478715883e-07
+  13|14: -2.3803181647971853e-13
+DMRG CAMPS + Fiedler: {'system': 'H2O_corr', 'benchmark': 'CAMPS + Fiedler', 'n_qubits': 14, 'dmrg_bd': 12, 'dmrg_energy': np.complex128(-74.75374977993107-6.723158957633601e-14j)}
+MPO CAMPS + Fiedler: {'system': 'H2O_corr', 'benchmark': 'CAMPS + Fiedler', 'n_qubits': 14, 'mpo_bd': 486}

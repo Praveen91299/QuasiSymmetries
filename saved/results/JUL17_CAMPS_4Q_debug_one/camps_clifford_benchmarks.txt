@@ -1,0 +1,43 @@
+CAMPS Clifford/Fiedler benchmarks
+systems = ['H4chain_eqm']
+n_dim = 4
+use_orb = False
+CAMPS reference state = fci
+Fiedler reference = exact ground state after CAMPS
+
+================================================================================
+H4chain_eqm
+
+Equivalent original-frame Pauli generators from CAMPS:
+  S_1: (1+0j) [Z2 Z4 Z6 Z7]
+  S_2: (1-0j) [Z0 Y1 X2 Y3 Z4 Y5 X6]
+  S_3: (1-0j) [Z0 Z1 Z5]
+  S_4: (-1+0j) [Y1 X2 X5 Y6 Z7]
+  S_5: (1-0j) [Y0 Y5 Z6]
+  S_6: (-1+0j) [Y0 Z4 Y5 Z6]
+  S_7: (1-0j) [X0 Y2 Z3 Y5 Y6 Z7]
+  S_8: (-1+0j) [X0 Y1 Z3 X6 X7]
+
+FCI entanglement after CAMPS:
+  1|2: 0.04245343254562204
+  2|3: 0.042453432545621526
+  3|4: 0.18404853146624783
+  4|5: 0.18607460512604868
+  5|6: 0.7409491416392961
+  6|7: 0.048033952783831164
+  7|8: 0.04684588442935143
+DMRG CAMPS: {'system': 'H4chain_eqm', 'benchmark': 'CAMPS', 'n_qubits': 8, 'dmrg_bd': '', 'dmrg_energy': ''}
+MPO CAMPS: {'system': 'H4chain_eqm', 'benchmark': 'CAMPS', 'n_qubits': 8, 'mpo_bd': ''}
+
+CAMPS + Fiedler
+Fiedler ordering: [7, 0, 3, 2, 6, 5, 4, 1]
+FCI entanglement after CAMPS + Fiedler:
+  1|2: 0.04684588442935145
+  2|3: 0.06878411441003116
+  3|4: 0.15666765189516735
+  4|5: 0.15723622477512858
+  5|6: 0.15743538787462671
+  6|7: 0.6931471805599453
+  7|8: -4.440892098500629e-16
+DMRG CAMPS + Fiedler: {'system': 'H4chain_eqm', 'benchmark': 'CAMPS + Fiedler', 'n_qubits': 8, 'dmrg_bd': '', 'dmrg_energy': ''}
+MPO CAMPS + Fiedler: {'system': 'H4chain_eqm', 'benchmark': 'CAMPS + Fiedler', 'n_qubits': 8, 'mpo_bd': ''}

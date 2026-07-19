@@ -6,6 +6,7 @@ Notes:
 - HCT_mod should give the same symmetries as found in the HCT paper, but the diagonalizing Clifford is not unique, hence need not match.  
 - BS-HCT has been observed to not improve much upon HCT, hence redundant.  
 - Beam search (with HCT symmetries added) currently performs best (lowest entanglement/bond dimension for DMRG convergence).  
+- DO NOT MODIFY ARCHIVED DATA IN ./saved/results/thesis_data
 
 ### Requirements
 
