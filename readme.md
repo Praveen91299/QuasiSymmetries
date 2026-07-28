@@ -1,6 +1,6 @@
 ## In search of greater ~purpose~ Pauli Quasi Symmetries...  
 
-See `hct_bs_sample.py` for example script to find symmetries and test various metrics.
+See `scripts/hct_bs_sample.py` for example script to find symmetries and test various metrics.
 
 Notes:  
 - HCT_mod should give the same symmetries as found in the HCT paper, but the diagonalizing Clifford is not unique, hence need not match.  
@@ -39,7 +39,7 @@ from quasisymmetries import (
 )
 ```
 
-Workflow and benchmarking scripts remain at the repository root. Reusable
+Workflow and benchmarking scripts live in `scripts/`. Reusable
 benchmark and MPO helpers are available from `quasisymmetries.benchmark` and
 `quasisymmetries.mpo`.
 
@@ -68,7 +68,7 @@ symmetry list.
 To compare both routes using the saved MAY27 H2O/N2 beam symmetries:
 
 ```bash
-python benchmark_clifford_routes.py
+python scripts/benchmark_clifford_routes.py
 ```
 
 Results are written to `saved/results/JUL04/clifford_routes/`.

@@ -1,0 +1,4 @@
+system,ncore,active_electrons,active_orbitals,mpo_bond_dimension,mps_converged_bond_dimension,converged,reference_energy,dmrg_energy,absolute_error,energy_tolerance
+BeH2_eqm,0,6,7,53,4,True,-15.595182356661697,-15.594115182120369,0.0010671745413279865,0.0016
+BeH2_corr,0,6,7,53,4,True,-15.446093740444962,-15.444928623431665,0.0011651170132971345,0.0016
+BeH2_diss,0,6,7,53,6,True,-15.336821512485358,-15.336514373351308,0.00030713913404945004,0.0016

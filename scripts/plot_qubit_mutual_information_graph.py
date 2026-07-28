@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
-"""Plot the qubit mutual-information graph of a saved molecular statevector."""
+"""Plot qubit mutual-information graphs of saved molecular wavefunctions."""
 
 from __future__ import annotations
+
+import _bootstrap  # noqa: F401
 
 import argparse
 import csv
@@ -27,8 +29,9 @@ if str(SRC_DIR) not in sys.path:
 from quasisymmetries.fiedler import (  # noqa: E402
     fiedler_order_from_weights,
     infer_n_qubits_from_state,
-    qubit_mutual_information_matrix,
+    qubit_mutual_information_matrix_sparse_bloch,
 )
+from quasisymmetries.state_utils import SparseQubitState  # noqa: E402
 
 
 HAMILTONIAN_DIR = PROJECT_ROOT / "saved" / "hamiltonians"
@@ -41,8 +44,9 @@ DEFAULT_OUTPUT_DIR = (
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Load an FCI state from a saved Hamiltonian tuple and plot its "
-            "qubit-site mutual-information graph."
+            "Load CISD/FCI states from a saved Hamiltonian tuple, import them "
+            "as SparseQubitState objects, and plot their qubit-site "
+            "mutual-information graphs."
         )
     )
     parser.add_argument(
@@ -62,10 +66,25 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--state",
+        choices=("fci", "cisd", "both"),
+        default="both",
+        help="Which saved wavefunction(s) to plot (default: both).",
+    )
+    parser.add_argument(
         "--output-dir",
         type=Path,
         default=DEFAULT_OUTPUT_DIR,
         help="Directory for the PNG and CSV outputs.",
+    )
+    parser.add_argument(
+        "--sparse-threshold",
+        type=float,
+        default=0.0,
+        help=(
+            "Drop amplitudes with absolute value <= this threshold when "
+            "constructing SparseQubitState objects."
+        ),
     )
     parser.add_argument(
         "--edge-tol",
@@ -83,8 +102,8 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def load_fci_state(path: Path) -> tuple[float, np.ndarray]:
-    """Load the FCI energy and state using the repository's saved tuple format."""
+def load_saved_states(path: Path) -> dict[str, tuple[float, np.ndarray]]:
+    """Load CISD and FCI energies/states using the saved tuple format."""
     with path.open("rb") as file_obj:
         data = pickle.load(file_obj)
 
@@ -94,8 +113,17 @@ def load_fci_state(path: Path) -> tuple[float, np.ndarray]:
             f"received {type(data).__name__}."
         )
 
-    _, fci_energy, fci_state, _, _ = data
-    return float(np.real(fci_energy)), np.asarray(fci_state, dtype=complex).reshape(-1)
+    _, fci_energy, fci_state, cisd_energy, cisd_state = data
+    return {
+        "fci": (
+            float(np.real(fci_energy)),
+            np.asarray(fci_state, dtype=complex).reshape(-1),
+        ),
+        "cisd": (
+            float(np.real(cisd_energy)),
+            np.asarray(cisd_state, dtype=complex).reshape(-1),
+        ),
+    }
 
 
 def circular_fiedler_layout(ordering: list[int]) -> dict[int, np.ndarray]:
@@ -138,10 +166,11 @@ def save_numerical_data(
 
 def plot_graph(
     system: str,
+    state_label: str,
     mutual_information: np.ndarray,
     one_qubit_entropies: np.ndarray,
     ordering: list[int],
-    fci_energy: float,
+    energy: float,
     output_path: Path,
     edge_tol: float,
     label_tol: float,
@@ -227,9 +256,9 @@ def plot_graph(
     node_colorbar.set_label("Node color/size: one-qubit entropy $S(i)$ [bits]")
 
     ax.set_title(
-        f"{system} FCI qubit mutual-information graph\n"
+        f"{system} {state_label.upper()} qubit mutual-information graph\n"
         f"{mutual_information.shape[0]} qubits, "
-        f"$E_{{FCI}}={fci_energy:.10f}$ Hartree",
+        f"$E_{{{state_label.upper()}}}={energy:.10f}$ Hartree",
         fontsize=16,
         pad=16,
     )
@@ -251,6 +280,92 @@ def plot_graph(
     plt.close(fig)
 
 
+def compute_sparse_mutual_information(
+    state: np.ndarray,
+    n_qubits: int,
+    sparse_threshold: float,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, SparseQubitState]:
+    sparse_state = SparseQubitState.from_dense(
+        state,
+        n_qubits=n_qubits,
+        threshold=sparse_threshold,
+    ).normalize()
+    mutual_information, one_qubit_entropies, two_qubit_entropies = (
+        qubit_mutual_information_matrix_sparse_bloch(
+            sparse_state,
+            n_qubits=n_qubits,
+            base=2.0,
+            convention="standard",
+        )
+    )
+    return (
+        mutual_information,
+        one_qubit_entropies,
+        two_qubit_entropies,
+        sparse_state,
+    )
+
+
+def write_state_outputs(
+    system: str,
+    stem: str,
+    state_label: str,
+    energy: float,
+    dense_state: np.ndarray,
+    output_dir: Path,
+    edge_tol: float,
+    label_tol: float,
+    dpi: int,
+    sparse_threshold: float,
+) -> None:
+    n_qubits = infer_n_qubits_from_state(dense_state)
+    mutual_information, one_qubit_entropies, _, sparse_state = (
+        compute_sparse_mutual_information(
+            dense_state,
+            n_qubits=n_qubits,
+            sparse_threshold=sparse_threshold,
+        )
+    )
+    fiedler_info = fiedler_order_from_weights(
+        mutual_information,
+        edge_tol=edge_tol,
+        component_order="index",
+    )
+
+    output_stem = f"{stem}_{state_label}"
+    image_path = output_dir / f"{output_stem}_qubit_mutual_information_graph.png"
+    matrix_path, edge_path = save_numerical_data(
+        output_dir,
+        output_stem,
+        mutual_information,
+        edge_tol,
+    )
+    plot_graph(
+        system,
+        state_label,
+        mutual_information,
+        one_qubit_entropies,
+        fiedler_info["ordering"],
+        energy,
+        image_path,
+        edge_tol,
+        label_tol,
+        dpi,
+    )
+
+    edge_count = int(np.count_nonzero(np.triu(mutual_information, 1) > edge_tol))
+    print(f"{state_label.upper()} energy: {energy:.12f} Hartree")
+    print(
+        f"{state_label.upper()} SparseQubitState nnz: "
+        f"{sparse_state.nnz}/{sparse_state.dimension}"
+    )
+    print(f"{state_label.upper()} plotted edges: {edge_count}")
+    print(f"{state_label.upper()} Fiedler ordering: {fiedler_info['ordering']}")
+    print(f"{state_label.upper()} graph: {image_path}")
+    print(f"{state_label.upper()} matrix: {matrix_path}")
+    print(f"{state_label.upper()} edge list: {edge_path}")
+
+
 def main() -> None:
     args = parse_args()
     if args.input is None:
@@ -266,45 +381,24 @@ def main() -> None:
     output_dir = args.output_dir.expanduser().resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    fci_energy, fci_state = load_fci_state(input_path)
-    n_qubits = infer_n_qubits_from_state(fci_state)
-    mutual_information, one_qubit_entropies, _ = qubit_mutual_information_matrix(
-        fci_state,
-        n_qubits=n_qubits,
-        base=2.0,
-        convention="standard",
-    )
-    fiedler_info = fiedler_order_from_weights(
-        mutual_information,
-        edge_tol=args.edge_tol,
-        component_order="index",
-    )
-
-    stem = input_path.stem
-    image_path = output_dir / f"{stem}_fci_qubit_mutual_information_graph.png"
-    matrix_path, edge_path = save_numerical_data(
-        output_dir, stem, mutual_information, args.edge_tol
-    )
-    plot_graph(
-        system,
-        mutual_information,
-        one_qubit_entropies,
-        fiedler_info["ordering"],
-        fci_energy,
-        image_path,
-        args.edge_tol,
-        args.label_tol,
-        args.dpi,
-    )
-
-    edge_count = int(np.count_nonzero(np.triu(mutual_information, 1) > args.edge_tol))
+    saved_states = load_saved_states(input_path)
     print(f"Loaded: {input_path}")
-    print(f"FCI energy: {fci_energy:.12f} Hartree")
-    print(f"Qubits: {n_qubits}; plotted edges: {edge_count}")
-    print(f"Fiedler ordering: {fiedler_info['ordering']}")
-    print(f"Graph: {image_path}")
-    print(f"Matrix: {matrix_path}")
-    print(f"Edge list: {edge_path}")
+
+    labels = ("fci", "cisd") if args.state == "both" else (args.state,)
+    for label in labels:
+        energy, state = saved_states[label]
+        write_state_outputs(
+            system=system,
+            stem=input_path.stem,
+            state_label=label,
+            energy=energy,
+            dense_state=state,
+            output_dir=output_dir,
+            edge_tol=args.edge_tol,
+            label_tol=args.label_tol,
+            dpi=args.dpi,
+            sparse_threshold=args.sparse_threshold,
+        )
 
 
 if __name__ == "__main__":

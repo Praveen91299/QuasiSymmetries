@@ -1,0 +1,16 @@
+system,benchmark,dataset_tag,fiedler,n_qubits,mpo_bd
+BeH2_eqm,Original Qubit,,False,14,71
+BeH2_eqm,HCT N,HCT N Comm,False,14,106
+BeH2_eqm,BS N,BS N Comm,False,14,126
+BeH2_eqm,HCT N + Fiedler,HCT N Comm,True,14,130
+BeH2_eqm,BS N + Fiedler,BS N Comm,True,14,161
+BeH2_corr,Original Qubit,,False,14,61
+BeH2_corr,HCT N,HCT N Comm,False,14,97
+BeH2_corr,BS N,BS N Comm,False,14,129
+BeH2_corr,HCT N + Fiedler,HCT N Comm,True,14,148
+BeH2_corr,BS N + Fiedler,BS N Comm,True,14,196
+BeH2_diss,Original Qubit,,False,14,61
+BeH2_diss,HCT N,HCT N Comm,False,14,118
+BeH2_diss,BS N,BS N Comm,False,14,162
+BeH2_diss,HCT N + Fiedler,HCT N Comm,True,14,212
+BeH2_diss,BS N + Fiedler,BS N Comm,True,14,183

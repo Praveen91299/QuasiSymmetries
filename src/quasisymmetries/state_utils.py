@@ -8,7 +8,18 @@ from openfermion import MolecularData
 from scipy.linalg import eigh
 import scipy as sp
 import math
+from dataclasses import dataclass
 #from pyscf import fci
+
+
+def _parity_array(values):
+    """Return parity of integer bit counts as a boolean NumPy array."""
+    values = np.asarray(values, dtype=np.int64).reshape(-1)
+    return np.fromiter(
+        (bin(int(v)).count("1") & 1 for v in values),
+        dtype=bool,
+        count=len(values),
+    )
 
 def to_str(occ_list):
     st = ''
@@ -253,6 +264,577 @@ def significant_determinants(wavefunction, threshold=1e-8):
     ]
     significant.sort(key=lambda item: abs(item[1]), reverse=True)
     return significant
+
+
+@dataclass(frozen=True)
+class PauliActionMask:
+    """
+    State-action bit-mask representation of one Pauli product.
+
+    Acting on computational basis index ``b`` gives
+
+        coeff * (-1)**parity(b & sign_mask) |b xor flip_mask>
+
+    The bit convention here follows OpenFermion/Jordan--Wigner statevectors:
+    qubit 0 is the most-significant bit of the basis-state integer.  This is
+    intentionally different from ``quasisymmetries.bs.utils.PauliMask``, where
+    qubit q is stored as bit ``1 << q`` for GF(2)/symplectic algebra.
+
+    Use ``from_pauli_mask`` and ``to_pauli_mask`` to convert across that
+    convention boundary.  Since ``PauliMask`` stores only X/Z supports and no
+    coefficient, ``from_pauli_mask`` reconstructs the Hermitian Pauli string by
+    default, with Y sites carrying the usual matrix phase through the action
+    rule rather than through a non-Hermitian prefactor.
+    """
+
+    coeff: complex
+    flip_mask: int
+    sign_mask: int
+
+    @classmethod
+    def from_pauli_term(cls, term, coeff=1.0, n_qubits=None):
+        flip_mask = 0
+        sign_mask = 0
+        n_y = 0
+
+        for q, pauli in term:
+            if n_qubits is None:
+                bit_mask = 1 << int(q)
+            else:
+                bit_mask = 1 << (int(n_qubits) - 1 - int(q))
+
+            if pauli == "X":
+                flip_mask ^= bit_mask
+            elif pauli == "Y":
+                flip_mask ^= bit_mask
+                sign_mask ^= bit_mask
+                n_y += 1
+            elif pauli == "Z":
+                sign_mask ^= bit_mask
+            else:
+                raise ValueError(f"Unknown Pauli operator {pauli!r}.")
+
+        return cls(complex(coeff) * (1.0j ** n_y), flip_mask, sign_mask)
+
+    @classmethod
+    def from_pauli_mask(cls, mask, n_qubits, coeff=1.0):
+        """
+        Convert a beam-search ``PauliMask = (x_mask, z_mask)`` to an action mask.
+
+        The input mask uses bit ``1 << q`` for qubit q.  The returned action
+        mask uses statevector-index bits ``1 << (n_qubits - 1 - q)``.
+
+        If no coefficient is supplied, the result represents the Hermitian
+        Pauli operator produced by ``bs.utils.mask_to_term``.
+        """
+        try:
+            from .bs.utils import masks_to_term
+        except ImportError:  # pragma: no cover - defensive for direct execution
+            from quasisymmetries.bs.utils import masks_to_term
+
+        term = masks_to_term(mask, n_qubits)
+        return cls.from_pauli_term(term, coeff=coeff, n_qubits=n_qubits)
+
+    def to_pauli_mask(self, n_qubits):
+        """
+        Convert this action mask to a beam-search ``PauliMask = (x_mask, z_mask)``.
+
+        The complex coefficient/action phase is intentionally discarded, matching
+        the algebraic purpose of ``PauliMask``.
+        """
+        x_mask = 0
+        z_mask = 0
+        for q in range(n_qubits):
+            state_bit = 1 << (int(n_qubits) - 1 - q)
+            if self.flip_mask & state_bit:
+                x_mask |= 1 << q
+            if self.sign_mask & state_bit:
+                z_mask |= 1 << q
+        return x_mask, z_mask
+
+    def phases(self, indices):
+        indices = np.asarray(indices, dtype=np.int64)
+        phases = np.full(indices.shape, self.coeff, dtype=np.complex128)
+        if self.sign_mask:
+            phases[_parity_array(indices & self.sign_mask)] *= -1.0
+        return phases
+
+
+def pauli_mask_to_action_mask(mask, n_qubits, coeff=1.0):
+    """Convert a beam-search PauliMask into a Hermitian PauliActionMask by default."""
+    return PauliActionMask.from_pauli_mask(mask, n_qubits=n_qubits, coeff=coeff)
+
+
+def action_mask_to_pauli_mask(action_mask, n_qubits):
+    """Convert a PauliActionMask into a beam-search PauliMask, dropping coeff/phase."""
+    return action_mask.to_pauli_mask(n_qubits=n_qubits)
+
+
+def qubit_operator_to_pauli_action_masks(op, n_qubits):
+    """Convert an OpenFermion QubitOperator into PauliActionMask objects."""
+    return [
+        PauliActionMask.from_pauli_term(term, coeff, n_qubits=n_qubits)
+        for term, coeff in op.terms.items()
+    ]
+
+
+class SparseQubitState:
+    """
+    Sparse computational-basis state represented by integer indices and amplitudes.
+
+    The basis-index convention matches OpenFermion statevectors:
+    qubit 0 is the leftmost/most-significant bit in the binary index.
+    """
+
+    _PAULI_MATRICES = {
+        "I": np.eye(2, dtype=np.complex128),
+        "X": np.array([[0, 1], [1, 0]], dtype=np.complex128),
+        "Y": np.array([[0, -1j], [1j, 0]], dtype=np.complex128),
+        "Z": np.array([[1, 0], [0, -1]], dtype=np.complex128),
+    }
+
+    def __init__(self, indices, coeffs, n_qubits=None, *, copy=True, drop_tol=0.0):
+        indices = np.asarray(indices, dtype=np.int64)
+        coeffs = np.asarray(coeffs, dtype=np.complex128)
+
+        if indices.ndim != 1 or coeffs.ndim != 1:
+            raise ValueError("indices and coeffs must be one-dimensional.")
+        if len(indices) != len(coeffs):
+            raise ValueError("indices and coeffs must have the same length.")
+        if np.any(indices < 0):
+            raise ValueError("Basis indices must be non-negative.")
+
+        if n_qubits is None:
+            max_index = int(indices.max()) if len(indices) else 0
+            n_qubits = max(1, max_index.bit_length())
+        self.n_qubits = int(n_qubits)
+        self.dimension = 1 << self.n_qubits
+
+        if np.any(indices >= self.dimension):
+            raise ValueError("Basis index exceeds 2**n_qubits.")
+
+        self.indices, self.coeffs = self._coalesce(indices, coeffs, drop_tol=drop_tol)
+        if copy:
+            self.indices = self.indices.copy()
+            self.coeffs = self.coeffs.copy()
+        self._refresh_lookup()
+
+    @staticmethod
+    def _coalesce(indices, coeffs, drop_tol=0.0):
+        if len(indices) == 0:
+            return indices.astype(np.int64), coeffs.astype(np.complex128)
+
+        unique, inverse = np.unique(indices, return_inverse=True)
+        summed = np.zeros(len(unique), dtype=np.complex128)
+        np.add.at(summed, inverse, coeffs)
+
+        if drop_tol > 0:
+            keep = np.abs(summed) > drop_tol
+            unique = unique[keep]
+            summed = summed[keep]
+        return unique.astype(np.int64), summed.astype(np.complex128)
+
+    def _refresh_lookup(self):
+        self._amp = {
+            int(index): complex(coeff)
+            for index, coeff in zip(self.indices, self.coeffs)
+            if coeff != 0
+        }
+
+    @property
+    def nnz(self):
+        return len(self.indices)
+
+    @classmethod
+    def from_dense(cls, state, n_qubits=None, threshold=0.0):
+        state = np.asarray(state, dtype=np.complex128).reshape(-1)
+        dim = state.size
+        if dim < 1 or dim & (dim - 1):
+            raise ValueError("Dense state length must be a positive power of two.")
+
+        inferred = dim.bit_length() - 1
+        if n_qubits is None:
+            n_qubits = inferred
+        elif int(n_qubits) != inferred:
+            raise ValueError("n_qubits does not match dense state dimension.")
+
+        indices = np.flatnonzero(np.abs(state) > threshold)
+        return cls(indices, state[indices], n_qubits=n_qubits)
+
+    @classmethod
+    def from_scipy_sparse(cls, state, n_qubits=None, threshold=0.0):
+        if not sp.sparse.issparse(state):
+            raise TypeError("state must be a SciPy sparse vector.")
+        if state.ndim != 2 or 1 not in state.shape:
+            raise ValueError("state must be a row or column sparse vector.")
+
+        dim = max(state.shape)
+        if dim < 1 or dim & (dim - 1):
+            raise ValueError("Sparse state length must be a positive power of two.")
+
+        inferred = dim.bit_length() - 1
+        if n_qubits is None:
+            n_qubits = inferred
+        elif int(n_qubits) != inferred:
+            raise ValueError("n_qubits does not match sparse state dimension.")
+
+        coo = state.tocoo(copy=True)
+        coo.sum_duplicates()
+        indices = coo.row if state.shape[1] == 1 else coo.col
+        coeffs = coo.data
+        keep = np.abs(coeffs) > threshold
+        return cls(indices[keep], coeffs[keep], n_qubits=n_qubits)
+
+    @classmethod
+    def from_dict(cls, amplitudes, n_qubits=None, threshold=0.0):
+        items = [
+            (int(index), complex(coeff))
+            for index, coeff in amplitudes.items()
+            if abs(coeff) > threshold
+        ]
+        if not items:
+            return cls([], [], n_qubits=n_qubits or 1)
+        indices, coeffs = zip(*items)
+        return cls(indices, coeffs, n_qubits=n_qubits)
+
+    @classmethod
+    def from_determinants(cls, determinants, n_qubits=None, threshold=0.0):
+        indices = []
+        coeffs = []
+        for determinant, coeff in determinants:
+            if abs(coeff) <= threshold:
+                continue
+            if isinstance(determinant, str):
+                bits = determinant
+            else:
+                bits = "".join(str(int(bit)) for bit in determinant)
+            if any(bit not in "01" for bit in bits):
+                raise ValueError(f"Invalid determinant bitstring {bits!r}.")
+            if n_qubits is None:
+                n_qubits = len(bits)
+            elif len(bits) != int(n_qubits):
+                raise ValueError("All determinants must have length n_qubits.")
+            indices.append(int(bits, 2))
+            coeffs.append(coeff)
+        return cls(indices, coeffs, n_qubits=n_qubits or 1)
+
+    @classmethod
+    def basis_state(cls, determinant, n_qubits=None, coeff=1.0):
+        return cls.from_determinants([(determinant, coeff)], n_qubits=n_qubits)
+
+    def copy(self):
+        return SparseQubitState(self.indices, self.coeffs, self.n_qubits)
+
+    def to_dense(self):
+        state = np.zeros(self.dimension, dtype=np.complex128)
+        state[self.indices] = self.coeffs
+        return state
+
+    def to_scipy_sparse(self, column=True):
+        if column:
+            rows = self.indices
+            cols = np.zeros(self.nnz, dtype=np.int64)
+            shape = (self.dimension, 1)
+        else:
+            rows = np.zeros(self.nnz, dtype=np.int64)
+            cols = self.indices
+            shape = (1, self.dimension)
+        return csr_matrix((self.coeffs, (rows, cols)), shape=shape)
+
+    def to_dict(self):
+        return dict(self._amp)
+
+    def significant_determinants(self, threshold=1e-8):
+        out = [
+            (format(int(index), f"0{self.n_qubits}b"), coeff)
+            for index, coeff in zip(self.indices, self.coeffs)
+            if abs(coeff) > threshold
+        ]
+        out.sort(key=lambda item: abs(item[1]), reverse=True)
+        return out
+
+    def norm_squared(self):
+        return float(np.real(np.vdot(self.coeffs, self.coeffs)))
+
+    def norm(self):
+        return float(np.sqrt(self.norm_squared()))
+
+    def normalize(self):
+        norm = self.norm()
+        if norm == 0:
+            raise ValueError("Cannot normalize a zero state.")
+        self.coeffs = self.coeffs / norm
+        self._refresh_lookup()
+        return self
+
+    def normalized(self):
+        return self.copy().normalize()
+
+    def expectation_mask(self, mask):
+        targets = self.indices ^ int(mask.flip_mask)
+        target_coeffs = np.fromiter(
+            (self._amp.get(int(target), 0.0j) for target in targets),
+            dtype=np.complex128,
+            count=len(targets),
+        )
+        phases = mask.phases(self.indices)
+        return np.sum(np.conjugate(target_coeffs) * phases * self.coeffs)
+
+    def expectation_masks(self, masks):
+        return sum((self.expectation_mask(mask) for mask in masks), 0.0j)
+
+    def expectation_pauli_term(self, term, coeff=1.0):
+        mask = PauliActionMask.from_pauli_term(term, coeff, n_qubits=self.n_qubits)
+        return self.expectation_mask(mask)
+
+    def expectation_qubit_operator(self, op):
+        return self.expectation_masks(
+            qubit_operator_to_pauli_action_masks(op, self.n_qubits)
+        )
+
+    def expectation_sparse_operator(self, operator):
+        vec = self.to_scipy_sparse(column=True)
+        out = operator @ vec
+        return (vec.conjugate().T @ out)[0, 0]
+
+    def apply_mask(self, mask, drop_tol=0.0):
+        targets = self.indices ^ int(mask.flip_mask)
+        coeffs = mask.phases(self.indices) * self.coeffs
+        return SparseQubitState(
+            targets,
+            coeffs,
+            n_qubits=self.n_qubits,
+            drop_tol=drop_tol,
+        )
+
+    def apply_masks(self, masks, drop_tol=0.0):
+        targets = []
+        coeffs = []
+        for mask in masks:
+            targets.append(self.indices ^ int(mask.flip_mask))
+            coeffs.append(mask.phases(self.indices) * self.coeffs)
+        if not targets:
+            return SparseQubitState([], [], n_qubits=self.n_qubits)
+        return SparseQubitState(
+            np.concatenate(targets),
+            np.concatenate(coeffs),
+            n_qubits=self.n_qubits,
+            drop_tol=drop_tol,
+        )
+
+    def apply_qubit_operator(self, op, drop_tol=0.0):
+        masks = qubit_operator_to_pauli_action_masks(op, self.n_qubits)
+        return self.apply_masks(masks, drop_tol=drop_tol)
+
+    def apply_sparse_operator(self, operator, drop_tol=0.0):
+        out = operator @ self.to_scipy_sparse(column=True)
+        return SparseQubitState.from_scipy_sparse(
+            out,
+            n_qubits=self.n_qubits,
+            threshold=drop_tol,
+        )
+
+    def variance_qubit_operator(self, op):
+        exp_val = self.expectation_qubit_operator(op)
+        op_state = self.apply_qubit_operator(op)
+        return np.real_if_close(op_state.norm_squared() - abs(exp_val) ** 2)
+
+    def variance_sparse_operator(self, operator):
+        exp_val = self.expectation_sparse_operator(operator)
+        op_state = self.apply_sparse_operator(operator)
+        return np.real_if_close(op_state.norm_squared() - abs(exp_val) ** 2)
+
+    @staticmethod
+    def _entropy_from_probabilities(probs, base=2.0, tol=1e-12):
+        probs = np.asarray(probs, dtype=float).reshape(-1)
+        probs[np.abs(probs) < tol] = 0.0
+        probs = probs[probs > tol]
+        if probs.size == 0:
+            return 0.0
+        logs = np.log(probs)
+        if base is not None:
+            logs /= np.log(base)
+        return float(-np.sum(probs * logs))
+
+    def cut_entropy(
+        self,
+        cut,
+        base=2.0,
+        tol=1e-12,
+        max_dense_dim=4096,
+    ):
+        """
+        Exact bipartite entropy across a contiguous cut of the sparse state.
+
+        The cut is between qubits ``cut - 1`` and ``cut`` in the current qubit
+        ordering.  Instead of materializing the full ``2**cut`` by
+        ``2**(n_qubits-cut)`` Schmidt matrix, this routine keeps only left and
+        right bit patterns that occur in the sparse support, then diagonalizes
+        the smaller Gram matrix.
+        """
+        cut = int(cut)
+        if cut <= 0 or cut >= self.n_qubits:
+            raise ValueError("cut must satisfy 0 < cut < n_qubits.")
+
+        norm = self.norm()
+        if norm == 0:
+            raise ValueError("Cannot compute entropy of a zero state.")
+
+        n_right = self.n_qubits - cut
+        right_mask = (1 << n_right) - 1
+        left_bits = self.indices >> n_right
+        right_bits = self.indices & right_mask
+
+        _, left_inv = np.unique(left_bits, return_inverse=True)
+        _, right_inv = np.unique(right_bits, return_inverse=True)
+
+        n_left = int(left_inv.max()) + 1 if left_inv.size else 0
+        n_right_patterns = int(right_inv.max()) + 1 if right_inv.size else 0
+        gram_dim = min(n_left, n_right_patterns)
+
+        if gram_dim == 0:
+            return 0.0
+        if max_dense_dim is not None and gram_dim > int(max_dense_dim):
+            raise ValueError(
+                "Sparse cut entropy would require diagonalizing a "
+                f"{gram_dim}x{gram_dim} dense Gram matrix. Increase "
+                "max_dense_dim if this is intentional."
+            )
+
+        schmidt_matrix = sp.sparse.coo_matrix(
+            (self.coeffs / norm, (left_inv, right_inv)),
+            shape=(n_left, n_right_patterns),
+        ).tocsr()
+
+        if n_left <= n_right_patterns:
+            rho = (schmidt_matrix @ schmidt_matrix.getH()).toarray()
+        else:
+            rho = (schmidt_matrix.getH() @ schmidt_matrix).toarray()
+        rho = 0.5 * (rho + rho.conjugate().T)
+        evals = np.real(np.linalg.eigvalsh(rho))
+        evals[np.abs(evals) < tol] = 0.0
+        evals = np.maximum(evals, 0.0)
+        return self._entropy_from_probabilities(evals, base=base, tol=tol)
+
+    def entropies_at_cuts(
+        self,
+        log_base=2.0,
+        tol=1e-12,
+        max_dense_dim=4096,
+    ):
+        return [
+            self.cut_entropy(
+                cut,
+                base=log_base,
+                tol=tol,
+                max_dense_dim=max_dense_dim,
+            )
+            for cut in range(1, self.n_qubits)
+        ]
+
+    def one_qubit_pauli_expectations(self, qubit):
+        return {
+            pauli: self.expectation_pauli_term(((qubit, pauli),))
+            for pauli in ("X", "Y", "Z")
+        }
+
+    def two_qubit_pauli_expectations(self, qubit_i, qubit_j):
+        if qubit_i == qubit_j:
+            raise ValueError("qubit_i and qubit_j must be distinct.")
+        return {
+            (pauli_i, pauli_j): self.expectation_pauli_term(
+                ((qubit_i, pauli_i), (qubit_j, pauli_j))
+            )
+            for pauli_i in ("X", "Y", "Z")
+            for pauli_j in ("X", "Y", "Z")
+        }
+
+    def one_qubit_rdm(self, qubit):
+        rho = self._PAULI_MATRICES["I"].copy()
+        for pauli, value in self.one_qubit_pauli_expectations(qubit).items():
+            rho += value * self._PAULI_MATRICES[pauli]
+        rho *= 0.5
+        return 0.5 * (rho + rho.conjugate().T)
+
+    def two_qubit_rdm(self, qubit_i, qubit_j):
+        if qubit_i == qubit_j:
+            raise ValueError("qubit_i and qubit_j must be distinct.")
+        labels = ("I", "X", "Y", "Z")
+        rho = np.zeros((4, 4), dtype=np.complex128)
+        one_i = self.one_qubit_pauli_expectations(qubit_i)
+        one_j = self.one_qubit_pauli_expectations(qubit_j)
+        two = self.two_qubit_pauli_expectations(qubit_i, qubit_j)
+
+        for a in labels:
+            for b in labels:
+                if a == "I" and b == "I":
+                    value = 1.0
+                elif a == "I":
+                    value = one_j[b]
+                elif b == "I":
+                    value = one_i[a]
+                else:
+                    value = two[(a, b)]
+                rho += value * np.kron(self._PAULI_MATRICES[a], self._PAULI_MATRICES[b])
+        rho *= 0.25
+        return 0.5 * (rho + rho.conjugate().T)
+
+    @staticmethod
+    def von_neumann_entropy(rho, base=2.0, tol=1e-12):
+        rho = np.asarray(rho, dtype=np.complex128)
+        rho = 0.5 * (rho + rho.conjugate().T)
+        evals = np.real(np.linalg.eigvalsh(rho))
+        evals[np.abs(evals) < tol] = 0.0
+        evals = evals[evals > tol]
+        if evals.size == 0:
+            return 0.0
+        logs = np.log(evals)
+        if base is not None:
+            logs /= np.log(base)
+        return float(-np.sum(evals * logs))
+
+    def qubit_mutual_information_matrix(
+        self,
+        base=2.0,
+        convention="standard",
+        entropy_tol=1e-12,
+    ):
+        if convention not in {"standard", "half"}:
+            raise ValueError("convention must be 'standard' or 'half'.")
+        factor = 0.5 if convention == "half" else 1.0
+        s1 = np.zeros(self.n_qubits, dtype=float)
+        for i in range(self.n_qubits):
+            s1[i] = self.von_neumann_entropy(
+                self.one_qubit_rdm(i),
+                base=base,
+                tol=entropy_tol,
+            )
+
+        s2 = np.zeros((self.n_qubits, self.n_qubits), dtype=float)
+        mi = np.zeros((self.n_qubits, self.n_qubits), dtype=float)
+        for i in range(self.n_qubits):
+            for j in range(i + 1, self.n_qubits):
+                sij = self.von_neumann_entropy(
+                    self.two_qubit_rdm(i, j),
+                    base=base,
+                    tol=entropy_tol,
+                )
+                s2[i, j] = s2[j, i] = sij
+                mij = factor * (s1[i] + s1[j] - sij)
+                if mij < 0.0 and abs(mij) < 1e-10:
+                    mij = 0.0
+                mi[i, j] = mi[j, i] = max(0.0, float(mij))
+        return mi, s1, s2
+
+    def reorder_qubits(self, ordering):
+        if sorted(ordering) != list(range(self.n_qubits)):
+            raise ValueError("ordering must be a permutation of all qubits.")
+        new_indices = np.zeros_like(self.indices)
+        for new_pos, old_qubit in enumerate(ordering):
+            old_mask = 1 << (self.n_qubits - 1 - int(old_qubit))
+            new_mask = 1 << (self.n_qubits - 1 - int(new_pos))
+            new_indices[(self.indices & old_mask) != 0] |= new_mask
+        return SparseQubitState(new_indices, self.coeffs, n_qubits=self.n_qubits)
 
 def get_reference_state(occ_no_state, tf = 'bk', gs_format = 'dm'):
     """

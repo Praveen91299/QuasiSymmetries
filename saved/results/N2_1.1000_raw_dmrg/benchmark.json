@@ -1,0 +1,406 @@
+{
+  "input": {
+    "molpath": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/quasisymmetry/hamiltonians/N2/N2_1.1000_D2h.chk"
+  },
+  "system": {
+    "norb": 10,
+    "n_qubits": 20,
+    "nelec": [
+      7,
+      7
+    ],
+    "fci_energy": -107.65412244752254
+  },
+  "basis": {
+    "orbital_rotation": false,
+    "clifford_transformation": false,
+    "jordan_wigner_terms": 2239,
+    "fermionic_active_space": "CAS(14e,10o)",
+    "fermionic_symmetry": "SU2",
+    "frozen_core_orbitals": 0,
+    "bond_dimension_note": "SU2-adapted fermionic and two-level qubit MPS bond dimensions use different local bases/symmetry structure and should be reported side by side, not interpreted as identical units."
+  },
+  "dmrg_settings": {
+    "bond_dims": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      12,
+      14,
+      16,
+      18,
+      20,
+      30,
+      40,
+      50,
+      60,
+      70,
+      80,
+      90,
+      100
+    ],
+    "dmrg_sweeps": 100,
+    "dmrg_tolerance": 0.0016,
+    "sweep_tolerance": 1e-06,
+    "mpo_cutoff": 1e-10,
+    "mps_cutoff": 1e-20,
+    "initial_state": "exact_fci",
+    "noise": 1.0,
+    "seed": 0,
+    "full_curve": false,
+    "n_threads": 4,
+    "stack_mem_gb": 2.0,
+    "skip_qubit_dmrg": false,
+    "skip_fermionic_dmrg": false
+  },
+  "dmrg_summary": {
+    "raw_canonical_qubit": {
+      "frame": "raw_canonical_qubit",
+      "first_converged_bond_dim": 40,
+      "converged_within_grid": true,
+      "mpo_bond_dimensions": [
+        4,
+        16,
+        31,
+        38,
+        55,
+        71,
+        78,
+        82,
+        117,
+        128,
+        157,
+        162,
+        131,
+        88,
+        67,
+        46,
+        33,
+        16,
+        4
+      ],
+      "max_mpo_bond_dimension": 162,
+      "mpo_build_seconds": 22.46645725000417
+    },
+    "raw_fermionic_su2": {
+      "frame": "raw_fermionic_su2",
+      "first_converged_bond_dim": 30,
+      "converged_within_grid": true,
+      "mpo_bond_dimension": 87,
+      "mpo_build_seconds": 0.03678708302322775,
+      "fci_determinants_retained": 1824,
+      "fci_projection_norm": 0.9999999999999999,
+      "imported_fci_mps_energy": -107.65412244752275,
+      "symmetry_type": "SU2",
+      "ncore": 0,
+      "active_electrons": 14,
+      "active_orbitals": 10
+    }
+  },
+  "dmrg_curve": [
+    {
+      "frame": "raw_canonical_qubit",
+      "bond_dim": 1,
+      "energy": -107.49817630411663,
+      "abs_energy_error": 0.15594614340591306,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 1.666244000021834,
+      "max_result_mps_bond": 1
+    },
+    {
+      "frame": "raw_canonical_qubit",
+      "bond_dim": 2,
+      "energy": -107.53482665913715,
+      "abs_energy_error": 0.11929578838538646,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 1.7666004170314409,
+      "max_result_mps_bond": 2
+    },
+    {
+      "frame": "raw_canonical_qubit",
+      "bond_dim": 3,
+      "energy": -107.57468116245208,
+      "abs_energy_error": 0.07944128507045889,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 2.0119242499931715,
+      "max_result_mps_bond": 3
+    },
+    {
+      "frame": "raw_canonical_qubit",
+      "bond_dim": 4,
+      "energy": -107.5858575060514,
+      "abs_energy_error": 0.06826494147114204,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 2.341031624993775,
+      "max_result_mps_bond": 4
+    },
+    {
+      "frame": "raw_canonical_qubit",
+      "bond_dim": 5,
+      "energy": -107.59851296412134,
+      "abs_energy_error": 0.055609483401198645,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 2.848196416045539,
+      "max_result_mps_bond": 5
+    },
+    {
+      "frame": "raw_canonical_qubit",
+      "bond_dim": 6,
+      "energy": -107.6048384356903,
+      "abs_energy_error": 0.04928401183224196,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 2.8130990830250084,
+      "max_result_mps_bond": 6
+    },
+    {
+      "frame": "raw_canonical_qubit",
+      "bond_dim": 7,
+      "energy": -107.60372238271194,
+      "abs_energy_error": 0.050400064810602885,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 2.7803791250335053,
+      "max_result_mps_bond": 7
+    },
+    {
+      "frame": "raw_canonical_qubit",
+      "bond_dim": 8,
+      "energy": -107.60979776531067,
+      "abs_energy_error": 0.04432468221186525,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 3.1353537919931114,
+      "max_result_mps_bond": 8
+    },
+    {
+      "frame": "raw_canonical_qubit",
+      "bond_dim": 9,
+      "energy": -107.61766068015066,
+      "abs_energy_error": 0.03646176737187545,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 3.25485262501752,
+      "max_result_mps_bond": 9
+    },
+    {
+      "frame": "raw_canonical_qubit",
+      "bond_dim": 10,
+      "energy": -107.61993369915709,
+      "abs_energy_error": 0.034188748365451715,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 3.5419917089748196,
+      "max_result_mps_bond": 10
+    },
+    {
+      "frame": "raw_canonical_qubit",
+      "bond_dim": 12,
+      "energy": -107.62602774582334,
+      "abs_energy_error": 0.02809470169920303,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 3.901171625009738,
+      "max_result_mps_bond": 12
+    },
+    {
+      "frame": "raw_canonical_qubit",
+      "bond_dim": 14,
+      "energy": -107.63527179643802,
+      "abs_energy_error": 0.01885065108452011,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 19.59771412500413,
+      "max_result_mps_bond": 14
+    },
+    {
+      "frame": "raw_canonical_qubit",
+      "bond_dim": 16,
+      "energy": -107.63923258234543,
+      "abs_energy_error": 0.01488986517711055,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 8.00418837502366,
+      "max_result_mps_bond": 16
+    },
+    {
+      "frame": "raw_canonical_qubit",
+      "bond_dim": 18,
+      "energy": -107.64352784477164,
+      "abs_energy_error": 0.010594602750899185,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 37.949714459013194,
+      "max_result_mps_bond": 18
+    },
+    {
+      "frame": "raw_canonical_qubit",
+      "bond_dim": 20,
+      "energy": -107.64553621606362,
+      "abs_energy_error": 0.008586231458920679,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 17.52596345799975,
+      "max_result_mps_bond": 20
+    },
+    {
+      "frame": "raw_canonical_qubit",
+      "bond_dim": 30,
+      "energy": -107.65091189618025,
+      "abs_energy_error": 0.0032105513422919785,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 111.81823570799315,
+      "max_result_mps_bond": 30
+    },
+    {
+      "frame": "raw_canonical_qubit",
+      "bond_dim": 40,
+      "energy": -107.65259390593138,
+      "abs_energy_error": 0.0015285415911563405,
+      "within_dmrg_tolerance": true,
+      "dmrg_seconds": 39.87126166600501,
+      "max_result_mps_bond": 40
+    },
+    {
+      "frame": "raw_fermionic_su2",
+      "bond_dim": 1,
+      "energy": -107.49845898787596,
+      "abs_energy_error": 0.15566345964657557,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 0.13850845902925357,
+      "max_result_mps_bond": 1
+    },
+    {
+      "frame": "raw_fermionic_su2",
+      "bond_dim": 2,
+      "energy": -107.55311630663842,
+      "abs_energy_error": 0.10100614088412385,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 0.42066629201872274,
+      "max_result_mps_bond": 2
+    },
+    {
+      "frame": "raw_fermionic_su2",
+      "bond_dim": 3,
+      "energy": -107.57893494939604,
+      "abs_energy_error": 0.07518749812649617,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 0.28469674999359995,
+      "max_result_mps_bond": 3
+    },
+    {
+      "frame": "raw_fermionic_su2",
+      "bond_dim": 4,
+      "energy": -107.59941919364321,
+      "abs_energy_error": 0.05470325387932462,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 0.11990741698537022,
+      "max_result_mps_bond": 4
+    },
+    {
+      "frame": "raw_fermionic_su2",
+      "bond_dim": 5,
+      "energy": -107.60845701727574,
+      "abs_energy_error": 0.04566543024679959,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 0.1212901669787243,
+      "max_result_mps_bond": 5
+    },
+    {
+      "frame": "raw_fermionic_su2",
+      "bond_dim": 6,
+      "energy": -107.61687533165467,
+      "abs_energy_error": 0.03724711586787066,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 0.1224609169876203,
+      "max_result_mps_bond": 6
+    },
+    {
+      "frame": "raw_fermionic_su2",
+      "bond_dim": 7,
+      "energy": -107.62324140915779,
+      "abs_energy_error": 0.030881038364753977,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 0.1536728339851834,
+      "max_result_mps_bond": 7
+    },
+    {
+      "frame": "raw_fermionic_su2",
+      "bond_dim": 8,
+      "energy": -107.63076970740075,
+      "abs_energy_error": 0.023352740121794113,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 0.14049579197308049,
+      "max_result_mps_bond": 8
+    },
+    {
+      "frame": "raw_fermionic_su2",
+      "bond_dim": 9,
+      "energy": -107.63615028146741,
+      "abs_energy_error": 0.017972166055130856,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 0.23683066602097824,
+      "max_result_mps_bond": 9
+    },
+    {
+      "frame": "raw_fermionic_su2",
+      "bond_dim": 10,
+      "energy": -107.64028420231644,
+      "abs_energy_error": 0.013838245206102329,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 0.18004979199031368,
+      "max_result_mps_bond": 10
+    },
+    {
+      "frame": "raw_fermionic_su2",
+      "bond_dim": 12,
+      "energy": -107.6451017944592,
+      "abs_energy_error": 0.009020653063345208,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 0.3293372909538448,
+      "max_result_mps_bond": 12
+    },
+    {
+      "frame": "raw_fermionic_su2",
+      "bond_dim": 14,
+      "energy": -107.647316780477,
+      "abs_energy_error": 0.006805667045540531,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 0.21562929201172665,
+      "max_result_mps_bond": 14
+    },
+    {
+      "frame": "raw_fermionic_su2",
+      "bond_dim": 16,
+      "energy": -107.64984247941861,
+      "abs_energy_error": 0.004279968103929832,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 0.2587327500223182,
+      "max_result_mps_bond": 16
+    },
+    {
+      "frame": "raw_fermionic_su2",
+      "bond_dim": 18,
+      "energy": -107.65022244810193,
+      "abs_energy_error": 0.0038999994206108113,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 0.2238127090386115,
+      "max_result_mps_bond": 18
+    },
+    {
+      "frame": "raw_fermionic_su2",
+      "bond_dim": 20,
+      "energy": -107.65202209303747,
+      "abs_energy_error": 0.0021003544850657363,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 0.2663603749824688,
+      "max_result_mps_bond": 20
+    },
+    {
+      "frame": "raw_fermionic_su2",
+      "bond_dim": 30,
+      "energy": -107.6538378365618,
+      "abs_energy_error": 0.0002846109607332892,
+      "within_dmrg_tolerance": true,
+      "dmrg_seconds": 0.19457137497374788,
+      "max_result_mps_bond": 30
+    }
+  ]
+}

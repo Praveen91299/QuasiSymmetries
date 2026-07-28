@@ -171,6 +171,42 @@ def qubit_mutual_information_matrix(
     return I, s1, s2
 
 
+def qubit_mutual_information_matrix_sparse_bloch(
+    state,
+    n_qubits: int = None,
+    base: float = 2.0,
+    convention: str = "standard",
+    entropy_tol: float = 1e-12,
+    threshold: float = 0.0,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Compute qubit mutual information using sparse Pauli-expectation/Bloch RDMs.
+
+    This avoids constructing reduced density matrices by tracing over a dense
+    statevector.  It reconstructs the one- and two-qubit RDMs from expectation
+    values of one- and two-qubit Pauli operators.
+    """
+    from .state_utils import SparseQubitState
+
+    if isinstance(state, SparseQubitState):
+        sparse_state = state.copy().normalize()
+    else:
+        sparse_state = SparseQubitState.from_dense(
+            state,
+            n_qubits=n_qubits,
+            threshold=threshold,
+        ).normalize()
+
+    if n_qubits is not None and sparse_state.n_qubits != int(n_qubits):
+        raise ValueError("n_qubits does not match sparse state.")
+
+    return sparse_state.qubit_mutual_information_matrix(
+        base=base,
+        convention=convention,
+        entropy_tol=entropy_tol,
+    )
+
+
 def sanitize_weight_matrix(W: np.ndarray, tol: float = 1e-14) -> np.ndarray:
     """
     Symmetrize, remove diagonal, and clip tiny negative values.
@@ -503,6 +539,8 @@ def fiedler_order_from_state(
     eig_tol: float = 1e-10,
     tie_break: str = "index",
     component_order: str = "total_weight",
+    mutual_information_method: str = "statevector",
+    sparse_threshold: float = 0.0,
 ) -> dict:
     """
     Full pipeline:
@@ -536,18 +574,40 @@ def fiedler_order_from_state(
     result
         Dictionary containing ordering and diagnostics.
     """
-    psi = np.asarray(psi, dtype=complex).reshape(-1)
+    if mutual_information_method not in {"statevector", "sparse_bloch"}:
+        raise ValueError(
+            "mutual_information_method must be 'statevector' or 'sparse_bloch'."
+        )
 
-    if n_qubits is None:
-        n_qubits = infer_n_qubits_from_state(psi)
+    if mutual_information_method == "sparse_bloch":
+        from .state_utils import SparseQubitState
 
-    I, s1, s2 = qubit_mutual_information_matrix(
-        psi,
-        n_qubits=n_qubits,
-        base=base,
-        convention=mutual_info_convention,
-        entropy_tol=entropy_tol,
-    )
+        if isinstance(psi, SparseQubitState):
+            if n_qubits is None:
+                n_qubits = psi.n_qubits
+        else:
+            psi = np.asarray(psi, dtype=complex).reshape(-1)
+            if n_qubits is None:
+                n_qubits = infer_n_qubits_from_state(psi)
+        I, s1, s2 = qubit_mutual_information_matrix_sparse_bloch(
+            psi,
+            n_qubits=n_qubits,
+            base=base,
+            convention=mutual_info_convention,
+            entropy_tol=entropy_tol,
+            threshold=sparse_threshold,
+        )
+    else:
+        psi = np.asarray(psi, dtype=complex).reshape(-1)
+        if n_qubits is None:
+            n_qubits = infer_n_qubits_from_state(psi)
+        I, s1, s2 = qubit_mutual_information_matrix(
+            psi,
+            n_qubits=n_qubits,
+            base=base,
+            convention=mutual_info_convention,
+            entropy_tol=entropy_tol,
+        )
 
     info = fiedler_order_from_weights(
         I,
@@ -563,6 +623,7 @@ def fiedler_order_from_state(
     info["two_qubit_entropies"] = s2
     info["n_qubits"] = n_qubits
     info["mutual_info_convention"] = mutual_info_convention
+    info["mutual_information_method"] = mutual_information_method
     info["entropy_base"] = base
 
     return info
@@ -608,18 +669,97 @@ def reorder_statevector_axes(
 from .clifford_symmetry_optimized import permute_qubits_in_qubit_operator
 from .metrics import get_entropies_at_cuts
 
-def do_fiedler_reordering(HQ, psi, n_qubits, verbose=True, component_order="index", log_base=np.e):
+def do_fiedler_reordering(
+    HQ,
+    psi,
+    n_qubits,
+    verbose=True,
+    component_order="index",
+    log_base=np.e,
+    mutual_information_method="statevector",
+    sparse_threshold=0.0,
+    sparse_cut_max_dense_dim=4096,
+):
     """
-    Determine Fiedler reordering from psi, apply onto psi and HQ,  
+    Determine a Fiedler qubit ordering from ``psi`` and apply it to ``HQ``.
+
+    Parameters
+    ----------
+    HQ
+        OpenFermion ``QubitOperator`` Hamiltonian to permute.
+    psi
+        State used to build the qubit mutual-information graph.  This can be a
+        dense statevector or a ``SparseQubitState``.
+    n_qubits
+        Number of qubits.
+    verbose
+        If True, print the one-qubit entropies, mutual-information matrix,
+        connected components, final ordering, and reordered cut entropies.
+    component_order
+        How disconnected mutual-information components are stitched together;
+        passed to ``fiedler_order_from_state``.  Common choices are ``"index"``,
+        ``"total_weight"``, and ``"size"``.
+    log_base
+        Logarithm base for entropy and mutual information.  The historical
+        default here is ``np.e``.
+    mutual_information_method
+        ``"statevector"`` uses the original dense reduced-density-matrix path.
+        ``"sparse_bloch"`` uses sparse Pauli expectation values to reconstruct
+        one- and two-qubit Bloch/RDM data.  For determinant-sparse states, use
+        this together with a ``SparseQubitState`` input to avoid materializing
+        the full ``2**n_qubits`` statevector.
+    sparse_threshold
+        When ``mutual_information_method="sparse_bloch"`` is requested with a
+        dense input state, amplitudes with absolute value <= this threshold are
+        discarded while converting to ``SparseQubitState``.
+    sparse_cut_max_dense_dim
+        Safety limit for the sparse reordered cut-entropy calculation.  The
+        sparse path groups amplitudes by observed left/right bit patterns at
+        each cut and diagonalizes the smaller Gram matrix.  If that Gram matrix
+        would exceed this dimension, a ``ValueError`` is raised rather than
+        accidentally allocating a very large dense matrix.  Increase this only
+        intentionally.
+
+    Feasible sparse usage
+    ---------------------
+    For CISD/determinant-sparse states, prefer::
+
+        sparse_psi = SparseQubitState.from_dense(psi, n_qubits, threshold=tol)
+        ent, HQ_reord, psi_reord, info = do_fiedler_reordering(
+            HQ,
+            sparse_psi,
+            n_qubits,
+            mutual_information_method="sparse_bloch",
+        )
+
+    In this mode, both the mutual-information graph and the returned reordered
+    cut entropies are computed without constructing the full dense statevector.
+    The returned ``psi_reord`` is also a ``SparseQubitState``.  Dense inputs keep
+    the original dense return behavior unless ``"sparse_bloch"`` is explicitly
+    requested.
+
     Returns
-    - bond entanglement
-    - HQ reordered
-    - psi reordered
-    - fiedler info
-    
+    -------
+    ent_reord
+        Entanglement entropies across contiguous cuts after reordering.
+    HQ_reord
+        Hamiltonian with qubits permuted according to the Fiedler ordering.
+    psi_reord
+        Reordered state.  Dense input returns a dense statevector; sparse input
+        returns a ``SparseQubitState``.
+    fiedler_info
+        Diagnostics from ``fiedler_order_from_state``, including ordering,
+        mutual-information matrix, components, and entropy data.
     """
 
-    fiedler_info = fiedler_order_from_state(psi, n_qubits, component_order=component_order, base=log_base)
+    fiedler_info = fiedler_order_from_state(
+        psi,
+        n_qubits,
+        component_order=component_order,
+        base=log_base,
+        mutual_information_method=mutual_information_method,
+        sparse_threshold=sparse_threshold,
+    )
     if verbose:
 
         print("One-qubit entropies:")
@@ -636,8 +776,27 @@ def do_fiedler_reordering(HQ, psi, n_qubits, verbose=True, component_order="inde
         print(fiedler_info["ordering"])
         describe_ordering(fiedler_info["ordering"])
 
-    psi_reord = reorder_statevector_axes(psi, fiedler_info["ordering"], n_qubits)
-    ent_reord = get_entropies_at_cuts(psi_reord, n_qubits, log_base=log_base)
+    if hasattr(psi, "reorder_qubits") and hasattr(psi, "entropies_at_cuts"):
+        psi_reord = psi.reorder_qubits(fiedler_info["ordering"])
+        ent_reord = psi_reord.entropies_at_cuts(
+            log_base=log_base,
+            max_dense_dim=sparse_cut_max_dense_dim,
+        )
+    elif mutual_information_method == "sparse_bloch":
+        from .state_utils import SparseQubitState
+
+        psi_reord = SparseQubitState.from_dense(
+            psi,
+            n_qubits=n_qubits,
+            threshold=sparse_threshold,
+        ).reorder_qubits(fiedler_info["ordering"])
+        ent_reord = psi_reord.entropies_at_cuts(
+            log_base=log_base,
+            max_dense_dim=sparse_cut_max_dense_dim,
+        )
+    else:
+        psi_reord = reorder_statevector_axes(psi, fiedler_info["ordering"], n_qubits)
+        ent_reord = get_entropies_at_cuts(psi_reord, n_qubits, log_base=log_base)
 
     perm = invert_ordering(fiedler_info["ordering"])
     HQ_reord = permute_qubits_in_qubit_operator(HQ, perm)

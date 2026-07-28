@@ -1,0 +1,53 @@
+JUL20 frozen-core F2/STO-3G Clifford/Fiedler benchmarks
+synthesis_basis = Z
+generator_mapping = positive_z
+output_dir = /Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/Jul20
+ham_dir = /Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/Jul20/hamiltonians
+systems = ['F2frozen_eqm', 'F2frozen_corr', 'F2frozen_diss']
+settings = {'beam_width': 16, 'heavy_core_fraction': 0.95, 'max_candidates_from_terms': 256, 'include_hct_symmetries': True, 'include_pairwise_products': False, 'pairwise_seed_terms': 24, 'seed_with_exact_symmetries': False, 'local_refine': True, 'local_refine_passes': 10, 'dmrg_sweeps': 100}
+
+Loaded Hamiltonian for F2frozen_eqm from /Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/Jul20/hamiltonians/F2frozen_eqm.pkl
+
+================================================================================
+F2frozen_eqm
+================================================================================
+R(F-F) = 1.412 Angstrom
+n_qubits = 16
+active_electrons = 14
+active_orbitals = 8
+FCI energy = -196.04960091558738
+CISD energy = -196.04960091558684
+
+FCI entanglement before Clifford:
+  1|2: 0.011108880030342081
+  2|3: 0.020699719114333194
+  3|4: 0.027765961230829892
+  4|5: 0.030189822972981888
+  5|6: 0.030883146851319616
+  6|7: 0.030640624384263855
+  7|8: 0.031333943995648525
+  8|9: 0.031087260922874546
+  9|10: 0.25647782212108333
+  10|11: 0.24679741006332595
+  11|12: 0.254174780110735
+  12|13: 0.24926939084609134
+  13|14: 0.2566458282320432
+  14|15: 0.25172733783007717
+  15|16: 0.24746320954527556
+
+CISD entanglement before Clifford:
+  1|2: 0.011108880030347934
+  2|3: 0.02069971911433792
+  3|4: 0.02776596123083374
+  4|5: 0.030189822972986207
+  5|6: 0.03088314685132474
+  6|7: 0.03064062438426885
+  7|8: 0.0313339439956514
+  8|9: 0.031087260922878883
+  9|10: 0.2564778221210618
+  10|11: 0.24679741006330386
+  11|12: 0.25417478011071515
+  12|13: 0.24926939084607197
+  13|14: 0.2566458282320276
+  14|15: 0.25172733783005874
+  15|16: 0.24746320954525844

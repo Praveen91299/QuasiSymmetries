@@ -287,7 +287,11 @@ def get_entropies_at_cuts(state, n_qubits, log_base='2'):
     """
     entropies = []
     for k in range(1, n_qubits):
-        u, d, v = np.linalg.svd(np.reshape(state, (1<<k, 1<<(n_qubits-k))))
+        d = np.linalg.svd(
+            np.reshape(state, (1 << k, 1 << (n_qubits - k))),
+            compute_uv=False,
+            full_matrices=False,
+        )
 
         entropies.append(entropy(np.abs(d)**2, log_base=log_base))
     return entropies

@@ -1,0 +1,45 @@
+{
+  "input": {
+    "molpath": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/quasisymmetry/hamiltonians/N2/N2_1.1000_D2h.chk"
+  },
+  "system": {
+    "norb": 10,
+    "n_qubits": 20,
+    "nelec": [
+      7,
+      7
+    ],
+    "fci_energy": -107.65412244752254
+  },
+  "basis": {
+    "orbital_rotation": false,
+    "clifford_transformation": false,
+    "jordan_wigner_terms": 2239,
+    "fermionic_active_space": "CAS(14e,10o)",
+    "fermionic_symmetry": "SU2",
+    "frozen_core_orbitals": 0,
+    "bond_dimension_note": "SU2-adapted fermionic and two-level qubit MPS bond dimensions use different local bases/symmetry structure and should be reported side by side, not interpreted as identical units."
+  },
+  "dmrg_settings": {
+    "bond_dims": [
+      1
+    ],
+    "dmrg_sweeps": 100,
+    "dmrg_tolerance": 0.0016,
+    "sweep_tolerance": 1e-06,
+    "mpo_cutoff": 1e-10,
+    "mps_cutoff": 1e-12,
+    "initial_state": "exact_fci",
+    "noise": 1.0,
+    "seed": 0,
+    "full_curve": false,
+    "n_threads": 1,
+    "stack_mem_gb": 0.2,
+    "qubit_backend": "block2",
+    "davidson_threshold": 1e-10,
+    "skip_qubit_dmrg": false,
+    "skip_fermionic_dmrg": true
+  },
+  "dmrg_summary": {},
+  "dmrg_curve": []
+}
