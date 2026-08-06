@@ -58,12 +58,39 @@ DEFAULT_OUTPUT_DIR = (
     PROJECT_ROOT / "saved" / "results" / "OO_N2_20260714_174556_e2256b"
 )
 
-# The orbital-optimization project deliberately exposes these as top-level
-# modules/scripts rather than as an installed package.
-if str(OO_PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(OO_PROJECT_ROOT))
+def load_rotation_from_oo_data(oo_data: dict, norb: int) -> np.ndarray:
+    """Load and evaluate the optional orbital-optimization helper.
 
-from src.orbital_rotation import rotation_from_oo_data  # noqa: E402
+    Parameters
+    ----------
+    oo_data
+        Saved orbital-optimization JSON mapping containing its rotation
+        parameterization.
+    norb
+        Number of spatial orbitals expected by the saved rotation.
+
+    Returns
+    -------
+    rotation
+        Spatial-orbital rotation matrix reconstructed by the external
+        ``quasisymmetry`` project.
+
+    Notes
+    -----
+    The external project is needed only by this script's orbital-optimization
+    workflow. Importing shared DMRG helpers from this module therefore must not
+    require that sibling repository to be present.
+    """
+    if str(OO_PROJECT_ROOT) not in sys.path:
+        sys.path.insert(0, str(OO_PROJECT_ROOT))
+    try:
+        from src.orbital_rotation import rotation_from_oo_data
+    except ModuleNotFoundError as exc:
+        raise ModuleNotFoundError(
+            "the saved orbital-optimization workflow requires the sibling "
+            f"repository at {OO_PROJECT_ROOT}"
+        ) from exc
+    return np.asarray(rotation_from_oo_data(oo_data, norb))
 
 
 def parse_args() -> argparse.Namespace:
@@ -632,7 +659,7 @@ def main() -> None:
             f"(FCI error {abs(cisd_energy - fci_energy):.3e})",
             flush=True,
         )
-    orbital_rotation = rotation_from_oo_data(oo_data, norb)
+    orbital_rotation = load_rotation_from_oo_data(oo_data, norb)
     identity = np.eye(norb)
     linear_symmetries = parity_linear_operators(
         parity_matrix, norb, moldata.nelec

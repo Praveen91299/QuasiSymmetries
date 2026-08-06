@@ -3,7 +3,6 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=20
-#SBATCH --mem=32G
 #SBATCH --time=15:00:00
 #SBATCH --job-name=n2_631g_dmrg
 #SBATCH --output=/scratch/jpraveen/slurm_logs/n2_631g_dmrg_%j.out
@@ -76,7 +75,7 @@ python -u scripts/benchmark_n2_631g_pyblock2.py \
   --skip-reference-bond-dims 150 \
   --n-threads "$SLURM_CPUS_PER_TASK" \
   --n-mkl-threads 1 \
-  --stack-mem-gb 4.0 \
+  --stack-mem-gb 32.0 \
   --verbose
 
 echo "Benchmark results: $BENCHMARK_DIR"
