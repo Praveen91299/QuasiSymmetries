@@ -4,8 +4,8 @@ This is the raw-basis control for ``benchmark_saved_oo_n2.py``.  It uses the
 same N2 1.1000 Angstrom checkpoint, full-CISD MPS initialization, bond-
 dimension grid, DMRG settings, and chemical-accuracy stopping rule, but it
 applies neither the saved orbital rotation nor any Clifford transformation.
-It runs both the raw Jordan--Wigner qubit Hamiltonian with quimb and the
-spatial-integral Hamiltonian directly with SU(2)-adapted Block2.
+It runs both the raw Jordan--Wigner qubit Hamiltonian in Pauli-mode pyblock2
+and the spatial-integral Hamiltonian directly with SU(2)-adapted pyblock2.
 
 Run from ``QuasiSymmetries``:
 
@@ -60,16 +60,23 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dmrg-tol", type=float, default=1.6e-3)
     parser.add_argument("--sweep-tol", type=float, default=1e-6)
     parser.add_argument("--mpo-cutoff", type=float, default=1e-10)
+    parser.add_argument(
+        "--block2-mpo-builder",
+        choices=("blocked_sum", "expression"),
+        default="blocked_sum",
+    )
+    parser.add_argument("--sum-mpo-mod", type=int, default=20)
     parser.add_argument("--mps-cutoff", type=float, default=1e-13)
     parser.add_argument("--noise", type=float, default=1.0)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument(
         "--qubit-backend",
-        choices=("quimb", "block2"),
-        default="quimb",
-        help="backend for the raw qubit-Hamiltonian DMRG curve",
+        choices=("block2",),
+        default="block2",
+        help="retained for CLI compatibility; pyblock2 is the only backend",
     )
     parser.add_argument("--n-threads", type=int, default=1)
+    parser.add_argument("--n-mkl-threads", type=int, default=1)
     parser.add_argument("--stack-mem-gb", type=float, default=0.5)
     parser.add_argument("--davidson-threshold", type=float, default=1e-10)
     parser.add_argument(
@@ -80,7 +87,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--skip-fermionic-dmrg",
         action="store_true",
-        help="run only the raw Jordan-Wigner/quimb benchmark",
+        help="run only the raw Jordan-Wigner pyblock2 benchmark",
     )
     parser.add_argument(
         "--full-curve",
@@ -197,6 +204,7 @@ def run_fermionic_dmrg_curve(
         active_orbitals=active_orbitals,
         symm_type=SymmetryTypes.SU2,
         n_threads=args.n_threads,
+        n_mkl_threads=getattr(args, "n_mkl_threads", 1),
         stack_mem=int(args.stack_mem_gb * 1024**3),
         iprint=2 if args.verbose else 0,
         orb_sym=orb_sym,
@@ -207,6 +215,8 @@ def run_fermionic_dmrg_curve(
 
     try:
         from quasisymmetries.block2_qubit_benchmark import (
+            Block2SweepTimer,
+            block2_dmrg_sweep_status,
             save_block2_mpo,
             save_block2_mps,
         )
@@ -256,12 +266,23 @@ def run_fermionic_dmrg_curve(
 
         rows = []
         first_converged_bd = None
-        thresholds = [1e-10] * args.dmrg_sweeps
+        thresholds = [
+            float(getattr(args, "davidson_threshold", 1e-10))
+        ] * args.dmrg_sweeps
         for bond_dim in args.bond_dims:
             tag = f"N2-RAW-FERM-BD{bond_dim}"
             if args.initial_state != "random":
                 ket = driver.copy_mps(warm_mps, tag=tag)
-                noises = [0.0] * args.dmrg_sweeps
+                warm_start_noises = tuple(
+                    float(value)
+                    for value in getattr(args, "warm_start_noises", ())
+                )
+                noises = list(
+                    warm_start_noises[: args.dmrg_sweeps]
+                )
+                noises += [0.0] * (
+                    args.dmrg_sweeps - len(noises)
+                )
             else:
                 ket = driver.get_random_mps(
                     tag=tag, bond_dim=int(bond_dim), nroots=1
@@ -276,11 +297,14 @@ def run_fermionic_dmrg_curve(
                 )
 
             start = perf_counter()
+            sweep_timer = Block2SweepTimer()
+            driver.set_callback(sweep_timer)
             energy = float(
                 driver.dmrg(
                     mpo,
                     ket,
                     n_sweeps=args.dmrg_sweeps,
+                    tol=args.sweep_tol,
                     bond_dims=[int(bond_dim)] * args.dmrg_sweeps,
                     noises=noises,
                     thrds=thresholds,
@@ -289,10 +313,28 @@ def run_fermionic_dmrg_curve(
                 )
             )
             seconds = perf_counter() - start
+            sweep_status = block2_dmrg_sweep_status(
+                driver,
+                requested_sweeps=args.dmrg_sweeps,
+                energy_tolerance=args.sweep_tol,
+                noises=noises,
+                sweep_seconds=sweep_timer.sweep_seconds,
+            )
             error = abs(energy - fci_energy)
             converged = error <= args.dmrg_tol
             if converged and first_converged_bd is None:
                 first_converged_bd = int(bond_dim)
+                if args.save_tensor_networks:
+                    artifacts["first_chemically_accurate_mps"] = (
+                        save_block2_mps(
+                            ket,
+                            artifact_dir
+                            / (
+                                "raw_fermionic_su2_first_chemical_accuracy_"
+                                f"bd{int(bond_dim)}_mps.block2"
+                            ),
+                        )
+                    )
             row = {
                 "frame": "raw_fermionic_su2",
                 "bond_dim": int(bond_dim),
@@ -301,6 +343,7 @@ def run_fermionic_dmrg_curve(
                 "within_dmrg_tolerance": converged,
                 "dmrg_seconds": seconds,
                 "max_result_mps_bond": int(bond_dim),
+                **sweep_status,
             }
             rows.append(row)
             print(
@@ -309,6 +352,17 @@ def run_fermionic_dmrg_curve(
                 f"seconds={seconds:.1f}",
                 flush=True,
             )
+            if sweep_status["sweep_limit_reached_without_convergence"]:
+                delta = sweep_status["last_sweep_energy_change"]
+                delta_text = "unavailable" if delta is None else f"{delta:.3e}"
+                print(
+                    "WARNING: raw_fermionic_su2 "
+                    f"bond_dim={bond_dim} exhausted {args.dmrg_sweeps} "
+                    "sweeps without sweep-energy convergence; "
+                    f"last |delta E_sweep|={delta_text}, "
+                    f"tolerance={args.sweep_tol:.3e}.",
+                    flush=True,
+                )
             if converged and not args.full_curve:
                 print(
                     "raw_fermionic_su2: reached chemical accuracy at "
@@ -317,10 +371,33 @@ def run_fermionic_dmrg_curve(
                 )
                 break
 
+        first_converged_row = next(
+            (
+                row
+                for row in rows
+                if row["within_dmrg_tolerance"]
+            ),
+            None,
+        )
         summary = {
             "frame": "raw_fermionic_su2",
             "first_converged_bond_dim": first_converged_bd,
             "converged_within_grid": first_converged_bd is not None,
+            "first_converged_dmrg_optimization_seconds": (
+                None
+                if first_converged_row is None
+                else first_converged_row["dmrg_seconds"]
+            ),
+            "first_converged_per_sweep_seconds": (
+                None
+                if first_converged_row is None
+                else first_converged_row["per_sweep_seconds"]
+            ),
+            "first_converged_sweep_energies": (
+                None
+                if first_converged_row is None
+                else first_converged_row["sweep_energies"]
+            ),
             "mpo_bond_dimension": mpo_result["largest_mpo_bond_dim"],
             "mpo_build_seconds": mpo_seconds,
             "warm_start_kind": args.initial_state,
@@ -333,9 +410,19 @@ def run_fermionic_dmrg_curve(
             "ncore": 0,
             "active_electrons": n_electrons,
             "active_orbitals": n_sites,
+            "sweep_energy_tolerance": args.sweep_tol,
+            "warm_start_noises": list(
+                getattr(args, "warm_start_noises", ())
+            ),
+            "bond_dims_without_sweep_convergence": [
+                row["bond_dim"]
+                for row in rows
+                if row["sweep_limit_reached_without_convergence"]
+            ],
         }
         return rows, summary
     finally:
+        driver.finalize()
         cleanup_qc_mpo_result(mpo_result)
 
 
@@ -435,12 +522,15 @@ def main() -> None:
             "dmrg_tolerance": args.dmrg_tol,
             "sweep_tolerance": args.sweep_tol,
             "mpo_cutoff": args.mpo_cutoff,
+            "block2_mpo_builder": args.block2_mpo_builder,
+            "sum_mpo_mod": args.sum_mpo_mod,
             "mps_cutoff": args.mps_cutoff,
             "initial_state": args.initial_state,
             "noise": args.noise,
             "seed": args.seed,
             "full_curve": args.full_curve,
             "n_threads": args.n_threads,
+            "n_mkl_threads": getattr(args, "n_mkl_threads", 1),
             "stack_mem_gb": args.stack_mem_gb,
             "qubit_backend": args.qubit_backend,
             "davidson_threshold": args.davidson_threshold,

@@ -1,0 +1,154 @@
+{
+  "system": "H2O_diss",
+  "source_input_dir": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_16_systems/H2O_diss/orbital_optimization_inputs",
+  "definition": "orbital-pair parity generators Z_(2p) Z_(2p+1); full transformed Hamiltonian, without sector projection",
+  "n_qubits": 14,
+  "n_symmetries": 7,
+  "symmetries": [
+    "1.0 [Z0 Z1]",
+    "1.0 [Z2 Z3]",
+    "1.0 [Z4 Z5]",
+    "1.0 [Z6 Z7]",
+    "1.0 [Z8 Z9]",
+    "1.0 [Z10 Z11]",
+    "1.0 [Z12 Z13]"
+  ],
+  "clifford": {
+    "n_qubits": 14,
+    "factor_descriptions": [
+      "CNOT(1->0)",
+      "CNOT(3->2)",
+      "CNOT(5->4)",
+      "CNOT(7->6)",
+      "CNOT(9->8)",
+      "CNOT(11->10)",
+      "CNOT(13->12)"
+    ],
+    "permutation": [
+      0,
+      7,
+      1,
+      8,
+      2,
+      9,
+      3,
+      10,
+      4,
+      11,
+      5,
+      12,
+      6,
+      13
+    ],
+    "synthesis_basis": "Z",
+    "generator_mapping": "positive_z",
+    "mapped_qubits": [
+      0,
+      2,
+      4,
+      6,
+      8,
+      10,
+      12
+    ],
+    "generator_row_transform": [
+      [
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1
+      ]
+    ]
+  },
+  "preparation_seconds": 0.039088958998036105,
+  "fci_determinants_before": 16384,
+  "fci_determinants_after": 16384,
+  "cisd_determinants_before": 311,
+  "cisd_determinants_after": 311,
+  "fci_energy": -74.73773981736049,
+  "transformed_fci_energy": -74.7377398162808,
+  "cisd_energy": -74.7377302281292,
+  "transformed_cisd_energy": -74.7377302281291,
+  "fci_cut_entropies": [
+    1.2599105033539572e-07,
+    8.382393045191419e-05,
+    0.022315204488617527,
+    0.02231520448753794,
+    0.009478962636398804,
+    0.048736241069413655,
+    0.0248307495510564,
+    0.024830754712016498,
+    0.024865052788660028,
+    0.713853762927168,
+    0.7138516880803547,
+    0.8368399145527944,
+    0.6931377217367878
+  ],
+  "symmetry_sector_entropy": 0.061629214883208994,
+  "non_commuting_l1": 10.982366438580687,
+  "num_commuting_terms": 189,
+  "files": {
+    "symmetry_datasets": "prepared/symmetry_datasets.json",
+    "clifford": "prepared/clifford.json",
+    "transformed_hamiltonian": "prepared/transformed_qubit_hamiltonian.json",
+    "transformed_fci": "prepared/transformed_fci_sparse_state.npz",
+    "transformed_cisd": "prepared/transformed_cisd_sparse_state.npz"
+  }
+}

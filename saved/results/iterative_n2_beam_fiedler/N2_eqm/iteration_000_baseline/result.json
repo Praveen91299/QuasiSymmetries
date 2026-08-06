@@ -1,0 +1,100 @@
+{
+  "system": "N2_eqm",
+  "iteration": 0,
+  "kind": "baseline",
+  "dmrg": {
+    "frame": "N2_eqm_iter000_baseline",
+    "backend": "block2_pauli",
+    "first_converged_bond_dim": 50,
+    "converged_within_grid": true,
+    "first_converged_dmrg_optimization_seconds": 12.774553416995332,
+    "first_converged_per_sweep_seconds": [
+      0.15088408401061315,
+      0.3049609580048127,
+      0.770187916001305,
+      1.3091020830033813,
+      0.9902107499947306,
+      1.1657824169960804,
+      0.8835676250018878,
+      1.068390750006074,
+      0.8344334170105867,
+      1.0210940000106348,
+      0.8299761670059524,
+      0.8922697920061182,
+      0.8131553340062965,
+      0.9004130829998758,
+      0.7995016670029145
+    ],
+    "first_converged_sweep_energies": [
+      -107.64167024788321,
+      -107.64179165530729,
+      -107.64252537482542,
+      -107.64996290849533,
+      -107.6518383161071,
+      -107.65236977304707,
+      -107.65262696516918,
+      -107.65268950332202,
+      -107.65269632206014,
+      -107.65271981297607,
+      -107.6527258866897,
+      -107.6527587571427,
+      -107.65276124394396,
+      -107.6527535043482,
+      -107.6527537919443
+    ],
+    "mpo_bond_dimension": 366,
+    "mpo_build_seconds": 0.41660062500159256,
+    "mpo_builder": "blocked_sum",
+    "mpo_cutoff": 1e-10,
+    "sum_mpo_mod": 20,
+    "warm_start": true,
+    "warm_start_kind": "cisd",
+    "imported_warm_start_energy": -107.64167024788527,
+    "expected_warm_start_energy": -107.64167024788341,
+    "warm_start_energy_difference": -1.8616219676914625e-12,
+    "warm_start_energy_validation_requested": true,
+    "warm_start_energy_validation_performed": true,
+    "warm_start_construction": {
+      "method": "coefficient_ordered_determinant_sum",
+      "determinants": 610,
+      "batch_size": 32,
+      "compression_cutoff": 1e-13,
+      "largest_reported_compression_error": 2.5091115490340836e-15,
+      "max_constructed_mps_bond": 26,
+      "constructed_state_norm": 1.0000000000000095
+    },
+    "saved_tensor_networks": {
+      "mpo": {
+        "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/iterative_n2_beam_fiedler/N2_eqm/iteration_000_baseline/tensor_networks/N2_eqm_iter000_baseline_hamiltonian_mpo.block2.bin",
+        "format": "block2_native_mpo",
+        "tag": "SMP-HQC",
+        "n_sites": 20,
+        "bytes": 1091017
+      },
+      "warm_start_mps": {
+        "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/iterative_n2_beam_fiedler/N2_eqm/iteration_000_baseline/tensor_networks/N2_eqm_iter000_baseline_cisd_warm_start_mps.block2",
+        "manifest": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/iterative_n2_beam_fiedler/N2_eqm/iteration_000_baseline/tensor_networks/N2_eqm_iter000_baseline_cisd_warm_start_mps.block2/manifest.json",
+        "file_count": 64
+      },
+      "first_chemically_accurate_mps": {
+        "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/iterative_n2_beam_fiedler/N2_eqm/iteration_000_baseline/tensor_networks/N2_eqm_iter000_baseline_first_chemical_accuracy_bd50_mps.block2",
+        "manifest": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/iterative_n2_beam_fiedler/N2_eqm/iteration_000_baseline/tensor_networks/N2_eqm_iter000_baseline_first_chemical_accuracy_bd50_mps.block2/manifest.json",
+        "file_count": 64
+      }
+    },
+    "complex_driver": false,
+    "complex_driver_from_hamiltonian_or_input_state": false,
+    "complex_driver_from_unitary_circuit": false,
+    "davidson_threshold": 1e-10,
+    "warm_start_noises": [
+      0.0001,
+      0.0001,
+      1e-05,
+      1e-05,
+      1e-06,
+      1e-06
+    ],
+    "sweep_energy_tolerance": 1e-06,
+    "bond_dims_without_sweep_convergence": []
+  }
+}

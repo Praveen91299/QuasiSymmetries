@@ -986,10 +986,34 @@ def permute_qubits_in_term(term: Term, perm: Sequence[int]) -> Term:
 
 
 def permute_qubits_in_qubit_operator(
-    op: QubitOperator,
+    op,
     perm: Sequence[int],
     compress_abs_tol: float = 1e-12,
 ) -> QubitOperator:
+    from .bs.utils import PauliTermStream
+
+    if isinstance(op, PauliTermStream):
+        if len(perm) != op.n_qubits or sorted(perm) != list(range(op.n_qubits)):
+            raise ValueError("Invalid qubit permutation.")
+
+        def permute_mask(mask):
+            x_out = z_out = 0
+            x, z = mask
+            for old_qubit, new_qubit in enumerate(perm):
+                if (x >> old_qubit) & 1:
+                    x_out |= 1 << new_qubit
+                if (z >> old_qubit) & 1:
+                    z_out |= 1 << new_qubit
+            return x_out, z_out
+
+        return PauliTermStream.from_terms(
+            op.n_qubits,
+            (
+                (permute_mask(item.mask), item.signed_coefficient)
+                for item in op.terms
+            ),
+            tolerance=compress_abs_tol,
+        )
     out = QubitOperator()
     for term, coeff in op.terms.items():
         out += QubitOperator(permute_qubits_in_term(term, perm), coeff)
@@ -1418,9 +1442,17 @@ class Clifford:
     def parsed_gates(self) -> Tuple[ParsedGate, ...]:
         return tuple(self._parsed_gates)
 
+    def get_parsed_gates(self) -> Tuple[ParsedGate, ...]:
+        """Return the synthesized basis gates in application order."""
+        return self.parsed_gates
+
     @property
     def permutation(self) -> Tuple[int, ...]:
         return tuple(self._permutation)
+
+    def get_permutation(self) -> Tuple[int, ...]:
+        """Return ``permutation[old_qubit] = new_qubit``."""
+        return self.permutation
 
     @property
     def inverse_permutation(self) -> Tuple[int, ...]:
@@ -1576,6 +1608,35 @@ class Clifford:
         phase_factor = (1, 1j, -1, -1j)[phase]
         return masks_to_term(x_out, z_out, self.n_qubits), coeff * phase_factor
 
+    def _transform_mask_from_tableau(self, mask, coeff, tableau):
+        """Conjugate one existing Beam-style ``(x_mask, z_mask)`` word."""
+        x, z = int(mask[0]), int(mask[1])
+        accumulator = (0, 0, _popcount(x & z) % 4)
+        x_images, z_images = tableau
+        support = x
+        while support:
+            low = support & -support
+            q = low.bit_length() - 1
+            accumulator = self._multiply_binary_paulis(
+                accumulator, x_images[q]
+            )
+            support ^= low
+        support = z
+        while support:
+            low = support & -support
+            q = low.bit_length() - 1
+            accumulator = self._multiply_binary_paulis(
+                accumulator, z_images[q]
+            )
+            support ^= low
+        x_out, z_out, phase = accumulator
+        return (x_out, z_out), complex(coeff) * (1, 1j, -1, -1j)[phase]
+
+    def transform_pauli_mask(self, mask, coefficient=1.0, *, inverse=False):
+        """Conjugate one packed Pauli word without materializing an operator."""
+        tableau = self._inverse_tableau if inverse else self._forward_tableau
+        return self._transform_mask_from_tableau(mask, coefficient, tableau)
+
     def _transform_operator(self, op: QubitOperator, tableau) -> QubitOperator:
         transformed = QubitOperator()
         for term, coeff in op.terms.items():
@@ -1586,12 +1647,46 @@ class Clifford:
         transformed.compress(abs_tol=1e-12)
         return transformed
 
-    def transform(self, op: QubitOperator) -> QubitOperator:
+    def transform(self, op):
         """Return ``U op U†`` using the cached signed binary tableau."""
+        from .bs.utils import PauliTermStream
+
+        if isinstance(op, PauliTermStream):
+            if op.n_qubits != self.n_qubits:
+                raise ValueError("Hamiltonian and Clifford qubit counts differ")
+            return PauliTermStream.from_terms(
+                self.n_qubits,
+                (
+                    self._transform_mask_from_tableau(
+                        item.mask,
+                        item.signed_coefficient,
+                        self._forward_tableau,
+                    )
+                    for item in op.terms
+                ),
+                tolerance=1e-12,
+            )
         return self._transform_operator(op, self._forward_tableau)
 
-    def inverse_transform(self, op: QubitOperator) -> QubitOperator:
+    def inverse_transform(self, op):
         """Return ``U† op U`` using the cached inverse binary tableau."""
+        from .bs.utils import PauliTermStream
+
+        if isinstance(op, PauliTermStream):
+            if op.n_qubits != self.n_qubits:
+                raise ValueError("Hamiltonian and Clifford qubit counts differ")
+            return PauliTermStream.from_terms(
+                self.n_qubits,
+                (
+                    self._transform_mask_from_tableau(
+                        item.mask,
+                        item.signed_coefficient,
+                        self._inverse_tableau,
+                    )
+                    for item in op.terms
+                ),
+                tolerance=1e-12,
+            )
         return self._transform_operator(op, self._inverse_tableau)
 
     def transform_operators(
@@ -1638,6 +1733,89 @@ class Clifford:
 
     def transform_state(self, state) -> np.ndarray:
         return np.asarray(self.sparse_matrix @ state)
+
+    def transform_sparse_state(self, state, *, drop_tol: float = 0.0):
+        """Apply this Clifford directly to a ``SparseQubitState``.
+
+        The gate sequence is applied without constructing the ``2**n`` square
+        Clifford matrix. Hadamards may still grow the state support, but memory
+        scales with the resulting state vector rather than with a unitary
+        matrix. The stored final permutation is applied with the same
+        ``old_qubit -> new_qubit`` convention as :attr:`permutation`.
+        """
+        from .state_utils import SparseQubitState
+
+        if not isinstance(state, SparseQubitState):
+            raise TypeError("state must be a SparseQubitState.")
+        if state.n_qubits != self.n_qubits:
+            raise ValueError(
+                "state and Clifford have different numbers of qubits."
+            )
+        if drop_tol < 0:
+            raise ValueError("drop_tol must be non-negative.")
+
+        out = state.copy()
+        inv_sqrt_two = 1.0 / np.sqrt(2.0)
+        for gate in self._parsed_gates:
+            name = gate[0]
+            if name in {"X", "S", "Sdg", "H"}:
+                q = int(gate[1])
+                bit = 1 << (self.n_qubits - 1 - q)
+            if name == "X":
+                out = SparseQubitState(
+                    out.indices ^ bit,
+                    out.coeffs,
+                    n_qubits=self.n_qubits,
+                    drop_tol=drop_tol,
+                )
+            elif name in {"S", "Sdg"}:
+                occupied = (out.indices & bit) != 0
+                phases = np.ones(out.nnz, dtype=np.complex128)
+                phases[occupied] = 1j if name == "S" else -1j
+                out = SparseQubitState(
+                    out.indices,
+                    phases * out.coeffs,
+                    n_qubits=self.n_qubits,
+                    drop_tol=drop_tol,
+                )
+            elif name == "H":
+                input_one = (out.indices & bit) != 0
+                cleared = out.indices & ~bit
+                set_indices = cleared | bit
+                out = SparseQubitState(
+                    np.concatenate((cleared, set_indices)),
+                    np.concatenate(
+                        (
+                            inv_sqrt_two * out.coeffs,
+                            inv_sqrt_two
+                            * out.coeffs
+                            * np.where(input_one, -1.0, 1.0),
+                        )
+                    ),
+                    n_qubits=self.n_qubits,
+                    drop_tol=drop_tol,
+                )
+            elif name == "CNOT":
+                control = int(gate[1])
+                target = int(gate[2])
+                control_bit = 1 << (self.n_qubits - 1 - control)
+                target_bit = 1 << (self.n_qubits - 1 - target)
+                controlled = (out.indices & control_bit) != 0
+                indices = out.indices.copy()
+                indices[controlled] ^= target_bit
+                out = SparseQubitState(
+                    indices,
+                    out.coeffs,
+                    n_qubits=self.n_qubits,
+                    drop_tol=drop_tol,
+                )
+            else:
+                raise ValueError(f"Unsupported Clifford gate {gate!r}.")
+
+        # SparseQubitState.reorder_qubits expects new_position -> old_qubit,
+        # whereas Clifford.permutation stores old_qubit -> new_position.
+        ordering = np.argsort(np.asarray(self._permutation)).tolist()
+        return out.reorder_qubits(ordering)
 
     def inverse_transform_state(self, state) -> np.ndarray:
         return np.asarray(self.sparse_matrix.getH() @ state)

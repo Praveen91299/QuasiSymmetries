@@ -196,6 +196,58 @@ def test_top_level_optimized_modes_match():
     assert parallel == serial
 
 
+@pytest.mark.parametrize("maximize_score", [False, True])
+def test_candidate_pool_cap_respects_objective_direction(maximize_score):
+    hamiltonian, _n_qubits, _candidate_pool = example_problem()
+    diagnostics = {}
+
+    def singleton_cost(symmetries):
+        ((term, _coefficient),) = symmetries[0].terms.items()
+        return sum(qubit + 1 for qubit, _pauli in term)
+
+    result = BeamSearch_Symmetries(
+        hamiltonian,
+        target_rank=1,
+        n_qubits=4,
+        beam_width=4,
+        include_hct_symmetries=False,
+        include_pairwise_products=True,
+        do_local_refine=False,
+        score_func=singleton_cost,
+        score_is_separable=True,
+        maximize_score=maximize_score,
+        max_candidate_pool_size=3,
+        diagnostics=diagnostics,
+    )
+
+    selected_cost = singleton_cost(result)
+    assert selected_cost == (10 if maximize_score else 1)
+    assert diagnostics["candidate_pool_size_after_cap"] == 3
+    assert diagnostics["candidate_pool_was_capped"]
+    assert diagnostics["objective_direction"] == (
+        "maximize" if maximize_score else "minimize"
+    )
+
+
+def test_candidate_pool_cap_accepts_nonseparable_objective():
+    hamiltonian, _n_qubits, _candidate_pool = example_problem()
+
+    result = BeamSearch_Symmetries(
+        hamiltonian,
+        target_rank=1,
+        n_qubits=4,
+        beam_width=2,
+        include_hct_symmetries=False,
+        include_pairwise_products=True,
+        do_local_refine=False,
+        score_func=separable_score,
+        score_is_separable=False,
+        max_candidate_pool_size=4,
+    )
+
+    assert len(result) == 1
+
+
 def test_invalid_optimization_options_raise():
     hamiltonian, n_qubits, candidate_pool = example_problem()
     with pytest.raises(ValueError, match="requires a score_func"):

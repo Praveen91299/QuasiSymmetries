@@ -1,0 +1,52 @@
+{
+  "system": "O2_1.2075_sto_3g",
+  "source": {
+    "kind": "pyscf_rohf_checkpoint",
+    "checkpoint": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_o2/hamiltonians/O2_1.2075_sto_3g.chk",
+    "atom": "O2",
+    "distance_angstrom": 1.2075,
+    "basis": "sto-3g",
+    "charge": 0,
+    "spin_twos": 2,
+    "multiplicity": 3,
+    "full_active_space": true
+  },
+  "n_orbitals": 10,
+  "n_qubits": 20,
+  "n_electrons": 16,
+  "fci_energy": -147.74403543362754,
+  "cisd_energy": -147.739401817598,
+  "fci_determinants": 592,
+  "cisd_determinants": 113,
+  "warm_start_info": {
+    "spin_repair_required": false,
+    "target_spin_squared": 2.0,
+    "fci": {
+      "target_spin_twos": 2,
+      "spin_squared": 2.0000000000000844,
+      "multiplicity": 3.0000000000000564,
+      "converged": true
+    },
+    "cisd": {
+      "method": "ROHF_UCISD_then_exact_triplet_projection",
+      "projector": "product_s[(S^2-s(s+1))/(2-s(s+1))], s=2..S_max",
+      "maximum_allowed_spin": 2,
+      "removed_spin_sectors": [
+        2
+      ],
+      "target_spin_twos": 2,
+      "unprojected_energy": -147.73935490823763,
+      "projected_energy": -147.739401817598,
+      "projection_norm": 0.9999892254338588,
+      "unprojected_spin_squared": 2.0000861960647622,
+      "unprojected_multiplicity": 3.0000574634928325,
+      "projected_spin_squared": 2.0000000000000036,
+      "projected_multiplicity": 3.000000000000002,
+      "unprojected_determinants": 43,
+      "projected_determinants": 57,
+      "converged": true
+    },
+    "jw_fci_spin_squared": 2.000000000000071,
+    "jw_cisd_spin_squared": 1.9999999999999958
+  }
+}

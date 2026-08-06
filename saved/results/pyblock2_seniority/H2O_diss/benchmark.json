@@ -1,0 +1,270 @@
+{
+  "system": "H2O_diss",
+  "source_input_dir": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_16_systems/H2O_diss/orbital_optimization_inputs",
+  "n_qubits": 14,
+  "n_orbitals": 7,
+  "n_electrons": 10,
+  "fci_energy": -74.73773981736049,
+  "cisd_energy": -74.7377302281292,
+  "preparation": {
+    "system": "H2O_diss",
+    "source_input_dir": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_16_systems/H2O_diss/orbital_optimization_inputs",
+    "definition": "orbital-pair parity generators Z_(2p) Z_(2p+1); full transformed Hamiltonian, without sector projection",
+    "n_qubits": 14,
+    "n_symmetries": 7,
+    "symmetries": [
+      "1.0 [Z0 Z1]",
+      "1.0 [Z2 Z3]",
+      "1.0 [Z4 Z5]",
+      "1.0 [Z6 Z7]",
+      "1.0 [Z8 Z9]",
+      "1.0 [Z10 Z11]",
+      "1.0 [Z12 Z13]"
+    ],
+    "clifford": {
+      "n_qubits": 14,
+      "factor_descriptions": [
+        "CNOT(1->0)",
+        "CNOT(3->2)",
+        "CNOT(5->4)",
+        "CNOT(7->6)",
+        "CNOT(9->8)",
+        "CNOT(11->10)",
+        "CNOT(13->12)"
+      ],
+      "permutation": [
+        0,
+        7,
+        1,
+        8,
+        2,
+        9,
+        3,
+        10,
+        4,
+        11,
+        5,
+        12,
+        6,
+        13
+      ],
+      "synthesis_basis": "Z",
+      "generator_mapping": "positive_z",
+      "mapped_qubits": [
+        0,
+        2,
+        4,
+        6,
+        8,
+        10,
+        12
+      ],
+      "generator_row_transform": [
+        [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1
+        ]
+      ]
+    },
+    "preparation_seconds": 0.039088958998036105,
+    "fci_determinants_before": 16384,
+    "fci_determinants_after": 16384,
+    "cisd_determinants_before": 311,
+    "cisd_determinants_after": 311,
+    "fci_energy": -74.73773981736049,
+    "transformed_fci_energy": -74.7377398162808,
+    "cisd_energy": -74.7377302281292,
+    "transformed_cisd_energy": -74.7377302281291,
+    "fci_cut_entropies": [
+      1.2599105033539572e-07,
+      8.382393045191419e-05,
+      0.022315204488617527,
+      0.02231520448753794,
+      0.009478962636398804,
+      0.048736241069413655,
+      0.0248307495510564,
+      0.024830754712016498,
+      0.024865052788660028,
+      0.713853762927168,
+      0.7138516880803547,
+      0.8368399145527944,
+      0.6931377217367878
+    ],
+    "symmetry_sector_entropy": 0.061629214883208994,
+    "non_commuting_l1": 10.982366438580687,
+    "num_commuting_terms": 189,
+    "files": {
+      "symmetry_datasets": "prepared/symmetry_datasets.json",
+      "clifford": "prepared/clifford.json",
+      "transformed_hamiltonian": "prepared/transformed_qubit_hamiltonian.json",
+      "transformed_fci": "prepared/transformed_fci_sparse_state.npz",
+      "transformed_cisd": "prepared/transformed_cisd_sparse_state.npz"
+    }
+  },
+  "dmrg": {
+    "frame": "seniority_Nover2",
+    "backend": "block2_pauli",
+    "first_converged_bond_dim": 2,
+    "converged_within_grid": true,
+    "first_converged_dmrg_optimization_seconds": 0.22876212499977555,
+    "first_converged_per_sweep_seconds": [
+      0.041935041997930966,
+      0.040099165998981334,
+      0.029064000002108514,
+      0.029581416994915344,
+      0.029743375001999084,
+      0.03559454100468429
+    ],
+    "first_converged_sweep_energies": [
+      -74.73773022812922,
+      -74.73531412964081,
+      -74.73643300261428,
+      -74.73695498403876,
+      -74.73697627403142,
+      -74.73697627420485
+    ],
+    "mpo_bond_dimension": 200,
+    "mpo_build_seconds": 0.12717237500328338,
+    "mpo_builder": "blocked_sum",
+    "mpo_cutoff": 1e-10,
+    "sum_mpo_mod": 20,
+    "warm_start": true,
+    "warm_start_kind": "cisd",
+    "imported_warm_start_energy": -74.73773022812922,
+    "expected_warm_start_energy": -74.7377302281292,
+    "warm_start_energy_difference": -2.842170943040401e-14,
+    "warm_start_energy_validation_requested": true,
+    "warm_start_energy_validation_performed": true,
+    "warm_start_construction": {
+      "method": "coefficient_ordered_determinant_sum",
+      "determinants": 311,
+      "batch_size": 32,
+      "compression_cutoff": 1e-13,
+      "largest_reported_compression_error": 2.6467333968398435e-16,
+      "max_constructed_mps_bond": 14,
+      "constructed_state_norm": 1.0000000000000107,
+      "tensor_circuit": {
+        "method": "pyblock2_local_gate_svd",
+        "max_bond_cap": 100,
+        "svd_cutoff": 1e-13,
+        "gate_counts": {
+          "CNOT": 7,
+          "permutation_swap": 21
+        },
+        "number_of_svd_splits": 28,
+        "root_sum_squared_discarded_singular_values": 7.567931480533748e-15,
+        "largest_single_split_discarded_norm": 7.03814730599878e-15,
+        "norm_before_final_normalization": 1.000000000000013,
+        "max_final_mps_bond": 17,
+        "max_intermediate_split_bond": 20,
+        "unitary_composition": {
+          "component_types": [
+            "Clifford"
+          ],
+          "number_of_components": 1,
+          "number_of_composed_gates": 7,
+          "composed_permutation": [
+            0,
+            7,
+            1,
+            8,
+            2,
+            9,
+            3,
+            10,
+            4,
+            11,
+            5,
+            12,
+            6,
+            13
+          ]
+        }
+      }
+    },
+    "saved_tensor_networks": {
+      "mpo": {
+        "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_seniority/H2O_diss/tensor_networks/seniority_Nover2_hamiltonian_mpo.block2.bin",
+        "format": "block2_native_mpo",
+        "tag": "SMP-HQC",
+        "n_sites": 14,
+        "bytes": 463748
+      },
+      "warm_start_mps": {
+        "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_seniority/H2O_diss/tensor_networks/seniority_Nover2_cisd_warm_start_mps.block2",
+        "manifest": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_seniority/H2O_diss/tensor_networks/seniority_Nover2_cisd_warm_start_mps.block2/manifest.json",
+        "file_count": 46
+      },
+      "first_chemically_accurate_mps": {
+        "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_seniority/H2O_diss/tensor_networks/seniority_Nover2_first_chemical_accuracy_bd2_mps.block2",
+        "manifest": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_seniority/H2O_diss/tensor_networks/seniority_Nover2_first_chemical_accuracy_bd2_mps.block2/manifest.json",
+        "file_count": 46
+      }
+    },
+    "complex_driver": false,
+    "complex_driver_from_hamiltonian_or_input_state": false,
+    "complex_driver_from_unitary_circuit": false,
+    "davidson_threshold": 1e-10,
+    "sweep_energy_tolerance": 1e-06,
+    "bond_dims_without_sweep_convergence": []
+  }
+}

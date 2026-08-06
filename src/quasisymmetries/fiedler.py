@@ -207,6 +207,198 @@ def qubit_mutual_information_matrix_sparse_bloch(
     )
 
 
+def _standardize_qubit_mps_tensors(tensors) -> list[np.ndarray]:
+    """Return open-boundary MPS tensors with shape ``(left, 2, right)``."""
+    arrays = [np.asarray(tensor, dtype=complex) for tensor in tensors]
+    if not arrays:
+        raise ValueError("An MPS must contain at least one tensor.")
+    standardized = []
+    for site, array in enumerate(arrays):
+        if array.ndim == 2 and site == 0:
+            array = array.reshape(1, array.shape[0], array.shape[1])
+        elif array.ndim == 2 and site == len(arrays) - 1:
+            array = array.reshape(array.shape[0], array.shape[1], 1)
+        elif array.ndim != 3:
+            raise ValueError(
+                f"MPS tensor {site} has rank {array.ndim}; expected rank 3."
+            )
+        if array.shape[1] != 2:
+            raise ValueError(
+                f"MPS tensor {site} has local dimension {array.shape[1]}; "
+                "expected a qubit local dimension of 2."
+            )
+        if standardized and standardized[-1].shape[2] != array.shape[0]:
+            raise ValueError(f"MPS bond mismatch before site {site}.")
+        standardized.append(array)
+    if standardized[0].shape[0] != 1 or standardized[-1].shape[2] != 1:
+        raise ValueError("MPS must have open boundary dimensions equal to one.")
+    return standardized
+
+
+def _qubit_mps_environments(tensors):
+    arrays = _standardize_qubit_mps_tensors(tensors)
+    n_sites = len(arrays)
+    left = [None] * (n_sites + 1)
+    right = [None] * (n_sites + 1)
+    left[0] = np.ones((1, 1), dtype=complex)
+    for site, array in enumerate(arrays):
+        left[site + 1] = np.einsum(
+            "ab,asr,bsq->rq",
+            left[site],
+            array,
+            array.conj(),
+            optimize=True,
+        )
+    right[n_sites] = np.ones((1, 1), dtype=complex)
+    for site in range(n_sites - 1, -1, -1):
+        array = arrays[site]
+        right[site] = np.einsum(
+            "asr,bsq,rq->ab",
+            array,
+            array.conj(),
+            right[site + 1],
+            optimize=True,
+        )
+    norm = float(np.real_if_close(left[-1][0, 0]))
+    if norm <= 0:
+        raise ValueError("Input MPS has zero or invalid norm.")
+    return arrays, left, right, norm
+
+
+def qubit_mutual_information_matrix_mps(
+    tensors,
+    *,
+    base: float = 2.0,
+    convention: str = "standard",
+    entropy_tol: float = 1e-12,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Compute all one- and two-qubit entropies directly from an MPS.
+
+    The contraction scales polynomially in the MPS bond dimension and never
+    constructs a statevector of length ``2**n_qubits``.
+    """
+    if convention not in {"standard", "half"}:
+        raise ValueError("convention must be 'standard' or 'half'.")
+    factor = 0.5 if convention == "half" else 1.0
+    arrays, left, right, norm = _qubit_mps_environments(tensors)
+    n_sites = len(arrays)
+    s1 = np.zeros(n_sites, dtype=float)
+    s2 = np.zeros((n_sites, n_sites), dtype=float)
+    mutual_information = np.zeros((n_sites, n_sites), dtype=float)
+
+    for site, array in enumerate(arrays):
+        rho = np.einsum(
+            "ab,asr,btq,rq->st",
+            left[site],
+            array,
+            array.conj(),
+            right[site + 1],
+            optimize=True,
+        ) / norm
+        s1[site] = von_neumann_entropy(rho, base=base, tol=entropy_tol)
+
+    for first in range(n_sites):
+        array = arrays[first]
+        # Open the physical bra/ket indices at ``first`` and move this
+        # environment rightward once, reusing it for every later partner.
+        open_environment = np.einsum(
+            "ab,asr,btq->rqst",
+            left[first],
+            array,
+            array.conj(),
+            optimize=True,
+        )
+        for second in range(first + 1, n_sites):
+            partner = arrays[second]
+            rho = np.einsum(
+                "rqst,ruc,qvd,cd->sutv",
+                open_environment,
+                partner,
+                partner.conj(),
+                right[second + 1],
+                optimize=True,
+            ).reshape(4, 4) / norm
+            entropy = von_neumann_entropy(
+                rho, base=base, tol=entropy_tol
+            )
+            s2[first, second] = s2[second, first] = entropy
+            value = factor * (s1[first] + s1[second] - entropy)
+            if value < 0 and abs(value) < 1e-10:
+                value = 0.0
+            mutual_information[first, second] = (
+                mutual_information[second, first]
+            ) = max(0.0, float(value))
+            open_environment = np.einsum(
+                "rqst,ruc,qud->cdst",
+                open_environment,
+                partner,
+                partner.conj(),
+                optimize=True,
+            )
+    return mutual_information, s1, s2
+
+
+def qubit_mps_cut_entropies(
+    tensors,
+    *,
+    base: float = 2.0,
+    entropy_tol: float = 1e-12,
+) -> np.ndarray:
+    """Return bipartite entropies across all internal MPS bonds."""
+    arrays, left, right, norm = _qubit_mps_environments(tensors)
+    entropies = np.zeros(max(0, len(arrays) - 1), dtype=float)
+    for cut in range(1, len(arrays)):
+        left_metric = 0.5 * (left[cut] + left[cut].conj().T)
+        eigenvalues, eigenvectors = np.linalg.eigh(left_metric)
+        eigenvalues = np.clip(np.real(eigenvalues), 0.0, None)
+        square_root = (
+            eigenvectors * np.sqrt(eigenvalues)[None, :]
+        ) @ eigenvectors.conj().T
+        reduced = square_root @ right[cut].T @ square_root
+        reduced = 0.5 * (reduced + reduced.conj().T) / norm
+        entropies[cut - 1] = von_neumann_entropy(
+            reduced, base=base, tol=entropy_tol
+        )
+    return entropies
+
+
+def fiedler_order_from_mps(
+    tensors,
+    *,
+    nodes: list[int] = None,
+    base: float = 2.0,
+    mutual_info_convention: str = "standard",
+    entropy_tol: float = 1e-12,
+    edge_tol: float = 1e-12,
+    eig_tol: float = 1e-10,
+    tie_break: str = "index",
+    component_order: str = "total_weight",
+) -> dict:
+    """Compute a component-aware Fiedler ordering directly from an MPS."""
+    mutual_information, s1, s2 = qubit_mutual_information_matrix_mps(
+        tensors,
+        base=base,
+        convention=mutual_info_convention,
+        entropy_tol=entropy_tol,
+    )
+    info = fiedler_order_from_weights(
+        mutual_information,
+        nodes=nodes,
+        edge_tol=edge_tol,
+        eig_tol=eig_tol,
+        tie_break=tie_break,
+        component_order=component_order,
+    )
+    info["mutual_information"] = mutual_information
+    info["one_qubit_entropies"] = s1
+    info["two_qubit_entropies"] = s2
+    info["n_qubits"] = len(s1)
+    info["mutual_info_convention"] = mutual_info_convention
+    info["mutual_information_method"] = "mps"
+    info["entropy_base"] = base
+    return info
+
+
 def sanitize_weight_matrix(W: np.ndarray, tol: float = 1e-14) -> np.ndarray:
     """
     Symmetrize, remove diagonal, and clip tiny negative values.

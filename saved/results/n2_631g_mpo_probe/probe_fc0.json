@@ -1,0 +1,136 @@
+{
+  "status": "mpo_ready",
+  "system": "N2",
+  "geometry_angstrom": [
+    [
+      "N",
+      [
+        0.0,
+        0.0,
+        -0.6
+      ]
+    ],
+    [
+      "N",
+      [
+        0.0,
+        0.0,
+        0.6
+      ]
+    ]
+  ],
+  "bond_length_angstrom": 1.2,
+  "basis": "6-31g",
+  "multiplicity": 1,
+  "charge": 0,
+  "molecular_data": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/n2_631g_mpo_probe/molecule/N2_1.2000_6-31g.hdf5",
+  "hartree_fock_energy": -108.83577420992903,
+  "full_spatial_orbitals": 18,
+  "full_electrons": 14,
+  "active_space": {
+    "frozen_core_orbitals": [],
+    "active_orbitals": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17
+    ],
+    "active_electrons": 14,
+    "active_spatial_orbitals": 18,
+    "n_qubits": 36
+  },
+  "fermion_term_count": null,
+  "pauli_stream": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/n2_631g_mpo_probe/raw_jordan_wigner_fc0_pauli_stream.json",
+  "pauli_statistics": {
+    "term_count": 34655,
+    "nonidentity_term_count": 34654,
+    "identity_coefficient": -64.31082274673687,
+    "pauli_l1_norm": 350.4759437438966,
+    "largest_coefficient": 64.31082274673687,
+    "largest_imaginary_coefficient": 0.0,
+    "maximum_pauli_weight": 36,
+    "mean_pauli_weight": 16.309334872312796
+  },
+  "settings": {
+    "pauli_tolerance": 1e-12,
+    "mpo_builder": "blocked_sum",
+    "mpo_cutoff": 1e-10,
+    "sum_mpo_mod": 10,
+    "threads": 1,
+    "stack_mem_gb": 0.25
+  },
+  "timings_seconds": {
+    "scf_or_molecule_reload": 0.012154750002082437,
+    "fermion_hamiltonian": 0.0,
+    "jordan_wigner": 0.0,
+    "pauli_stream_load": 0.07379645796027035,
+    "mpo_construction": 3.4457563750329427
+  },
+  "memory_gib": {
+    "current_after_hamiltonian": 0.245452880859375,
+    "peak_after_hamiltonian": 0.245452880859375,
+    "current_after_mpo": 0.3688507080078125,
+    "peak_after_mpo": 0.40045166015625
+  },
+  "molecule_generated_this_run": false,
+  "mpo": {
+    "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/n2_631g_mpo_probe/raw_qubit_fc0_hamiltonian_mpo.block2.bin",
+    "format": "block2_native_mpo",
+    "tag": "SMP-HQC",
+    "n_sites": 36,
+    "bytes": 12084894
+  },
+  "mpo_bond_dimensions": [
+    7,
+    25,
+    71,
+    127,
+    193,
+    261,
+    341,
+    425,
+    525,
+    641,
+    897,
+    1089,
+    1259,
+    1413,
+    1545,
+    1659,
+    1768,
+    1823,
+    1880,
+    1707,
+    1645,
+    1525,
+    1455,
+    1371,
+    1241,
+    991,
+    843,
+    605,
+    505,
+    423,
+    323,
+    175,
+    118,
+    67,
+    18,
+    2
+  ],
+  "maximum_mpo_bond_dimension": 1880
+}

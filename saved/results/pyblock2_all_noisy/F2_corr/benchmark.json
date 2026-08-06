@@ -1,0 +1,1167 @@
+{
+  "system": "F2_corr",
+  "source_input_dir": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_16_systems/F2_corr/orbital_optimization_inputs",
+  "fci_energy": -195.98413802057107,
+  "cisd_energy": -195.98413802057075,
+  "warm_start_noises": [
+    0.0001,
+    0.0001,
+    1e-05,
+    1e-05,
+    1e-06,
+    1e-06
+  ],
+  "frames": {
+    "raw_fermionic_su2": {
+      "frame": "raw_fermionic_su2",
+      "first_converged_bond_dim": 3,
+      "converged_within_grid": true,
+      "first_converged_dmrg_optimization_seconds": 0.10606108399952063,
+      "first_converged_per_sweep_seconds": [
+        0.013933457994426135,
+        0.015086208004504442,
+        0.010188041000219528,
+        0.01463349999539787,
+        0.01918587500404101,
+        0.019823833004920743,
+        0.00901141700160224
+      ],
+      "first_converged_sweep_energies": [
+        -195.98413802057087,
+        -195.98359843255503,
+        -195.98350466808674,
+        -195.98350791772455,
+        -195.98350791772455,
+        -195.9835091914402,
+        -195.98350971287283
+      ],
+      "mpo_bond_dimension": 87,
+      "mpo_build_seconds": 0.025285708004957996,
+      "warm_start_kind": "cisd",
+      "warm_start_determinants_retained": 44,
+      "warm_start_projection_norm": 1.0,
+      "imported_warm_start_mps_energy": -195.98413802057075,
+      "expected_warm_start_energy": -195.98413802057075,
+      "saved_tensor_networks": {
+        "mpo": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/raw_fermionic_su2_hamiltonian_mpo.block2.bin",
+          "format": "block2_native_mpo",
+          "tag": "SMP-HQC",
+          "n_sites": 10,
+          "bytes": 466178
+        },
+        "warm_start_mps": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/raw_fermionic_su2_cisd_warm_start_mps.block2",
+          "manifest": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/raw_fermionic_su2_cisd_warm_start_mps.block2/manifest.json",
+          "file_count": 34
+        },
+        "first_chemically_accurate_mps": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/raw_fermionic_su2_first_chemical_accuracy_bd3_mps.block2",
+          "manifest": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/raw_fermionic_su2_first_chemical_accuracy_bd3_mps.block2/manifest.json",
+          "file_count": 34
+        }
+      },
+      "symmetry_type": "SU2",
+      "ncore": 0,
+      "active_electrons": 18,
+      "active_orbitals": 10,
+      "sweep_energy_tolerance": 1e-06,
+      "warm_start_noises": [
+        0.0001,
+        0.0001,
+        1e-05,
+        1e-05,
+        1e-06,
+        1e-06
+      ],
+      "bond_dims_without_sweep_convergence": []
+    },
+    "raw_qubit": {
+      "frame": "raw_qubit",
+      "backend": "block2_pauli",
+      "first_converged_bond_dim": 4,
+      "converged_within_grid": true,
+      "first_converged_dmrg_optimization_seconds": 0.4075366250035586,
+      "first_converged_per_sweep_seconds": [
+        0.06221279199962737,
+        0.05300683299719822,
+        0.060459332999016624,
+        0.05173170800117077,
+        0.056827041997166816,
+        0.05278987500059884,
+        0.0467619580012979
+      ],
+      "first_converged_sweep_energies": [
+        -195.98413802057024,
+        -195.98301792547784,
+        -195.98286255930572,
+        -195.98286255930586,
+        -195.9828625593058,
+        -195.98286255930577,
+        -195.98286255930566
+      ],
+      "mpo_bond_dimension": 369,
+      "mpo_build_seconds": 0.26188741600344656,
+      "mpo_builder": "blocked_sum",
+      "mpo_cutoff": 1e-10,
+      "sum_mpo_mod": 20,
+      "warm_start": true,
+      "warm_start_kind": "cisd",
+      "imported_warm_start_energy": -195.98413802057075,
+      "expected_warm_start_energy": -195.98413802057075,
+      "warm_start_energy_difference": 0.0,
+      "warm_start_energy_validation_requested": true,
+      "warm_start_energy_validation_performed": true,
+      "warm_start_construction": {
+        "method": "coefficient_ordered_determinant_sum",
+        "determinants": 44,
+        "batch_size": 32,
+        "compression_cutoff": 1e-13,
+        "largest_reported_compression_error": 2.543039826339713e-15,
+        "max_constructed_mps_bond": 7,
+        "constructed_state_norm": 1.0000000000000016
+      },
+      "saved_tensor_networks": {
+        "mpo": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/raw_qubit_hamiltonian_mpo.block2.bin",
+          "format": "block2_native_mpo",
+          "tag": "SMP-HQC",
+          "n_sites": 20,
+          "bytes": 1217011
+        },
+        "warm_start_mps": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/raw_qubit_cisd_warm_start_mps.block2",
+          "manifest": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/raw_qubit_cisd_warm_start_mps.block2/manifest.json",
+          "file_count": 64
+        },
+        "first_chemically_accurate_mps": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/raw_qubit_first_chemical_accuracy_bd4_mps.block2",
+          "manifest": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/raw_qubit_first_chemical_accuracy_bd4_mps.block2/manifest.json",
+          "file_count": 64
+        }
+      },
+      "complex_driver": false,
+      "complex_driver_from_hamiltonian_or_input_state": false,
+      "complex_driver_from_unitary_circuit": false,
+      "davidson_threshold": 1e-10,
+      "warm_start_noises": [
+        0.0001,
+        0.0001,
+        1e-05,
+        1e-05,
+        1e-06,
+        1e-06
+      ],
+      "sweep_energy_tolerance": 1e-06,
+      "bond_dims_without_sweep_convergence": []
+    },
+    "seniority_Nover2": {
+      "frame": "seniority_Nover2",
+      "backend": "block2_pauli",
+      "first_converged_bond_dim": 2,
+      "converged_within_grid": true,
+      "first_converged_dmrg_optimization_seconds": 0.45288308399904054,
+      "first_converged_per_sweep_seconds": [
+        0.0626744580004015,
+        0.06206262499472359,
+        0.058081458999367896,
+        0.07068170799902873,
+        0.0596300000033807,
+        0.06538929200178245,
+        0.049442208000982646
+      ],
+      "first_converged_sweep_energies": [
+        -195.9841380205703,
+        -195.98316840649028,
+        -195.98316840835867,
+        -195.9831683011637,
+        -195.98316830116357,
+        -195.98316829984438,
+        -195.98316829984446
+      ],
+      "mpo_bond_dimension": 416,
+      "mpo_build_seconds": 0.27566229199874215,
+      "mpo_builder": "blocked_sum",
+      "mpo_cutoff": 1e-10,
+      "sum_mpo_mod": 20,
+      "warm_start": true,
+      "warm_start_kind": "cisd",
+      "imported_warm_start_energy": -195.9841380205701,
+      "expected_warm_start_energy": -195.98413802057075,
+      "warm_start_energy_difference": 6.536993168992922e-13,
+      "warm_start_energy_validation_requested": true,
+      "warm_start_energy_validation_performed": true,
+      "warm_start_construction": {
+        "method": "coefficient_ordered_determinant_sum",
+        "determinants": 44,
+        "batch_size": 32,
+        "compression_cutoff": 1e-13,
+        "largest_reported_compression_error": 2.543039826339713e-15,
+        "max_constructed_mps_bond": 7,
+        "constructed_state_norm": 1.0000000000000016,
+        "tensor_circuit": {
+          "method": "pyblock2_local_gate_svd",
+          "max_bond_cap": 100,
+          "svd_cutoff": 1e-13,
+          "gate_counts": {
+            "CNOT": 10,
+            "permutation_swap": 45
+          },
+          "number_of_svd_splits": 55,
+          "root_sum_squared_discarded_singular_values": 1.463547824487137e-15,
+          "largest_single_split_discarded_norm": 1.0631625429228315e-15,
+          "norm_before_final_normalization": 1.0000000000000058,
+          "max_final_mps_bond": 7,
+          "max_intermediate_split_bond": 10,
+          "unitary_composition": {
+            "component_types": [
+              "Clifford"
+            ],
+            "number_of_components": 1,
+            "number_of_composed_gates": 10,
+            "composed_permutation": [
+              0,
+              10,
+              1,
+              11,
+              2,
+              12,
+              3,
+              13,
+              4,
+              14,
+              5,
+              15,
+              6,
+              16,
+              7,
+              17,
+              8,
+              18,
+              9,
+              19
+            ]
+          }
+        }
+      },
+      "saved_tensor_networks": {
+        "mpo": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/seniority_Nover2_hamiltonian_mpo.block2.bin",
+          "format": "block2_native_mpo",
+          "tag": "SMP-HQC",
+          "n_sites": 20,
+          "bytes": 1249003
+        },
+        "warm_start_mps": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/seniority_Nover2_cisd_warm_start_mps.block2",
+          "manifest": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/seniority_Nover2_cisd_warm_start_mps.block2/manifest.json",
+          "file_count": 64
+        },
+        "first_chemically_accurate_mps": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/seniority_Nover2_first_chemical_accuracy_bd2_mps.block2",
+          "manifest": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/seniority_Nover2_first_chemical_accuracy_bd2_mps.block2/manifest.json",
+          "file_count": 64
+        }
+      },
+      "complex_driver": false,
+      "complex_driver_from_hamiltonian_or_input_state": false,
+      "complex_driver_from_unitary_circuit": false,
+      "davidson_threshold": 1e-10,
+      "warm_start_noises": [
+        0.0001,
+        0.0001,
+        1e-05,
+        1e-05,
+        1e-06,
+        1e-06
+      ],
+      "sweep_energy_tolerance": 1e-06,
+      "bond_dims_without_sweep_convergence": []
+    },
+    "HCT_Nover2_Comm": {
+      "frame": "HCT_Nover2_Comm",
+      "backend": "block2_pauli",
+      "first_converged_bond_dim": 5,
+      "converged_within_grid": true,
+      "first_converged_dmrg_optimization_seconds": 0.5554181250045076,
+      "first_converged_per_sweep_seconds": [
+        0.08264266700280132,
+        0.07257554199895822,
+        0.07271362499886891,
+        0.07285550000233343,
+        0.07256999999663094,
+        0.07333933399786474,
+        0.07512112500262447
+      ],
+      "first_converged_sweep_energies": [
+        -195.98413802057036,
+        -195.98318594410728,
+        -195.98318594644496,
+        -195.98318594644286,
+        -195.98318594644337,
+        -195.98318594644252,
+        -195.98318594644257
+      ],
+      "mpo_bond_dimension": 884,
+      "mpo_build_seconds": 0.3240173340018373,
+      "mpo_builder": "blocked_sum",
+      "mpo_cutoff": 1e-10,
+      "sum_mpo_mod": 20,
+      "warm_start": true,
+      "warm_start_kind": "cisd",
+      "imported_warm_start_energy": -195.98413802057047,
+      "expected_warm_start_energy": -195.98413802057075,
+      "warm_start_energy_difference": 2.8421709430404007e-13,
+      "warm_start_energy_validation_requested": true,
+      "warm_start_energy_validation_performed": true,
+      "warm_start_construction": {
+        "method": "coefficient_ordered_determinant_sum",
+        "determinants": 44,
+        "batch_size": 32,
+        "compression_cutoff": 1e-13,
+        "largest_reported_compression_error": 2.543039826339713e-15,
+        "max_constructed_mps_bond": 7,
+        "constructed_state_norm": 1.0000000000000016,
+        "tensor_circuit": {
+          "method": "pyblock2_local_gate_svd",
+          "max_bond_cap": 100,
+          "svd_cutoff": 1e-13,
+          "gate_counts": {
+            "CNOT": 55,
+            "routing_swap": 754,
+            "permutation_swap": 51
+          },
+          "number_of_svd_splits": 860,
+          "root_sum_squared_discarded_singular_values": 8.313030760320394e-14,
+          "largest_single_split_discarded_norm": 6.848342055862977e-14,
+          "norm_before_final_normalization": 1.0000000000000324,
+          "max_final_mps_bond": 9,
+          "max_intermediate_split_bond": 9,
+          "unitary_composition": {
+            "component_types": [
+              "Clifford"
+            ],
+            "number_of_components": 1,
+            "number_of_composed_gates": 55,
+            "composed_permutation": [
+              1,
+              0,
+              2,
+              10,
+              11,
+              12,
+              13,
+              14,
+              3,
+              6,
+              4,
+              5,
+              15,
+              16,
+              17,
+              18,
+              8,
+              7,
+              9,
+              19
+            ]
+          }
+        }
+      },
+      "saved_tensor_networks": {
+        "mpo": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/HCT_Nover2_Comm_hamiltonian_mpo.block2.bin",
+          "format": "block2_native_mpo",
+          "tag": "SMP-HQC",
+          "n_sites": 20,
+          "bytes": 1704234
+        },
+        "warm_start_mps": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/HCT_Nover2_Comm_cisd_warm_start_mps.block2",
+          "manifest": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/HCT_Nover2_Comm_cisd_warm_start_mps.block2/manifest.json",
+          "file_count": 64
+        },
+        "first_chemically_accurate_mps": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/HCT_Nover2_Comm_first_chemical_accuracy_bd5_mps.block2",
+          "manifest": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/HCT_Nover2_Comm_first_chemical_accuracy_bd5_mps.block2/manifest.json",
+          "file_count": 64
+        }
+      },
+      "complex_driver": false,
+      "complex_driver_from_hamiltonian_or_input_state": false,
+      "complex_driver_from_unitary_circuit": false,
+      "davidson_threshold": 1e-10,
+      "warm_start_noises": [
+        0.0001,
+        0.0001,
+        1e-05,
+        1e-05,
+        1e-06,
+        1e-06
+      ],
+      "sweep_energy_tolerance": 1e-06,
+      "bond_dims_without_sweep_convergence": []
+    },
+    "HCT_N_Comm": {
+      "frame": "HCT_N_Comm",
+      "backend": "block2_pauli",
+      "first_converged_bond_dim": 2,
+      "converged_within_grid": true,
+      "first_converged_dmrg_optimization_seconds": 0.5101105829962762,
+      "first_converged_per_sweep_seconds": [
+        0.07929583299846854,
+        0.07623495799634838,
+        0.06536108400177909,
+        0.06655291600327473,
+        0.06491895799990743,
+        0.0636048340020352,
+        0.057322541004396044
+      ],
+      "first_converged_sweep_energies": [
+        -195.98413802057044,
+        -195.98355073449642,
+        -195.98361719139928,
+        -195.98361672520466,
+        -195.98361478438397,
+        -195.9836146921593,
+        -195.98361433114366
+      ],
+      "mpo_bond_dimension": 726,
+      "mpo_build_seconds": 0.31906562500080327,
+      "mpo_builder": "blocked_sum",
+      "mpo_cutoff": 1e-10,
+      "sum_mpo_mod": 20,
+      "warm_start": true,
+      "warm_start_kind": "cisd",
+      "imported_warm_start_energy": -195.98413802057075,
+      "expected_warm_start_energy": -195.98413802057075,
+      "warm_start_energy_difference": 0.0,
+      "warm_start_energy_validation_requested": true,
+      "warm_start_energy_validation_performed": true,
+      "warm_start_construction": {
+        "method": "coefficient_ordered_determinant_sum",
+        "determinants": 44,
+        "batch_size": 32,
+        "compression_cutoff": 1e-13,
+        "largest_reported_compression_error": 2.543039826339713e-15,
+        "max_constructed_mps_bond": 7,
+        "constructed_state_norm": 1.0000000000000016,
+        "tensor_circuit": {
+          "method": "pyblock2_local_gate_svd",
+          "max_bond_cap": 100,
+          "svd_cutoff": 1e-13,
+          "gate_counts": {
+            "CNOT": 89,
+            "routing_swap": 1172,
+            "permutation_swap": 87
+          },
+          "number_of_svd_splits": 1348,
+          "root_sum_squared_discarded_singular_values": 8.112420979662291e-14,
+          "largest_single_split_discarded_norm": 6.848342055862977e-14,
+          "norm_before_final_normalization": 1.0000000000000855,
+          "max_final_mps_bond": 8,
+          "max_intermediate_split_bond": 10,
+          "unitary_composition": {
+            "component_types": [
+              "Clifford"
+            ],
+            "number_of_components": 1,
+            "number_of_composed_gates": 89,
+            "composed_permutation": [
+              1,
+              0,
+              2,
+              19,
+              16,
+              15,
+              17,
+              18,
+              3,
+              6,
+              4,
+              5,
+              12,
+              11,
+              14,
+              13,
+              8,
+              7,
+              9,
+              10
+            ]
+          }
+        }
+      },
+      "saved_tensor_networks": {
+        "mpo": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/HCT_N_Comm_hamiltonian_mpo.block2.bin",
+          "format": "block2_native_mpo",
+          "tag": "SMP-HQC",
+          "n_sites": 20,
+          "bytes": 1633346
+        },
+        "warm_start_mps": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/HCT_N_Comm_cisd_warm_start_mps.block2",
+          "manifest": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/HCT_N_Comm_cisd_warm_start_mps.block2/manifest.json",
+          "file_count": 64
+        },
+        "first_chemically_accurate_mps": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/HCT_N_Comm_first_chemical_accuracy_bd2_mps.block2",
+          "manifest": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/HCT_N_Comm_first_chemical_accuracy_bd2_mps.block2/manifest.json",
+          "file_count": 64
+        }
+      },
+      "complex_driver": false,
+      "complex_driver_from_hamiltonian_or_input_state": false,
+      "complex_driver_from_unitary_circuit": false,
+      "davidson_threshold": 1e-10,
+      "warm_start_noises": [
+        0.0001,
+        0.0001,
+        1e-05,
+        1e-05,
+        1e-06,
+        1e-06
+      ],
+      "sweep_energy_tolerance": 1e-06,
+      "bond_dims_without_sweep_convergence": []
+    },
+    "Pauli_BLISS+HCT_N_Comm": {
+      "frame": "Pauli_BLISS+HCT_N_Comm",
+      "backend": "block2_pauli",
+      "first_converged_bond_dim": 4,
+      "converged_within_grid": true,
+      "first_converged_dmrg_optimization_seconds": 1.3831255830009468,
+      "first_converged_per_sweep_seconds": [
+        0.17797387500468176,
+        0.14027537500078324,
+        0.12945775000116555,
+        0.12961154100048589,
+        0.12410458399972413,
+        0.12655716700101038,
+        0.10101449999638135,
+        0.11625674999959301,
+        0.09510725000291131,
+        0.10934791700128699,
+        0.09114466599567095
+      ],
+      "first_converged_sweep_energies": [
+        -195.9841380205704,
+        -195.9828401110315,
+        -195.98306081285915,
+        -195.9830866848455,
+        -195.98314545597208,
+        -195.98290773362837,
+        -195.98290330648797,
+        -195.98320713659166,
+        -195.98321342679475,
+        -195.9832149889629,
+        -195.98321503052142
+      ],
+      "mpo_bond_dimension": 607,
+      "mpo_build_seconds": 0.44339579199731816,
+      "mpo_builder": "blocked_sum",
+      "mpo_cutoff": 1e-10,
+      "sum_mpo_mod": 20,
+      "warm_start": true,
+      "warm_start_kind": "cisd",
+      "imported_warm_start_energy": -195.9841380205704,
+      "expected_warm_start_energy": -195.98413802057075,
+      "warm_start_energy_difference": 3.410605131648481e-13,
+      "warm_start_energy_validation_requested": true,
+      "warm_start_energy_validation_performed": true,
+      "warm_start_construction": {
+        "method": "coefficient_ordered_determinant_sum",
+        "determinants": 44,
+        "batch_size": 32,
+        "compression_cutoff": 1e-13,
+        "largest_reported_compression_error": 2.543039826339713e-15,
+        "max_constructed_mps_bond": 7,
+        "constructed_state_norm": 1.0000000000000016,
+        "tensor_circuit": {
+          "method": "pyblock2_local_gate_svd",
+          "max_bond_cap": 100,
+          "svd_cutoff": 1e-13,
+          "gate_counts": {
+            "CNOT": 84,
+            "routing_swap": 948,
+            "H": 9,
+            "Sdg": 4,
+            "X": 2,
+            "permutation_swap": 73
+          },
+          "number_of_svd_splits": 1105,
+          "root_sum_squared_discarded_singular_values": 8.254110114698653e-14,
+          "largest_single_split_discarded_norm": 6.686157249721292e-14,
+          "norm_before_final_normalization": 1.000000000000101,
+          "max_final_mps_bond": 10,
+          "max_intermediate_split_bond": 28,
+          "unitary_composition": {
+            "component_types": [
+              "Clifford"
+            ],
+            "number_of_components": 1,
+            "number_of_composed_gates": 99,
+            "composed_permutation": [
+              1,
+              0,
+              2,
+              19,
+              15,
+              14,
+              17,
+              16,
+              3,
+              7,
+              4,
+              6,
+              8,
+              10,
+              9,
+              12,
+              5,
+              11,
+              13,
+              18
+            ]
+          }
+        }
+      },
+      "saved_tensor_networks": {
+        "mpo": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/Pauli_BLISS+HCT_N_Comm_hamiltonian_mpo.block2.bin",
+          "format": "block2_native_mpo",
+          "tag": "SMP-HQC",
+          "n_sites": 20,
+          "bytes": 2066812
+        },
+        "warm_start_mps": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/Pauli_BLISS+HCT_N_Comm_cisd_warm_start_mps.block2",
+          "manifest": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/Pauli_BLISS+HCT_N_Comm_cisd_warm_start_mps.block2/manifest.json",
+          "file_count": 64
+        },
+        "first_chemically_accurate_mps": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/Pauli_BLISS+HCT_N_Comm_first_chemical_accuracy_bd4_mps.block2",
+          "manifest": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/Pauli_BLISS+HCT_N_Comm_first_chemical_accuracy_bd4_mps.block2/manifest.json",
+          "file_count": 64
+        }
+      },
+      "complex_driver": true,
+      "complex_driver_from_hamiltonian_or_input_state": true,
+      "complex_driver_from_unitary_circuit": true,
+      "davidson_threshold": 1e-10,
+      "warm_start_noises": [
+        0.0001,
+        0.0001,
+        1e-05,
+        1e-05,
+        1e-06,
+        1e-06
+      ],
+      "sweep_energy_tolerance": 1e-06,
+      "bond_dims_without_sweep_convergence": []
+    },
+    "BS_Nover2_Comm": {
+      "frame": "BS_Nover2_Comm",
+      "backend": "block2_pauli",
+      "first_converged_bond_dim": 2,
+      "converged_within_grid": true,
+      "first_converged_dmrg_optimization_seconds": 0.47371087499777786,
+      "first_converged_per_sweep_seconds": [
+        0.07361729100375669,
+        0.06563762499717996,
+        0.062325083003088366,
+        0.06296887499775039,
+        0.06077487499715062,
+        0.05837637500371784,
+        0.053542749999905936
+      ],
+      "first_converged_sweep_energies": [
+        -195.98413802057024,
+        -195.98295215618398,
+        -195.98316060240518,
+        -195.98316060240504,
+        -195.98316085832977,
+        -195.98316085833005,
+        -195.98316100332403
+      ],
+      "mpo_bond_dimension": 706,
+      "mpo_build_seconds": 0.301881040999433,
+      "mpo_builder": "blocked_sum",
+      "mpo_cutoff": 1e-10,
+      "sum_mpo_mod": 20,
+      "warm_start": true,
+      "warm_start_kind": "cisd",
+      "imported_warm_start_energy": -195.98413802057053,
+      "expected_warm_start_energy": -195.98413802057075,
+      "warm_start_energy_difference": 2.2737367544323206e-13,
+      "warm_start_energy_validation_requested": true,
+      "warm_start_energy_validation_performed": true,
+      "warm_start_construction": {
+        "method": "coefficient_ordered_determinant_sum",
+        "determinants": 44,
+        "batch_size": 32,
+        "compression_cutoff": 1e-13,
+        "largest_reported_compression_error": 2.543039826339713e-15,
+        "max_constructed_mps_bond": 7,
+        "constructed_state_norm": 1.0000000000000016,
+        "tensor_circuit": {
+          "method": "pyblock2_local_gate_svd",
+          "max_bond_cap": 100,
+          "svd_cutoff": 1e-13,
+          "gate_counts": {
+            "CNOT": 56,
+            "routing_swap": 672,
+            "permutation_swap": 27
+          },
+          "number_of_svd_splits": 755,
+          "root_sum_squared_discarded_singular_values": 9.677781355397305e-14,
+          "largest_single_split_discarded_norm": 9.281821829127419e-14,
+          "norm_before_final_normalization": 1.0000000000000013,
+          "max_final_mps_bond": 6,
+          "max_intermediate_split_bond": 8,
+          "unitary_composition": {
+            "component_types": [
+              "Clifford"
+            ],
+            "number_of_components": 1,
+            "number_of_composed_gates": 56,
+            "composed_permutation": [
+              1,
+              0,
+              2,
+              7,
+              8,
+              9,
+              10,
+              11,
+              3,
+              12,
+              4,
+              13,
+              5,
+              14,
+              6,
+              15,
+              16,
+              17,
+              18,
+              19
+            ]
+          }
+        }
+      },
+      "saved_tensor_networks": {
+        "mpo": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/BS_Nover2_Comm_hamiltonian_mpo.block2.bin",
+          "format": "block2_native_mpo",
+          "tag": "SMP-HQC",
+          "n_sites": 20,
+          "bytes": 1572158
+        },
+        "warm_start_mps": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/BS_Nover2_Comm_cisd_warm_start_mps.block2",
+          "manifest": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/BS_Nover2_Comm_cisd_warm_start_mps.block2/manifest.json",
+          "file_count": 64
+        },
+        "first_chemically_accurate_mps": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/BS_Nover2_Comm_first_chemical_accuracy_bd2_mps.block2",
+          "manifest": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/BS_Nover2_Comm_first_chemical_accuracy_bd2_mps.block2/manifest.json",
+          "file_count": 64
+        }
+      },
+      "complex_driver": false,
+      "complex_driver_from_hamiltonian_or_input_state": false,
+      "complex_driver_from_unitary_circuit": false,
+      "davidson_threshold": 1e-10,
+      "warm_start_noises": [
+        0.0001,
+        0.0001,
+        1e-05,
+        1e-05,
+        1e-06,
+        1e-06
+      ],
+      "sweep_energy_tolerance": 1e-06,
+      "bond_dims_without_sweep_convergence": []
+    },
+    "BS_N_Comm": {
+      "frame": "BS_N_Comm",
+      "backend": "block2_pauli",
+      "first_converged_bond_dim": 2,
+      "converged_within_grid": true,
+      "first_converged_dmrg_optimization_seconds": 0.7180694169946946,
+      "first_converged_per_sweep_seconds": [
+        0.0995444169966504,
+        0.08298266600468196,
+        0.08314283299841918,
+        0.0857313750020694,
+        0.08123370799876284,
+        0.08255150000331923,
+        0.07628645799559308,
+        0.07666929200058803
+      ],
+      "first_converged_sweep_energies": [
+        -195.98413802057033,
+        -195.98408073822105,
+        -195.98407460574722,
+        -195.98407460577278,
+        -195.98407110830954,
+        -195.98407110834063,
+        -195.98406920243633,
+        -195.98406920247038
+      ],
+      "mpo_bond_dimension": 1112,
+      "mpo_build_seconds": 0.4140347920038039,
+      "mpo_builder": "blocked_sum",
+      "mpo_cutoff": 1e-10,
+      "sum_mpo_mod": 20,
+      "warm_start": true,
+      "warm_start_kind": "cisd",
+      "imported_warm_start_energy": -195.9841380205704,
+      "expected_warm_start_energy": -195.98413802057075,
+      "warm_start_energy_difference": 3.410605131648481e-13,
+      "warm_start_energy_validation_requested": true,
+      "warm_start_energy_validation_performed": true,
+      "warm_start_construction": {
+        "method": "coefficient_ordered_determinant_sum",
+        "determinants": 44,
+        "batch_size": 32,
+        "compression_cutoff": 1e-13,
+        "largest_reported_compression_error": 2.543039826339713e-15,
+        "max_constructed_mps_bond": 7,
+        "constructed_state_norm": 1.0000000000000016,
+        "tensor_circuit": {
+          "method": "pyblock2_local_gate_svd",
+          "max_bond_cap": 100,
+          "svd_cutoff": 1e-13,
+          "gate_counts": {
+            "CNOT": 109,
+            "routing_swap": 1316,
+            "H": 1,
+            "permutation_swap": 31
+          },
+          "number_of_svd_splits": 1456,
+          "root_sum_squared_discarded_singular_values": 1.2164425304830607e-13,
+          "largest_single_split_discarded_norm": 9.281821829127419e-14,
+          "norm_before_final_normalization": 1.0000000000000482,
+          "max_final_mps_bond": 9,
+          "max_intermediate_split_bond": 9,
+          "unitary_composition": {
+            "component_types": [
+              "Clifford"
+            ],
+            "number_of_components": 1,
+            "number_of_composed_gates": 110,
+            "composed_permutation": [
+              1,
+              0,
+              2,
+              7,
+              8,
+              9,
+              10,
+              14,
+              3,
+              11,
+              4,
+              12,
+              5,
+              15,
+              6,
+              13,
+              16,
+              17,
+              18,
+              19
+            ]
+          }
+        }
+      },
+      "saved_tensor_networks": {
+        "mpo": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/BS_N_Comm_hamiltonian_mpo.block2.bin",
+          "format": "block2_native_mpo",
+          "tag": "SMP-HQC",
+          "n_sites": 20,
+          "bytes": 2193909
+        },
+        "warm_start_mps": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/BS_N_Comm_cisd_warm_start_mps.block2",
+          "manifest": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/BS_N_Comm_cisd_warm_start_mps.block2/manifest.json",
+          "file_count": 64
+        },
+        "first_chemically_accurate_mps": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/BS_N_Comm_first_chemical_accuracy_bd2_mps.block2",
+          "manifest": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/BS_N_Comm_first_chemical_accuracy_bd2_mps.block2/manifest.json",
+          "file_count": 64
+        }
+      },
+      "complex_driver": false,
+      "complex_driver_from_hamiltonian_or_input_state": false,
+      "complex_driver_from_unitary_circuit": false,
+      "davidson_threshold": 1e-10,
+      "warm_start_noises": [
+        0.0001,
+        0.0001,
+        1e-05,
+        1e-05,
+        1e-06,
+        1e-06
+      ],
+      "sweep_energy_tolerance": 1e-06,
+      "bond_dims_without_sweep_convergence": []
+    },
+    "HCT_N_Comm_Fiedler": {
+      "frame": "HCT_N_Comm_Fiedler",
+      "backend": "block2_pauli",
+      "first_converged_bond_dim": 2,
+      "converged_within_grid": true,
+      "first_converged_dmrg_optimization_seconds": 0.4922138330002781,
+      "first_converged_per_sweep_seconds": [
+        0.07330204099707771,
+        0.07574983299855376,
+        0.07091166700411122,
+        0.06192133299919078,
+        0.06043599999975413,
+        0.06100624999817228,
+        0.052957708001486026
+      ],
+      "first_converged_sweep_energies": [
+        -195.9841380205706,
+        -195.98348370172835,
+        -195.98348524599908,
+        -195.9834725190061,
+        -195.98347251814795,
+        -195.98347223471137,
+        -195.98347223485823
+      ],
+      "mpo_bond_dimension": 581,
+      "mpo_build_seconds": 0.2954106250035693,
+      "mpo_builder": "blocked_sum",
+      "mpo_cutoff": 1e-10,
+      "sum_mpo_mod": 20,
+      "warm_start": true,
+      "warm_start_kind": "cisd",
+      "imported_warm_start_energy": -195.98413802057084,
+      "expected_warm_start_energy": -195.98413802057075,
+      "warm_start_energy_difference": -8.526512829121202e-14,
+      "warm_start_energy_validation_requested": true,
+      "warm_start_energy_validation_performed": true,
+      "warm_start_construction": {
+        "method": "coefficient_ordered_determinant_sum",
+        "determinants": 44,
+        "batch_size": 32,
+        "compression_cutoff": 1e-13,
+        "largest_reported_compression_error": 2.543039826339713e-15,
+        "max_constructed_mps_bond": 7,
+        "constructed_state_norm": 1.0000000000000016,
+        "tensor_circuit": {
+          "method": "pyblock2_local_gate_svd",
+          "max_bond_cap": 100,
+          "svd_cutoff": 1e-13,
+          "gate_counts": {
+            "CNOT": 89,
+            "routing_swap": 1172,
+            "permutation_swap": 83
+          },
+          "number_of_svd_splits": 1344,
+          "root_sum_squared_discarded_singular_values": 8.108446584505855e-14,
+          "largest_single_split_discarded_norm": 6.848342055862977e-14,
+          "norm_before_final_normalization": 1.0000000000000921,
+          "max_final_mps_bond": 7,
+          "max_intermediate_split_bond": 9,
+          "unitary_composition": {
+            "component_types": [
+              "Clifford",
+              "PermutationUnitary"
+            ],
+            "number_of_components": 2,
+            "number_of_composed_gates": 89,
+            "composed_permutation": [
+              1,
+              0,
+              2,
+              19,
+              18,
+              12,
+              16,
+              17,
+              3,
+              9,
+              4,
+              10,
+              7,
+              8,
+              5,
+              6,
+              14,
+              15,
+              13,
+              11
+            ]
+          }
+        }
+      },
+      "saved_tensor_networks": {
+        "mpo": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/HCT_N_Comm_Fiedler_hamiltonian_mpo.block2.bin",
+          "format": "block2_native_mpo",
+          "tag": "SMP-HQC",
+          "n_sites": 20,
+          "bytes": 1470850
+        },
+        "warm_start_mps": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/HCT_N_Comm_Fiedler_cisd_warm_start_mps.block2",
+          "manifest": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/HCT_N_Comm_Fiedler_cisd_warm_start_mps.block2/manifest.json",
+          "file_count": 64
+        },
+        "first_chemically_accurate_mps": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/HCT_N_Comm_Fiedler_first_chemical_accuracy_bd2_mps.block2",
+          "manifest": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/HCT_N_Comm_Fiedler_first_chemical_accuracy_bd2_mps.block2/manifest.json",
+          "file_count": 64
+        }
+      },
+      "complex_driver": false,
+      "complex_driver_from_hamiltonian_or_input_state": false,
+      "complex_driver_from_unitary_circuit": false,
+      "davidson_threshold": 1e-10,
+      "warm_start_noises": [
+        0.0001,
+        0.0001,
+        1e-05,
+        1e-05,
+        1e-06,
+        1e-06
+      ],
+      "sweep_energy_tolerance": 1e-06,
+      "bond_dims_without_sweep_convergence": []
+    },
+    "BS_N_Comm_Fiedler": {
+      "frame": "BS_N_Comm_Fiedler",
+      "backend": "block2_pauli",
+      "first_converged_bond_dim": 2,
+      "converged_within_grid": true,
+      "first_converged_dmrg_optimization_seconds": 0.5746975830043084,
+      "first_converged_per_sweep_seconds": [
+        0.09145799999532755,
+        0.07906758400349645,
+        0.07320504200470168,
+        0.07686412500333972,
+        0.07296708300418686,
+        0.07540050000534393,
+        0.06922937499621185
+      ],
+      "first_converged_sweep_energies": [
+        -195.9841380205703,
+        -195.9832644983132,
+        -195.98388543237013,
+        -195.98406133013972,
+        -195.9840629840853,
+        -195.98406335577636,
+        -195.98406335057223
+      ],
+      "mpo_bond_dimension": 1095,
+      "mpo_build_seconds": 0.34708254199358635,
+      "mpo_builder": "blocked_sum",
+      "mpo_cutoff": 1e-10,
+      "sum_mpo_mod": 20,
+      "warm_start": true,
+      "warm_start_kind": "cisd",
+      "imported_warm_start_energy": -195.98413802057044,
+      "expected_warm_start_energy": -195.98413802057075,
+      "warm_start_energy_difference": 3.126388037344441e-13,
+      "warm_start_energy_validation_requested": true,
+      "warm_start_energy_validation_performed": true,
+      "warm_start_construction": {
+        "method": "coefficient_ordered_determinant_sum",
+        "determinants": 44,
+        "batch_size": 32,
+        "compression_cutoff": 1e-13,
+        "largest_reported_compression_error": 2.543039826339713e-15,
+        "max_constructed_mps_bond": 7,
+        "constructed_state_norm": 1.0000000000000016,
+        "tensor_circuit": {
+          "method": "pyblock2_local_gate_svd",
+          "max_bond_cap": 100,
+          "svd_cutoff": 1e-13,
+          "gate_counts": {
+            "CNOT": 109,
+            "routing_swap": 1316,
+            "H": 1,
+            "permutation_swap": 66
+          },
+          "number_of_svd_splits": 1491,
+          "root_sum_squared_discarded_singular_values": 1.2317367792972262e-13,
+          "largest_single_split_discarded_norm": 9.281821829127419e-14,
+          "norm_before_final_normalization": 1.0000000000000486,
+          "max_final_mps_bond": 8,
+          "max_intermediate_split_bond": 9,
+          "unitary_composition": {
+            "component_types": [
+              "Clifford",
+              "PermutationUnitary"
+            ],
+            "number_of_components": 2,
+            "number_of_composed_gates": 110,
+            "composed_permutation": [
+              1,
+              0,
+              2,
+              19,
+              18,
+              8,
+              7,
+              11,
+              3,
+              15,
+              4,
+              10,
+              5,
+              14,
+              6,
+              9,
+              17,
+              13,
+              12,
+              16
+            ]
+          }
+        }
+      },
+      "saved_tensor_networks": {
+        "mpo": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/BS_N_Comm_Fiedler_hamiltonian_mpo.block2.bin",
+          "format": "block2_native_mpo",
+          "tag": "SMP-HQC",
+          "n_sites": 20,
+          "bytes": 1881571
+        },
+        "warm_start_mps": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/BS_N_Comm_Fiedler_cisd_warm_start_mps.block2",
+          "manifest": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/BS_N_Comm_Fiedler_cisd_warm_start_mps.block2/manifest.json",
+          "file_count": 64
+        },
+        "first_chemically_accurate_mps": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/BS_N_Comm_Fiedler_first_chemical_accuracy_bd2_mps.block2",
+          "manifest": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_all_noisy/F2_corr/tensor_networks/BS_N_Comm_Fiedler_first_chemical_accuracy_bd2_mps.block2/manifest.json",
+          "file_count": 64
+        }
+      },
+      "complex_driver": false,
+      "complex_driver_from_hamiltonian_or_input_state": false,
+      "complex_driver_from_unitary_circuit": false,
+      "davidson_threshold": 1e-10,
+      "warm_start_noises": [
+        0.0001,
+        0.0001,
+        1e-05,
+        1e-05,
+        1e-06,
+        1e-06
+      ],
+      "sweep_energy_tolerance": 1e-06,
+      "bond_dims_without_sweep_convergence": []
+    }
+  }
+}

@@ -1,0 +1,152 @@
+{
+  "schema": "quasisymmetries.BenchmarkData",
+  "version": 1,
+  "kind": "collection",
+  "datasets": [
+    {
+      "tag": "Seniority N/2",
+      "symmetries": [
+        {
+          "terms": [
+            {
+              "pauli": [
+                [
+                  0,
+                  "Z"
+                ],
+                [
+                  1,
+                  "Z"
+                ]
+              ],
+              "coefficient": {
+                "real": 1.0,
+                "imag": 0.0
+              }
+            }
+          ]
+        },
+        {
+          "terms": [
+            {
+              "pauli": [
+                [
+                  2,
+                  "Z"
+                ],
+                [
+                  3,
+                  "Z"
+                ]
+              ],
+              "coefficient": {
+                "real": 1.0,
+                "imag": 0.0
+              }
+            }
+          ]
+        },
+        {
+          "terms": [
+            {
+              "pauli": [
+                [
+                  4,
+                  "Z"
+                ],
+                [
+                  5,
+                  "Z"
+                ]
+              ],
+              "coefficient": {
+                "real": 1.0,
+                "imag": 0.0
+              }
+            }
+          ]
+        },
+        {
+          "terms": [
+            {
+              "pauli": [
+                [
+                  6,
+                  "Z"
+                ],
+                [
+                  7,
+                  "Z"
+                ]
+              ],
+              "coefficient": {
+                "real": 1.0,
+                "imag": 0.0
+              }
+            }
+          ]
+        },
+        {
+          "terms": [
+            {
+              "pauli": [
+                [
+                  8,
+                  "Z"
+                ],
+                [
+                  9,
+                  "Z"
+                ]
+              ],
+              "coefficient": {
+                "real": 1.0,
+                "imag": 0.0
+              }
+            }
+          ]
+        },
+        {
+          "terms": [
+            {
+              "pauli": [
+                [
+                  10,
+                  "Z"
+                ],
+                [
+                  11,
+                  "Z"
+                ]
+              ],
+              "coefficient": {
+                "real": 1.0,
+                "imag": 0.0
+              }
+            }
+          ]
+        }
+      ],
+      "non_commuting_l1": 8.693999157455952,
+      "num_commuting_terms": 138,
+      "sym_entropy": 0.06336658220231188,
+      "cut_entropies": [
+        0.0005156174363878536,
+        0.021031801919210957,
+        0.05364304202317054,
+        0.05364304202317044,
+        0.05364304202317042,
+        0.05132225248093387,
+        0.051600482221051784,
+        0.12918386649523947,
+        0.0921265529829873,
+        0.08837233121279327,
+        0.08430845585500929
+      ],
+      "dmrg_bd": 2,
+      "single_sector_e": 0.0,
+      "clifford_synthesis_basis": "Z",
+      "clifford_generator_mapping": "positive_z"
+    }
+  ]
+}

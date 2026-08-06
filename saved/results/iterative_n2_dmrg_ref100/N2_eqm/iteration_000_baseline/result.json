@@ -1,0 +1,179 @@
+{
+  "system": "N2_eqm",
+  "iteration": 0,
+  "kind": "baseline",
+  "dmrg": {
+    "frame": "N2_eqm_iter000_baseline",
+    "backend": "block2_pauli",
+    "first_converged_bond_dim": 50,
+    "converged_within_grid": true,
+    "first_converged_dmrg_optimization_seconds": 12.803888333000941,
+    "first_converged_per_sweep_seconds": [
+      0.1799469580000732,
+      0.4397496670135297,
+      0.9251474170014262,
+      1.5975952080043498,
+      1.0389430829964112,
+      1.4272029160056263,
+      0.9349445420084521,
+      1.2848447920114268,
+      0.8707114589924458,
+      1.1421005410084035,
+      0.8376180829945952,
+      1.1979010829818435,
+      0.8821166669949889
+    ],
+    "first_converged_sweep_energies": [
+      -107.64167024788321,
+      -107.64179599388578,
+      -107.6423973350976,
+      -107.64866136929137,
+      -107.65151144989834,
+      -107.65241875033804,
+      -107.65271342461371,
+      -107.65271842576075,
+      -107.65281257669135,
+      -107.65275599568673,
+      -107.65275728218498,
+      -107.65273786230782,
+      -107.65273841943815
+    ],
+    "mpo_bond_dimension": 366,
+    "mpo_build_seconds": 0.3078071250056382,
+    "mpo_builder": "blocked_sum",
+    "mpo_cutoff": 1e-10,
+    "sum_mpo_mod": 10,
+    "warm_start": true,
+    "warm_start_kind": "cisd",
+    "imported_warm_start_energy": -107.64167024788527,
+    "expected_warm_start_energy": -107.64167024788341,
+    "warm_start_energy_difference": -1.8616219676914625e-12,
+    "warm_start_energy_validation_requested": true,
+    "warm_start_energy_validation_performed": true,
+    "warm_start_construction": {
+      "method": "coefficient_ordered_determinant_sum",
+      "determinants": 610,
+      "batch_size": 32,
+      "compression_cutoff": 1e-13,
+      "largest_reported_compression_error": 2.5091115490340836e-15,
+      "max_constructed_mps_bond": 26,
+      "constructed_state_norm": 1.0000000000000095
+    },
+    "saved_tensor_networks": {
+      "mpo": {
+        "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/iterative_n2_dmrg_ref100/N2_eqm/iteration_000_baseline/tensor_networks/N2_eqm_iter000_baseline_hamiltonian_mpo.block2.bin",
+        "format": "block2_native_mpo",
+        "tag": "SMP-HQC",
+        "n_sites": 20,
+        "bytes": 1081426
+      },
+      "warm_start_mps": {
+        "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/iterative_n2_dmrg_ref100/N2_eqm/iteration_000_baseline/tensor_networks/N2_eqm_iter000_baseline_cisd_warm_start_mps.block2",
+        "manifest": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/iterative_n2_dmrg_ref100/N2_eqm/iteration_000_baseline/tensor_networks/N2_eqm_iter000_baseline_cisd_warm_start_mps.block2/manifest.json",
+        "file_count": 64
+      },
+      "first_chemically_accurate_mps": {
+        "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/iterative_n2_dmrg_ref100/N2_eqm/iteration_000_baseline/tensor_networks/N2_eqm_iter000_baseline_first_chemical_accuracy_bd50_mps.block2",
+        "manifest": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/iterative_n2_dmrg_ref100/N2_eqm/iteration_000_baseline/tensor_networks/N2_eqm_iter000_baseline_first_chemical_accuracy_bd50_mps.block2/manifest.json",
+        "file_count": 64
+      }
+    },
+    "complex_driver": false,
+    "complex_driver_from_hamiltonian_or_input_state": false,
+    "complex_driver_from_unitary_circuit": false,
+    "davidson_threshold": 1e-10,
+    "warm_start_noises": [
+      0.0001,
+      0.0001,
+      1e-05,
+      1e-05,
+      1e-06,
+      1e-06
+    ],
+    "sweep_energy_tolerance": 1e-06,
+    "bond_dims_without_sweep_convergence": [],
+    "benchmark_reference": {
+      "method": "pyblock2_qubit_reference_dmrg",
+      "energy": -107.65411938482609,
+      "energy_label": "variational_dmrg_reference",
+      "bond_dim": 100,
+      "bond_dimension_convergence_tested": false,
+      "accuracy_note": "Sweep convergence is tested at one fixed bond dimension; residual finite-bond variational error is not estimated.",
+      "dmrg_seconds": 33.24094699998386,
+      "sweep_converged": true,
+      "reached_max_sweeps": false,
+      "sweep_limit_reached_without_convergence": false,
+      "sweeps_requested": 100,
+      "sweeps_completed": 13,
+      "sweep_energy_tolerance": 1e-08,
+      "last_sweep_energy_change": 2.787814423754753e-09,
+      "final_sweep_noise": 0.0,
+      "sweep_energies": [
+        -107.64167024788321,
+        -107.64179602459208,
+        -107.64253359233479,
+        -107.65404246462975,
+        -107.65411049442785,
+        -107.65411798424138,
+        -107.65411966239614,
+        -107.65411961510927,
+        -107.65411959874578,
+        -107.65411950111348,
+        -107.65411951640033,
+        -107.6541193876139,
+        -107.65411938482609
+      ],
+      "per_sweep_seconds": [
+        0.22707550000632182,
+        0.36021279098349623,
+        1.8139919590030331,
+        4.994505041977391,
+        3.4985276669904124,
+        3.471858250006335,
+        2.5376013340137433,
+        2.5999072500271723,
+        2.4971729590033647,
+        3.0246349169756286,
+        2.796223125013057,
+        2.8614631250093225,
+        2.511847999994643
+      ],
+      "mpo_bond_dimension": 366,
+      "mpo_build_seconds": 0.24885354199795984,
+      "mpo_builder": "blocked_sum",
+      "mpo_cutoff": 1e-10,
+      "initial_state": "cisd",
+      "initial_state_construction": {
+        "method": "coefficient_ordered_determinant_sum",
+        "determinants": 610,
+        "batch_size": 32,
+        "compression_cutoff": 1e-13,
+        "largest_reported_compression_error": 2.5091115490340836e-15,
+        "max_constructed_mps_bond": 26,
+        "constructed_state_norm": 1.0000000000000095
+      },
+      "saved_tensor_networks": {
+        "mpo": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/iterative_n2_dmrg_ref100/N2_eqm/reference_tensor_networks/N2_eqm_reference_mpo.block2.bin",
+          "format": "block2_native_mpo",
+          "tag": "SMP-HQC",
+          "n_sites": 20,
+          "bytes": 1081426
+        },
+        "mps": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/iterative_n2_dmrg_ref100/N2_eqm/reference_tensor_networks/N2_eqm_reference_mps.block2",
+          "manifest": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/iterative_n2_dmrg_ref100/N2_eqm/reference_tensor_networks/N2_eqm_reference_mps.block2/manifest.json",
+          "file_count": 64
+        },
+        "portable_mps": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/iterative_n2_dmrg_ref100/N2_eqm/reference_tensor_networks/N2_eqm_reference_mps.npz",
+          "format": "numpy_open_boundary_qubit_mps",
+          "n_sites": 20,
+          "max_bond_dimension": 100,
+          "bytes": 994896
+        }
+      },
+      "complex_driver": false
+    }
+  }
+}

@@ -1,0 +1,184 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{hyperref}
+
+\title{Notes on Scaling the Quasi-Symmetry DMRG Workflow\\
+to Larger Orbital Spaces}
+\author{}
+\date{July 2026}
+
+\begin{document}
+\maketitle
+
+\section{Purpose}
+
+The current workflow is practical for the full STO-3G calculations considered
+so far, whose largest examples contain ten spatial orbitals and twenty qubits.
+It already avoids several unnecessary costs: DMRG is performed entirely with
+\texttt{pyblock2}, CISD determinants are added to the initial MPS in bounded
+batches, Clifford circuits and qubit permutations act directly on the MPS,
+and each Hamiltonian representation is processed and saved separately.
+
+Larger basis sets introduce qualitatively different bottlenecks.  The main
+issue is not DMRG alone.  Full-CI reference states, entropy calculations,
+CISD-to-MPS conversion, symmetry scoring, transformed Pauli Hamiltonians, and
+MPO construction can each become the limiting step.  This note records a
+possible sequence of changes rather than prescribing a final implementation.
+
+\section{Remove full CI from the required workflow}
+
+The size of the full-CI space grows combinatorially with the numbers of
+electrons and orbitals.  Full CI should therefore become an optional
+small-system validation method rather than a required input.
+
+For larger systems, a tightly converged spin-adapted fermionic DMRG
+calculation can provide both the reference energy and reference MPS.  The
+reference energy used in the chemical-accuracy test would then be labeled by
+its source, for example FCI, selected CI, variational DMRG, or extrapolated
+DMRG.  The reported criterion remains
+\begin{equation}
+  \left|E(\chi)-E_{\mathrm{ref}}\right|\leq 1.6\ \mathrm{mHa},
+\end{equation}
+but it no longer assumes that $E_{\mathrm{ref}}$ is available from FCI.
+
+The software interface should consequently accept a general reference-state
+object.  For small systems this may be a sparse CI vector; for larger systems
+it should normally be a saved MPS together with its energy, quantum numbers,
+and convergence information.
+
+\section{Calculate entropies from an MPS}
+
+The current preprocessing calculates entropies and mutual information from a
+saved FCI state.  Instead, one- and two-site reduced density matrices can be
+contracted directly from a converged reference MPS.  This gives the one-site
+entropies and pairwise mutual information needed for Fiedler ordering without
+constructing a vector of length $2^{n_q}$.
+
+For a transformed representation, the same unitary circuit used for the
+Hamiltonian can be applied to a copy of the reference MPS.  Entropies can then
+be measured from the transformed MPS.  This procedure applies equally to
+Clifford circuits, qubit permutations, and orbital rotations decomposed into
+Givens rotations.  Every entropy result should record the MPS bond dimension
+and discarded weight used in this preprocessing step.
+
+\section{Make the orbital space explicit}
+
+In a larger basis, retaining every orbital will often be neither necessary
+nor affordable.  Molecular input and saved metadata should explicitly record
+the basis, frozen orbitals, active orbitals, active electron number, target
+spin, and original orbital ordering.  A useful interface should support both
+the full orbital space and a selected active space without changing the
+subsequent symmetry and DMRG code.
+
+The active-space definition must also be carried through the CISD state,
+fermionic MPO, Jordan--Wigner Hamiltonian, and reference energy.  Silent
+differences between these spaces would invalidate energy comparisons.
+
+\section{Improve CISD-to-MPS conversion}
+
+Although CISD is polynomial in system size, its number of double excitations
+scales approximately as
+\begin{equation}
+  O\!\left(n_{\mathrm{occ}}^2 n_{\mathrm{virt}}^2\right).
+\end{equation}
+The present method retains every CISD determinant, sorts them by coefficient
+magnitude, adds them sequentially to an MPS, and compresses the growing sum in
+batches.  This is reliable for the current systems but may become slow for
+large virtual spaces.
+
+Possible improvements include balanced-tree addition of determinant MPSs,
+adaptive batch sizes, an intermediate bond-dimension cap, and construction by
+applying single- and double-excitation operators to the Hartree--Fock MPS.
+Disk-backed intermediate tensors may also be useful.  Selected-CI or
+coefficient truncation can be offered as an explicit optional approximation,
+but the retained norm, discarded norm, and change in energy must be reported.
+
+\section{Avoid large intermediate Pauli operators}
+
+An electronic Hamiltonian contains $O(n_{\mathrm{orb}}^4)$ integral terms.
+Jordan--Wigner mapping and Clifford conjugation can make the explicit Pauli
+representation expensive even when the corresponding fermionic MPO remains
+manageable.  Materializing the complete transformed \texttt{QubitOperator}
+and all intermediate MPO sums may therefore become the dominant memory cost.
+
+The transformation and MPO builder should eventually operate as a streaming
+pipeline: transform terms in chunks, combine identical Pauli words
+immediately, and release each chunk after it has been incorporated into the
+MPO.  Coefficient screening should be optional and controlled by an explicit
+error tolerance.  Density fitting, Cholesky decomposition, and other
+factorized representations of the two-electron interaction should also be
+investigated, especially if the factorized structure can be preserved during
+MPO construction.
+
+For sufficiently large orbital spaces, a Pauli-space DMRG calculation may
+remain much more expensive than the spin-adapted fermionic calculation.  That
+difference is scientifically relevant and should not be hidden by using
+different uncontrolled truncations in the two representations.
+
+\section{Scale the symmetry search}
+
+The present beam-search safeguards---50 pairwise seed terms and a candidate
+pool capped at 1000 operators---limit the combinatorial part of the search.
+The remaining cost comes from repeatedly scoring candidates against a large
+Hamiltonian and state.
+
+Useful improvements include caching Pauli commutation relations in binary
+symplectic form, evaluating candidate scores incrementally, screening small
+Hamiltonian terms during pool generation, and parallelizing independent
+candidate evaluations.  The initial candidate pool, its ranking scores, and
+the state of a partially completed search should be saved so that a long
+search can be resumed exactly.
+
+When the Hamiltonian and state are transformed by a known unitary, objective
+values can sometimes be evaluated in the original frame by transforming only
+the candidate Pauli operator back to that frame.  For Clifford transformations
+this maps a Pauli product to another Pauli product.  It can avoid constructing
+a large sparse matrix for every transformed Hamiltonian and is especially
+useful for repeated symmetry searches.
+
+\section{Control the cost of applying unitary circuits}
+
+Applying a long circuit to an MPS can increase its bond dimension before DMRG
+begins.  The circuit layer should report the discarded singular-value weight,
+the maximum intermediate bond dimension, and the energy error introduced by
+compression.  Separate bond caps may be appropriate for reference-state
+transformation and for the later DMRG calculation.
+
+Additional improvements include reordering commuting gates, reducing swap
+routing, applying independent gates in layers, and variationally compressing
+the state after the complete circuit.  These operations should use the common
+unitary interface so that Clifford transformations and orbital rotations
+follow the same execution and validation path.
+
+\section{Exploit exact symmetries where available}
+
+The fermionic calculations already use particle-number and spin-adapted
+$\mathrm{SU}(2)$ symmetry.  The general Pauli calculations currently do not
+enforce particle number or total spin.  For larger systems, exact mapped
+symmetries could be used to restrict the qubit calculation or eliminate fixed
+qubits.  Approximate symmetries cannot be fixed without introducing an
+additional approximation, so exact and approximate generators must remain
+clearly distinguished.
+
+\section{Suggested implementation order}
+
+The following order removes the most restrictive bottlenecks first:
+\begin{enumerate}
+  \item introduce a reference-state interface supporting saved MPSs;
+  \item compute entropies and mutual information directly from an MPS;
+  \item generalize molecular input and active-space metadata;
+  \item improve and instrument CISD-to-MPS conversion;
+  \item add streaming transformed-Hamiltonian and MPO construction;
+  \item cache and checkpoint the symmetry search; and
+  \item optimize circuit routing and MPS compression.
+\end{enumerate}
+
+This sequence preserves the current small-system workflow as a validation
+case while allowing the reference calculation, entropy analysis, and warm
+start to be replaced independently as the orbital space grows.
+
+\end{document}

@@ -2,51 +2,23 @@
 # %%
 from __future__ import annotations
 
-import json
-import os
 import pickle
-import tempfile
 import warnings
 import numpy as np
 from dataclasses import dataclass, field, fields
 from pathlib import Path
 
 from openfermion import QubitOperator
+from .save import (
+    decode_qubit_operator,
+    encode_qubit_operator,
+    load_json,
+    save_json,
+)
 
 
 _JSON_SCHEMA = "quasisymmetries.BenchmarkData"
 _JSON_VERSION = 1
-
-
-def _encode_qubit_operator(operator: QubitOperator):
-    return {
-        "terms": [
-            {
-                "pauli": [[int(index), pauli] for index, pauli in term],
-                "coefficient": {
-                    "real": float(complex(coefficient).real),
-                    "imag": float(complex(coefficient).imag),
-                },
-            }
-            for term, coefficient in operator.terms.items()
-        ]
-    }
-
-
-def _decode_qubit_operator(data):
-    operator = QubitOperator()
-    for encoded_term in data["terms"]:
-        term = tuple(
-            (int(index), str(pauli))
-            for index, pauli in encoded_term["pauli"]
-        )
-        encoded_coefficient = encoded_term["coefficient"]
-        coefficient = complex(
-            encoded_coefficient["real"],
-            encoded_coefficient["imag"],
-        )
-        operator += QubitOperator(term, coefficient)
-    return operator
 
 
 @dataclass
@@ -106,7 +78,7 @@ class BenchmarkData:
         return {
             "tag": self.tag,
             "symmetries": [
-                _encode_qubit_operator(symmetry)
+                encode_qubit_operator(symmetry)
                 for symmetry in self.symmetries
             ],
             "non_commuting_l1": float(self.non_commuting_l1),
@@ -125,7 +97,7 @@ class BenchmarkData:
     def _from_json_dict(cls, data):
         decoded = dict(data)
         decoded["symmetries"] = [
-            _decode_qubit_operator(symmetry)
+            decode_qubit_operator(symmetry)
             for symmetry in data.get("symmetries", [])
         ]
         return cls.from_dict(decoded)
@@ -200,32 +172,11 @@ class BenchmarkData:
         elif path.suffix != ".json":
             path = path.with_suffix(path.suffix + ".json")
 
-        temporary_path = None
-        try:
-            with tempfile.NamedTemporaryFile(
-                mode="w",
-                encoding="utf-8",
-                dir=path.parent,
-                prefix=f".{path.name}.",
-                suffix=".tmp",
-                delete=False,
-            ) as file_obj:
-                temporary_path = Path(file_obj.name)
-                json.dump(payload, file_obj, indent=2, allow_nan=False)
-                file_obj.write("\n")
-                file_obj.flush()
-                os.fsync(file_obj.fileno())
-            os.replace(temporary_path, path)
-        except Exception:
-            if temporary_path is not None:
-                temporary_path.unlink(missing_ok=True)
-            raise
-        return path
+        return save_json(path, payload)
 
     @classmethod
     def _read_json(cls, filename):
-        with Path(filename).open(encoding="utf-8") as file_obj:
-            payload = json.load(file_obj)
+        payload = load_json(filename)
 
         if payload.get("schema") != _JSON_SCHEMA:
             raise ValueError(

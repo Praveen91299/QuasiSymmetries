@@ -26,22 +26,24 @@ import _bootstrap  # noqa: F401
 
 import argparse
 import csv
+import gc
 import json
 import sys
 from pathlib import Path
-from time import perf_counter
 
 import numpy as np
 from openfermion import (
     MolecularData,
     QubitOperator,
     get_fermion_operator,
+    hermitian_conjugated,
     jordan_wigner,
 )
 from pyscf import ci, fci, lib, scf
 from pyscf.fci import cistring
 
 from quasisymmetries.clifford_symmetry_optimized import Clifford
+from quasisymmetries.mps_unitary import OrbitalRotationUnitary
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -83,17 +85,35 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dmrg-tol", type=float, default=1.6e-3)
     parser.add_argument("--sweep-tol", type=float, default=1e-6)
     parser.add_argument("--mpo-cutoff", type=float, default=1e-10)
+    parser.add_argument(
+        "--block2-mpo-builder",
+        choices=("blocked_sum", "expression"),
+        default="blocked_sum",
+        help=(
+            "use Block2's memory-bounded blocked sum-of-MPO builder "
+            "(default) or Block2's high-memory global expression builder"
+        ),
+    )
+    parser.add_argument("--sum-mpo-mod", type=int, default=20)
     parser.add_argument("--mps-cutoff", type=float, default=1e-13)
     parser.add_argument("--noise", type=float, default=1.0)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument(
         "--qubit-backend",
-        choices=("quimb", "block2"),
-        default="quimb",
-        help="tensor-network backend for the qubit Hamiltonian DMRG curves",
+        choices=("block2",),
+        default="block2",
+        help="retained for CLI compatibility; pyblock2 is the only backend",
     )
     parser.add_argument("--n-threads", type=int, default=1)
-    parser.add_argument("--stack-mem-gb", type=float, default=0.5)
+    parser.add_argument(
+        "--stack-mem-gb",
+        type=float,
+        default=0.25,
+        help=(
+            "Block2 stack arena in GiB; MPO tensors are disk-backed to keep "
+            "the default safe on memory-constrained machines"
+        ),
+    )
     parser.add_argument("--davidson-threshold", type=float, default=1e-10)
     parser.add_argument(
         "--full-curve",
@@ -116,6 +136,21 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--sparse-batch-size", type=int, default=32)
     parser.add_argument(
         "--sparse-compression-cutoff", type=float, default=1e-13
+    )
+    parser.add_argument(
+        "--transform-mps-max-bond",
+        type=int,
+        default=None,
+        help=(
+            "bond cap while applying orbital-Givens and Clifford gates; "
+            "defaults to the largest value in --bond-dims"
+        ),
+    )
+    parser.add_argument(
+        "--transform-mps-cutoff",
+        type=float,
+        default=1e-13,
+        help="singular-value cutoff after every two-site circuit gate",
     )
     parser.add_argument(
         "--no-save-tensor-networks",
@@ -351,6 +386,20 @@ def molecular_hamiltonian_to_jw(molecular_hamiltonian, nelec):
     return qubit_hamiltonian
 
 
+def hermitize_qubit_hamiltonian(
+    hamiltonian: QubitOperator, *, cutoff: float = 1e-12
+) -> tuple[QubitOperator, float]:
+    """Remove numerical anti-Hermitian residue from a Pauli expansion."""
+    adjoint = hermitian_conjugated(hamiltonian)
+    antihermitian = hamiltonian - adjoint
+    largest_residual = max(
+        (abs(value) for value in antihermitian.terms.values()), default=0.0
+    )
+    hermitian = 0.5 * (hamiltonian + adjoint)
+    hermitian.compress(abs_tol=cutoff)
+    return hermitian, float(largest_residual)
+
+
 def expand_ci_state(
     ci_vector: np.ndarray, norb: int, nelec, cutoff: float = 1e-14
 ) -> np.ndarray:
@@ -474,177 +523,6 @@ def build_clifford(symmetries, n_qubits: int) -> Clifford:
     return clifford
 
 
-def mpo_from_qubit_operator(
-    hamiltonian,
-    n_qubits: int,
-    qtn,
-    cutoff: float,
-    verbose: bool,
-):
-    identity = np.eye(2, dtype=complex)
-    paulis = {
-        "X": np.array([[0, 1], [1, 0]], dtype=complex),
-        "Y": np.array([[0, -1j], [1j, 0]], dtype=complex),
-        "Z": np.array([[1, 0], [0, -1]], dtype=complex),
-    }
-    zero = np.zeros((2, 2), dtype=complex)
-    mpo = qtn.MPO_product_operator([zero] * n_qubits)
-    for term_index, (term, coefficient) in enumerate(hamiltonian.terms.items()):
-        local_ops = [identity] * n_qubits
-        for qubit, pauli in term:
-            local_ops[qubit] = paulis[pauli]
-        mpo += coefficient * qtn.MPO_product_operator(local_ops)
-        if term_index % 20 == 0:
-            mpo.compress(cutoff=cutoff)
-    mpo.compress(cutoff=cutoff)
-    if verbose:
-        print("MPO bond dimensions:", mpo.bond_sizes(), flush=True)
-    return mpo
-
-
-def run_dmrg_curve(
-    *,
-    label: str,
-    hamiltonian,
-    exact_state,
-    exact_energy: float,
-    warm_start_energy: float | None,
-    n_qubits: int,
-    args: argparse.Namespace,
-) -> tuple[list[dict], dict]:
-    try:
-        import quimb.tensor as qtn
-    except ImportError as exc:
-        raise ImportError(
-            "quimb is required for DMRG; install QuasiSymmetries with the "
-            "'tensor-network' extra or rerun with --skip-dmrg"
-        ) from exc
-
-    mpo_start = perf_counter()
-    mpo = mpo_from_qubit_operator(
-        hamiltonian,
-        n_qubits,
-        qtn,
-        cutoff=args.mpo_cutoff,
-        verbose=args.verbose,
-    )
-    mpo_seconds = perf_counter() - mpo_start
-    mpo_bonds = [int(value) for value in mpo.bond_sizes()]
-    artifacts = {}
-    if args.save_tensor_networks:
-        from quimb.utils import save_to_disk
-
-        artifact_dir = args.output_dir / "tensor_networks"
-        artifact_dir.mkdir(parents=True, exist_ok=True)
-        mpo_path = artifact_dir / f"{label}_hamiltonian_mpo.qtn.pkl"
-        save_to_disk(mpo, str(mpo_path))
-        artifacts["mpo"] = {
-            "path": str(mpo_path),
-            "format": "quimb_pickle",
-        }
-        print(f"{label}: saved Hamiltonian MPO to {mpo_path}", flush=True)
-
-    exact_mps = None
-    if args.initial_state != "random":
-        exact_mps = qtn.MatrixProductState.from_dense(
-            exact_state, cutoff=args.mps_cutoff
-        )
-        if args.save_tensor_networks:
-            mps_path = (
-                args.output_dir
-                / "tensor_networks"
-                / f"{label}_{args.initial_state}_warm_start_mps.qtn.pkl"
-            )
-            save_to_disk(exact_mps, str(mps_path))
-            artifacts["warm_start_mps"] = {
-                "path": str(mps_path),
-                "format": "quimb_pickle",
-            }
-            print(
-                f"{label}: saved {args.initial_state} warm-start MPS to "
-                f"{mps_path}",
-                flush=True,
-            )
-
-    rows = []
-    first_converged_bd = None
-    for bond_dim in args.bond_dims:
-        np.random.seed(args.seed + int(bond_dim))
-        if exact_mps is None:
-            guess = qtn.MPS_rand_state(
-                n_qubits, bond_dim=min(2, int(bond_dim))
-            )
-        else:
-            guess = exact_mps.copy()
-            if args.noise:
-                guess += args.noise * qtn.MPS_rand_state(
-                    n_qubits, bond_dim=1
-                )
-                guess.normalize()
-
-        start = perf_counter()
-        dmrg = qtn.DMRG(
-            mpo,
-            int(bond_dim),
-            bsz=2,
-            cutoffs=args.mpo_cutoff,
-            p0=guess,
-        )
-        dmrg.opts["local_eig_tol"] = 1e-3
-        dmrg.solve(
-            tol=args.sweep_tol,
-            bond_dims=int(bond_dim),
-            max_sweeps=args.dmrg_sweeps,
-            sweep_sequence="RL",
-            verbosity=2 if args.verbose else 0,
-            suppress_warnings=False,
-            cutoffs=args.mpo_cutoff,
-        )
-        seconds = perf_counter() - start
-        energy = float(np.real(dmrg.energy))
-        error = abs(energy - exact_energy)
-        converged = error <= args.dmrg_tol
-        if converged and first_converged_bd is None:
-            first_converged_bd = int(bond_dim)
-        state_bonds = [int(value) for value in dmrg.state.bond_sizes()]
-        row = {
-            "frame": label,
-            "bond_dim": int(bond_dim),
-            "energy": energy,
-            "abs_energy_error": error,
-            "within_dmrg_tolerance": converged,
-            "dmrg_seconds": seconds,
-            "max_result_mps_bond": max(state_bonds, default=1),
-        }
-        rows.append(row)
-        print(
-            f"{label:18s} bond_dim={bond_dim:3d} "
-            f"E={energy:.12f} |dE|={error:.3e} "
-            f"seconds={seconds:.1f}",
-            flush=True,
-        )
-        if converged and not args.full_curve:
-            print(
-                f"{label}: reached chemical accuracy at bond_dim={bond_dim}; "
-                "stopping this frame.",
-                flush=True,
-            )
-            break
-
-    summary = {
-        "frame": label,
-        "first_converged_bond_dim": first_converged_bd,
-        "converged_within_grid": first_converged_bd is not None,
-        "mpo_bond_dimensions": mpo_bonds,
-        "max_mpo_bond_dimension": max(mpo_bonds, default=1),
-        "mpo_build_seconds": mpo_seconds,
-        "warm_start_kind": args.initial_state,
-        "expected_warm_start_energy": warm_start_energy,
-        "saved_tensor_networks": artifacts,
-    }
-    return rows, summary
-
-
 def run_qubit_dmrg_curve(
     *,
     label: str,
@@ -655,23 +533,16 @@ def run_qubit_dmrg_curve(
     warm_start_energy: float | None = None,
     n_qubits: int,
     args: argparse.Namespace,
+    unitaries=(),
+    validate_warm_start_energy: bool = True,
 ) -> tuple[list[dict], dict]:
-    """Dispatch a qubit-Hamiltonian curve to quimb or Pauli-mode Block2."""
-    if args.qubit_backend == "quimb":
-        return run_dmrg_curve(
-            label=label,
-            hamiltonian=hamiltonian,
-            exact_state=exact_state,
-            exact_energy=exact_energy,
-            warm_start_energy=warm_start_energy,
-            n_qubits=n_qubits,
-            args=args,
-        )
-
+    """Run a qubit-Hamiltonian curve using only Pauli-mode pyblock2."""
     from quasisymmetries.block2_qubit_benchmark import (
         run_block2_qubit_dmrg_curve,
     )
 
+    transform_max_bond = getattr(args, "transform_mps_max_bond", None)
+    transform_cutoff = getattr(args, "transform_mps_cutoff", 1e-13)
     return run_block2_qubit_dmrg_curve(
         label=label,
         hamiltonian=hamiltonian,
@@ -683,12 +554,25 @@ def run_qubit_dmrg_curve(
         bond_dims=args.bond_dims,
         dmrg_sweeps=args.dmrg_sweeps,
         dmrg_tolerance=args.dmrg_tol,
+        sweep_tolerance=args.sweep_tol,
         mps_cutoff=args.mps_cutoff,
+        mpo_cutoff=args.mpo_cutoff,
+        mpo_builder=args.block2_mpo_builder,
+        sum_mpo_mod=args.sum_mpo_mod,
         initial_state=args.initial_state,
         sparse_batch_size=args.sparse_batch_size,
         sparse_compression_cutoff=args.sparse_compression_cutoff,
+        unitaries=unitaries,
+        transform_max_bond=(
+            transform_max_bond
+            if transform_max_bond is not None
+            else max(args.bond_dims)
+        ),
+        transform_cutoff=transform_cutoff,
+        validate_warm_start_energy=validate_warm_start_energy,
         full_curve=args.full_curve,
         n_threads=args.n_threads,
+        n_mkl_threads=getattr(args, "n_mkl_threads", 1),
         stack_mem_gb=args.stack_mem_gb,
         davidson_threshold=args.davidson_threshold,
         verbose=args.verbose,
@@ -791,53 +675,54 @@ def main() -> None:
     optimized_jw = molecular_hamiltonian_to_jw(
         moldata.hamiltonian.rotated(orbital_rotation), moldata.nelec
     )
+    canonical_jw, canonical_antihermitian_residual = (
+        hermitize_qubit_hamiltonian(canonical_jw)
+    )
+    optimized_jw, optimized_antihermitian_residual = (
+        hermitize_qubit_hamiltonian(optimized_jw)
+    )
+    print(
+        "Largest removed anti-Hermitian Pauli coefficient: "
+        f"canonical={canonical_antihermitian_residual:.3e}, "
+        f"orbital_rotated={optimized_antihermitian_residual:.3e}",
+        flush=True,
+    )
     canonical_clifford = clifford.transform(canonical_jw)
     optimized_clifford = clifford.transform(optimized_jw)
-
-    import ffsim
+    canonical_terms_before = len(canonical_jw.terms)
+    optimized_terms_before = len(optimized_jw.terms)
+    canonical_terms_after = len(canonical_clifford.terms)
+    optimized_terms_after = len(optimized_clifford.terms)
+    # The untransformed operators are no longer used. Their Python Pauli-term
+    # dictionaries otherwise remain live during Block2 MPO construction.
+    del canonical_jw, optimized_jw
+    gc.collect()
 
     warm_ci = cisd_ci if args.initial_state == "cisd" else fci_ci
     warm_start_energy = (
         cisd_energy if args.initial_state == "cisd" else fci_energy
     )
-    optimized_ci = ffsim.apply_orbital_rotation(
-        warm_ci.reshape(-1),
-        orbital_rotation,
-        norb,
-        moldata.nelec,
-    ).reshape(warm_ci.shape)
     # For CISD, retain every nonzero CI coefficient. No determinant-amplitude
     # cutoff is applied before MPS construction.
     state_cutoff = 0.0 if args.initial_state == "cisd" else 1e-14
     canonical_state = expand_ci_state(
         warm_ci, norb, moldata.nelec, cutoff=state_cutoff
     )
-    optimized_state = expand_ci_state(
-        optimized_ci, norb, moldata.nelec, cutoff=state_cutoff
-    )
-    canonical_clifford_state = transform_state_matrix_free(
-        clifford, canonical_state
-    )
-    optimized_clifford_state = transform_state_matrix_free(
-        clifford, optimized_state
-    )
-    for label, state in (
-        ("canonical", canonical_clifford_state),
-        ("orbital_rotated", optimized_clifford_state),
-    ):
-        norm = np.linalg.norm(state)
-        if not np.isclose(norm, 1.0, atol=1e-10):
-            raise RuntimeError(
-                f"{label} Clifford-transformed state has norm {norm}"
-            )
-    canonical_sparse_state = sparse_state(canonical_clifford_state)
-    optimized_sparse_state = sparse_state(optimized_clifford_state)
+    canonical_sparse_state = sparse_state(canonical_state)
+    # Both curves start from this same canonical-orbital selected-CI state.
+    # The optimized curve creates its rotated state by applying a capped
+    # adjacent-Givens tensor circuit directly to the pyblock MPS.
+    optimized_sparse_state = canonical_sparse_state
     print(
-        "Warm-start determinants after Clifford: "
-        f"canonical={len(canonical_sparse_state[0])}, "
-        f"orbital_rotated={len(optimized_sparse_state[0])}",
+        "Warm-start source determinants before tensor circuits: "
+        f"{len(canonical_sparse_state[0])}; the canonical and optimized "
+        "curves use the same determinant-sum MPS.",
         flush=True,
     )
+    canonical_dmrg_state = None
+    optimized_dmrg_state = None
+    del canonical_state, warm_ci
+    gc.collect()
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     result_path = args.output_dir / "benchmark.json"
@@ -875,10 +760,16 @@ def main() -> None:
             "transformed_symmetries": [
                 str(sym) for sym in clifford.transformed_symmetries
             ],
-            "canonical_terms_before": len(canonical_jw.terms),
-            "canonical_terms_after": len(canonical_clifford.terms),
-            "optimized_terms_before": len(optimized_jw.terms),
-            "optimized_terms_after": len(optimized_clifford.terms),
+            "canonical_terms_before": canonical_terms_before,
+            "canonical_terms_after": canonical_terms_after,
+            "optimized_terms_before": optimized_terms_before,
+            "optimized_terms_after": optimized_terms_after,
+            "canonical_antihermitian_residual_removed": (
+                canonical_antihermitian_residual
+            ),
+            "optimized_antihermitian_residual_removed": (
+                optimized_antihermitian_residual
+            ),
         },
         "dmrg_settings": {
             "skipped": args.skip_dmrg,
@@ -887,6 +778,8 @@ def main() -> None:
             "dmrg_tolerance": args.dmrg_tol,
             "sweep_tolerance": args.sweep_tol,
             "mpo_cutoff": args.mpo_cutoff,
+            "block2_mpo_builder": args.block2_mpo_builder,
+            "sum_mpo_mod": args.sum_mpo_mod,
             "mps_cutoff": args.mps_cutoff,
             "initial_state": args.initial_state,
             "noise": args.noise,
@@ -898,14 +791,28 @@ def main() -> None:
             "davidson_threshold": args.davidson_threshold,
             "sparse_batch_size": args.sparse_batch_size,
             "sparse_compression_cutoff": args.sparse_compression_cutoff,
+            "transform_mps_max_bond": (
+                args.transform_mps_max_bond
+                if args.transform_mps_max_bond is not None
+                else max(args.bond_dims)
+            ),
+            "transform_mps_cutoff": args.transform_mps_cutoff,
             "save_tensor_networks": args.save_tensor_networks,
         },
         "warm_start": {
             "kind": args.initial_state,
             "energy": warm_start_energy,
-            "canonical_nonzero_determinants": len(canonical_sparse_state[0]),
-            "optimized_nonzero_determinants": len(optimized_sparse_state[0]),
+            "canonical_source_nonzero_determinants": len(
+                canonical_sparse_state[0]
+            ),
+            "optimized_source_nonzero_determinants": len(
+                optimized_sparse_state[0]
+            ),
             "determinant_coefficient_truncation": False,
+            "optimized_state_construction": (
+                "canonical selected-CI pyblock MPS followed by adjacent "
+                "orbital Givens gates with capped two-site SVDs"
+            ),
             "mps_numerical_rank_cutoff": (
                 args.sparse_compression_cutoff
                 if args.qubit_backend == "block2"
@@ -920,18 +827,33 @@ def main() -> None:
 
     if not args.skip_dmrg:
         all_rows = []
-        for label, hamiltonian, state, sparse_warm_state in (
+        orbital_unitary = OrbitalRotationUnitary(
+            orbital_rotation,
+            tolerance=max(float(args.transform_mps_cutoff), 1e-12),
+        )
+        for (
+            label,
+            hamiltonian,
+            state,
+            sparse_warm_state,
+            warm_unitaries,
+            validate_warm_energy,
+        ) in (
             (
                 "canonical_orbitals",
                 canonical_clifford,
-                canonical_clifford_state,
+                canonical_dmrg_state,
                 canonical_sparse_state,
+                (clifford,),
+                True,
             ),
             (
                 "optimized_orbitals",
                 optimized_clifford,
-                optimized_clifford_state,
+                optimized_dmrg_state,
                 optimized_sparse_state,
+                (orbital_unitary, clifford),
+                False,
             ),
         ):
             rows, summary = run_qubit_dmrg_curve(
@@ -943,6 +865,8 @@ def main() -> None:
                 warm_start_energy=warm_start_energy,
                 n_qubits=n_qubits,
                 args=args,
+                unitaries=warm_unitaries,
+                validate_warm_start_energy=validate_warm_energy,
             )
             all_rows.extend(rows)
             result["dmrg_curve"] = all_rows

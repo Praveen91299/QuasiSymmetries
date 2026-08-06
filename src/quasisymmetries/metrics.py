@@ -1,10 +1,99 @@
 
 from openfermion import commutator, get_sparse_operator, expectation, get_ground_state, hermitian_conjugated, QubitOperator, jordan_wigner, FermionOperator
 import numpy as np
-from scipy.sparse import identity as sparse_id
+from scipy.sparse import csc_matrix, identity as sparse_id
 from copy import deepcopy
 from .op_utils import freeze_qubits, permute_sym_to_start
 from .clifford_symmetry_optimized import Clifford
+
+
+class PauliTermOverlapCommutatorEvaluator:
+    """Matrix-free repeated ``||[H, S] psi||^2`` for Pauli products ``S``.
+
+    For a Pauli product ``S``, only Hamiltonian terms that anticommute with it
+    contribute, and ``||[H,S] psi||^2 = 4 ||H_anti(S) psi||^2``.  The action
+    of each Hamiltonian Pauli term on a determinant-sparse state is prepared
+    once.  Their comparatively small term-by-term Gram matrix is retained;
+    the full ``2**n_qubits`` square Hamiltonian matrix is never constructed.
+    """
+
+    def __init__(self, hamiltonian, sparse_state):
+        from .bs.utils import as_pauli_term_stream
+        from .state_utils import PauliActionMask, SparseQubitState
+
+        if not isinstance(sparse_state, SparseQubitState):
+            raise TypeError("sparse_state must be a SparseQubitState")
+        self.n_qubits = int(sparse_state.n_qubits)
+        stream = as_pauli_term_stream(hamiltonian, self.n_qubits)
+        terms = stream.terms
+        self.hamiltonian_masks = tuple(item.mask for item in terms)
+        n_terms = len(terms)
+        n_det = int(sparse_state.nnz)
+        rows = []
+        columns = []
+        values = []
+        for column, item in enumerate(terms):
+            action = PauliActionMask.from_pauli_mask(
+                item.mask,
+                self.n_qubits,
+                item.signed_coefficient,
+            )
+            rows.append(
+                (sparse_state.indices ^ action.flip_mask).astype(
+                    np.int32, copy=False
+                )
+            )
+            columns.append(np.full(n_det, column, dtype=np.int32))
+            values.append(
+                action.phases(sparse_state.indices) * sparse_state.coeffs
+            )
+        if n_terms:
+            action_matrix = csc_matrix(
+                (
+                    np.concatenate(values),
+                    (np.concatenate(rows), np.concatenate(columns)),
+                ),
+                shape=(1 << self.n_qubits, n_terms),
+            )
+            self.term_overlap = (action_matrix.getH() @ action_matrix).tocsr()
+        else:
+            self.term_overlap = csc_matrix((0, 0), dtype=np.complex128).tocsr()
+
+    @staticmethod
+    def _anticommutes(first, second):
+        first_x, first_z = first
+        second_x, second_z = second
+        return (
+            (bin(int(first_x & second_z)).count("1")
+             + bin(int(first_z & second_x)).count("1"))
+            & 1
+        ) == 1
+
+    def cost_mask(self, symmetry_mask):
+        selected = np.fromiter(
+            (
+                self._anticommutes(term_mask, symmetry_mask)
+                for term_mask in self.hamiltonian_masks
+            ),
+            dtype=np.float64,
+            count=len(self.hamiltonian_masks),
+        )
+        value = 4.0 * np.vdot(selected, self.term_overlap @ selected)
+        value = float(np.real_if_close(value))
+        if value < 0 and abs(value) < 1e-10:
+            value = 0.0
+        return value
+
+    def cost(self, symmetries):
+        from .bs.utils import term_to_masks
+
+        total = 0.0
+        for symmetry in symmetries:
+            if len(symmetry.terms) != 1:
+                raise ValueError("Every symmetry must be one Pauli product.")
+            (term, _coefficient), = symmetry.terms.items()
+            total += self.cost_mask(term_to_masks(term, self.n_qubits))
+        return total
 
 def construct_projectors(sym_list: list[QubitOperator]):
     """

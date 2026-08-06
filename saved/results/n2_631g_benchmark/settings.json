@@ -1,0 +1,87 @@
+{
+  "format": "n2_631g_benchmark_settings_v2",
+  "preparation": {
+    "probe_dir": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/n2_631g_mpo_probe",
+    "output_dir": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/n2_631g_benchmark",
+    "frozen_core_orbitals": 0,
+    "frames": [
+      "raw_fermionic_su2",
+      "raw_qubit",
+      "seniority_Nover2",
+      "HCT_Nover2_CommL1",
+      "HCT_N_CommL1",
+      "Beam_Nover2_CommL1",
+      "Beam_N_CommL1",
+      "HCT_N_CommL1_Fiedler",
+      "Beam_N_CommL1_Fiedler"
+    ],
+    "cisd_tolerance": 1e-10,
+    "cisd_max_cycle": 100,
+    "cisd_coefficient_tolerance": 0.0,
+    "reference_bond_dims": [
+      100,
+      150
+    ],
+    "reference_sweeps": 100,
+    "reference_sweep_tolerance": 1e-08,
+    "reference_validation_tolerance": 0.0001,
+    "require_reference_validation": false,
+    "reference_transform_max_bond": 150,
+    "hct_intervals": 100,
+    "hct_term_tolerance": 1e-05,
+    "hct_use_coefficient_thresholds": false,
+    "beam_width": 16,
+    "heavy_core_fraction": 0.95,
+    "max_candidates_from_terms": 256,
+    "pairwise_seed_terms": 50,
+    "max_candidate_pool_size": 1000,
+    "max_pauli_weight": null,
+    "fiedler_component_order": "index",
+    "bond_dims": [
+      10,
+      20,
+      30,
+      40,
+      60,
+      80,
+      100,
+      150,
+      200
+    ],
+    "dmrg_sweeps": 100,
+    "dmrg_tolerance": 0.0016,
+    "sweep_tolerance": 1e-06,
+    "davidson_threshold": 1e-10,
+    "warm_start_noises": [
+      0.0001,
+      0.0001,
+      1e-05,
+      1e-05,
+      1e-06,
+      1e-06
+    ],
+    "mps_cutoff": 1e-13,
+    "mpo_cutoff": 1e-10,
+    "mpo_builder": "blocked_sum",
+    "sum_mpo_mod": 10,
+    "sparse_batch_size": 32,
+    "full_curve": false,
+    "system": "N2_631g",
+    "n_qubits": 36,
+    "probe_manifest": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/n2_631g_mpo_probe/probe_fc0.json",
+    "fci_used": false,
+    "symmetry_scoring_state": null,
+    "frames_processed_sequentially": true
+  },
+  "execution": {
+    "n_threads": 1,
+    "mp_start_method": null,
+    "n_mkl_threads": 1,
+    "stack_mem_gb": 0.5,
+    "n_processes": 1,
+    "verbose": true,
+    "skip_reference_bond_dims": [
+      150
+    ]
+  }
+}

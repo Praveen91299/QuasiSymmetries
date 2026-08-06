@@ -27,17 +27,55 @@ def statevector_to_sz_determinants(
     spin=None,
     cutoff=1e-12,
 ):
+    """Convert a dense or sparse JW state to Block2 SZ determinants.
+
+    Parameters
+    ----------
+    state
+        Dense OpenFermion-ordered statevector or ``SparseQubitState`` using the
+        same most-significant-bit qubit convention.
+    n_spatial_orbitals
+        Number of spatial orbitals in the input qubit register.
+    active_orbitals
+        Spatial orbitals retained in the returned Block2 determinant strings.
+    core_orbitals
+        Spatial orbitals required to be doubly occupied and removed from the
+        returned active strings.
+    n_electrons
+        Optional required active electron count.
+    spin
+        Optional required active spin projection ``N_alpha - N_beta``.
+    cutoff
+        Input amplitudes at or below this magnitude are ignored.
+
+    Returns
+    -------
+    determinants, coefficients, projected_norm
+        Block2 ``0/a/b/2`` determinant strings, normalized real coefficients,
+        and the norm of the selected input-space component before
+        normalization. No dense state is created for sparse input.
     """
-    Convert an OpenFermion/Jordan-Wigner statevector to Block2 SZ determinant
-    strings. Frozen-core orbitals are projected to doubly occupied, and any
-    omitted non-core orbitals are projected to empty.
-    """
-    state = np.asarray(state).reshape(-1)
     n_qubits = 2 * n_spatial_orbitals
-    if state.size != 2**n_qubits:
-        raise ValueError(
-            f"State has length {state.size}; expected {2**n_qubits}."
-        )
+    try:
+        from quasisymmetries.state_utils import SparseQubitState
+    except ImportError:
+        SparseQubitState = ()
+    if isinstance(state, SparseQubitState):
+        if state.n_qubits != n_qubits:
+            raise ValueError(
+                f"Sparse state has {state.n_qubits} qubits; expected {n_qubits}."
+            )
+        keep = np.abs(state.coeffs) > cutoff
+        basis_indices = state.indices[keep]
+        amplitudes = state.coeffs[keep]
+    else:
+        state = np.asarray(state).reshape(-1)
+        if state.size != 2**n_qubits:
+            raise ValueError(
+                f"State has length {state.size}; expected {2**n_qubits}."
+            )
+        basis_indices = np.flatnonzero(np.abs(state) > cutoff)
+        amplitudes = state[basis_indices]
 
     active_orbitals = list(active_orbitals)
     core_orbitals = set(core_orbitals)
@@ -49,7 +87,7 @@ def statevector_to_sz_determinants(
     occ_chars = {(0, 0): "0", (1, 0): "a", (0, 1): "b", (1, 1): "2"}
     dets, coeffs = [], []
 
-    for basis_index in np.flatnonzero(np.abs(state) > cutoff):
+    for basis_index, amplitude in zip(basis_indices, amplitudes):
         # OpenFermion's sparse basis places mode 0 at the most-significant bit.
         bits = [
             (int(basis_index) >> (n_qubits - 1 - mode)) & 1
@@ -83,7 +121,7 @@ def statevector_to_sz_determinants(
                 for p in active_orbitals
             )
         )
-        coeffs.append(state[basis_index])
+        coeffs.append(amplitude)
 
     if not coeffs:
         raise ValueError("The state has no weight in the requested active space.")
@@ -160,13 +198,26 @@ def determinants_to_su2_pyblock_mps(
             for basis in sz_driver.ghamil.basis
         ]
 
-        return MPSTools.trans_sz_to_su2(
+        py_su2_mps = MPSTools.trans_sz_to_su2(
             py_sz_mps,
             sz_basis,
             sz_driver.target,
             target_twos=spin,
             cutoff=1e-13,
         )
+        empty_sites = [
+            site
+            for site, tensor in enumerate(py_su2_mps.tensors)
+            if not tensor.blocks
+        ]
+        if empty_sites:
+            raise ValueError(
+                "The determinant state has zero projection into the requested "
+                f"SU(2) total-spin sector 2S={spin}; empty MPS tensor sites "
+                f"{empty_sites}. Check <S^2> and construct a spin-adapted "
+                "CISD warm start."
+            )
+        return py_su2_mps
 
 
 def pyblock_su2_to_block2_mps(py_su2_mps, driver, tag):

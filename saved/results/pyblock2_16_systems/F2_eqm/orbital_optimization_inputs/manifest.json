@@ -1,0 +1,35 @@
+{
+  "system": "F2_eqm",
+  "source": {
+    "kind": "pyscf_checkpoint",
+    "checkpoint": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_16_systems/hamiltonians/F2_eqm.chk",
+    "atom": "F2",
+    "distance_angstrom": 1.412,
+    "basis": "sto-3g",
+    "full_active_space": true
+  },
+  "n_qubits": 20,
+  "n_orbitals": 10,
+  "n_electrons": 18,
+  "fci_energy": -196.04963792324855,
+  "cisd_energy": -196.04963792324855,
+  "warm_start_info": {
+    "saved_cisd_spin_squared": -4.3021142204224816e-16,
+    "target_spin_squared": 0.0,
+    "spin_repair_required": false
+  },
+  "state_files": {
+    "fci": "fci_sparse_state.npz",
+    "cisd": "cisd_sparse_state.npz"
+  },
+  "hamiltonian_files": {
+    "qubit_json": "canonical_qubit_hamiltonian.json",
+    "fermionic_pickle": "fermionic_hamiltonian.pkl",
+    "bliss_qubit_json": "bliss_qubit_hamiltonian.json",
+    "bliss_fermionic_pickle": "bliss_fermionic_hamiltonian.pkl"
+  },
+  "symmetry_datasets": "symmetry_datasets.json",
+  "cliffords_and_orderings": "cliffords_and_orderings.json",
+  "synthesis_basis": "Z",
+  "generator_mapping": "positive_z"
+}

@@ -10,3 +10,10 @@ dist/
 *.out
 *.fdb_latexmk
 tmp_block2_pauli/
+
+# PyBlock2 MPS tensor and canonicalization shards.
+F.MPS*
+
+# Complete native PyBlock2 MPS restart directories. Portable *.npz MPS
+# archives remain eligible for version control.
+*_mps.block2/

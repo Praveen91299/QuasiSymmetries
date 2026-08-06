@@ -1,0 +1,43 @@
+{
+  "system": "H4chain_diss",
+  "source": {
+    "kind": "openfermion_molecular_data",
+    "hamiltonian_pickle": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/hamiltonians/H4chain_diss.pkl",
+    "molecular_data": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/hamiltonians/H4chain_diss.hdf5"
+  },
+  "n_qubits": 8,
+  "n_orbitals": 4,
+  "n_electrons": 4,
+  "fci_energy": -1.8672913724013778,
+  "cisd_energy": -1.8588887525947484,
+  "warm_start_info": {
+    "saved_cisd_spin_squared": 5.999999999999998,
+    "target_spin_squared": 0.0,
+    "spin_repair_required": true,
+    "saved_cisd_energy": -1.8656454887722758,
+    "repaired_cisd_energy": -1.8588887525947484,
+    "repair": {
+      "method": "CISD_with_total_spin_penalty",
+      "hf_occupation": "11110000",
+      "subspace_dimension": 53,
+      "spin_penalty": 10.0,
+      "target_spin_twos": 0,
+      "target_spin_squared": 0.0,
+      "measured_spin_squared": 1.5740361044149025e-17
+    }
+  },
+  "state_files": {
+    "fci": "fci_sparse_state.npz",
+    "cisd": "cisd_sparse_state.npz"
+  },
+  "hamiltonian_files": {
+    "qubit_json": "canonical_qubit_hamiltonian.json",
+    "fermionic_pickle": "fermionic_hamiltonian.pkl",
+    "bliss_qubit_json": "bliss_qubit_hamiltonian.json",
+    "bliss_fermionic_pickle": "bliss_fermionic_hamiltonian.pkl"
+  },
+  "symmetry_datasets": "symmetry_datasets.json",
+  "cliffords_and_orderings": "cliffords_and_orderings.json",
+  "synthesis_basis": "Z",
+  "generator_mapping": "positive_z"
+}

@@ -1,0 +1,94 @@
+{
+  "system": "H4chain_diss",
+  "source_input_dir": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/pyblock2_16_systems/H4chain_diss/orbital_optimization_inputs",
+  "definition": "orbital-pair parity generators Z_(2p) Z_(2p+1); full transformed Hamiltonian, without sector projection",
+  "n_qubits": 8,
+  "n_symmetries": 4,
+  "symmetries": [
+    "1.0 [Z0 Z1]",
+    "1.0 [Z2 Z3]",
+    "1.0 [Z4 Z5]",
+    "1.0 [Z6 Z7]"
+  ],
+  "clifford": {
+    "n_qubits": 8,
+    "factor_descriptions": [
+      "CNOT(1->0)",
+      "CNOT(3->2)",
+      "CNOT(5->4)",
+      "CNOT(7->6)"
+    ],
+    "permutation": [
+      0,
+      4,
+      1,
+      5,
+      2,
+      6,
+      3,
+      7
+    ],
+    "synthesis_basis": "Z",
+    "generator_mapping": "positive_z",
+    "mapped_qubits": [
+      0,
+      2,
+      4,
+      6
+    ],
+    "generator_row_transform": [
+      [
+        1,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        1,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        1,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        1
+      ]
+    ]
+  },
+  "preparation_seconds": 0.0024948329955805093,
+  "fci_determinants_before": 256,
+  "fci_determinants_after": 256,
+  "cisd_determinants_before": 52,
+  "cisd_determinants_after": 52,
+  "fci_energy": -1.8672913724013778,
+  "transformed_fci_energy": -1.8672913724013787,
+  "cisd_energy": -1.8588887525947484,
+  "transformed_cisd_energy": -1.8588887525947486,
+  "fci_cut_entropies": [
+    0.5657470640222328,
+    0.5828154045786023,
+    0.5756371608877552,
+    0.5673371621883689,
+    1.253867359303547,
+    1.37718934656079,
+    0.6890484916806342
+  ],
+  "symmetry_sector_entropy": 0.5828154045786025,
+  "non_commuting_l1": 10.342407581102748,
+  "num_commuting_terms": 60,
+  "files": {
+    "symmetry_datasets": "prepared/symmetry_datasets.json",
+    "clifford": "prepared/clifford.json",
+    "transformed_hamiltonian": "prepared/transformed_qubit_hamiltonian.json",
+    "transformed_fci": "prepared/transformed_fci_sparse_state.npz",
+    "transformed_cisd": "prepared/transformed_cisd_sparse_state.npz"
+  }
+}

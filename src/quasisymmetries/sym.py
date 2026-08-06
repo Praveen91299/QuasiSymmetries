@@ -5,6 +5,35 @@ from openfermion import count_qubits, jordan_wigner, QubitOperator
 from .metrics import universal_grading
 from .op_utils import truncate_qubitop
 from dataclasses import dataclass
+from .bs.utils import (
+    as_pauli_term_stream,
+    qubitops_to_masks,
+    symplectic_commutes,
+)
+
+
+def _stream_g_matrix(stream, threshold=0.0):
+    """Build HCT's binary symplectic matrix directly from packed masks."""
+    selected = [
+        item for item in stream.terms
+        if item.mask != (0, 0) and item.abs_coeff >= float(threshold)
+    ]
+    matrix = np.zeros((len(selected), 2 * stream.n_qubits), dtype=np.uint8)
+    for row, item in enumerate(selected):
+        x, z = item.mask
+        for qubit in range(stream.n_qubits):
+            matrix[row, qubit] = (x >> qubit) & 1
+            matrix[row, stream.n_qubits + qubit] = (z >> qubit) & 1
+    return matrix
+
+
+def _stream_commutator_l1(symmetry, stream):
+    mask = qubitops_to_masks([symmetry], stream.n_qubits)[0]
+    return 2.0 * sum(
+        item.abs_coeff
+        for item in stream.terms
+        if item.mask != (0, 0) and not symplectic_commutes(mask, item.mask)
+    )
 
 # def find_approx_symm(H, n_sym=None, num_intervals=100, eps_max=None, verbose=True, print_new=True, sym_metric_func=None):
 #     """
@@ -134,12 +163,14 @@ def hct_mod(HQ, n_sym=None, sym_metric_func = None, use_coeffs_eps=False, num_in
 
     """
 
-    n_qubits = count_qubits(HQ)
-    max_abs = max((abs(c) for c in HQ.terms.values()), default=0.0)
+    stream = as_pauli_term_stream(HQ)
+    n_qubits = stream.n_qubits
+    max_abs = max((item.abs_coeff for item in stream.terms), default=0.0)
 
     #defaults
     if n_sym is None: n_sym = n_qubits
-    if sym_metric_func is None: sym_metric_func = lambda s: np.real(universal_grading([s], HQ)) # Pauli L1 of NC
+    if sym_metric_func is None:
+        sym_metric_func = lambda s: _stream_commutator_l1(s, stream)
     if eps_max is None: eps_max = max_abs * 1.000001
 
     #input checks
@@ -147,7 +178,7 @@ def hct_mod(HQ, n_sym=None, sym_metric_func = None, use_coeffs_eps=False, num_in
 
     if use_coeffs_eps:
         eps_grid = [0.0]
-        eps_grid.extend(sorted([np.abs(c) for c in truncate_qubitop(HQ, tol).terms.values()]))
+        eps_grid.extend(sorted(item.abs_coeff for item in stream.terms if item.abs_coeff >= tol))
     else:
         eps_grid = np.linspace(0.0, eps_max, num_intervals)
     
@@ -156,10 +187,7 @@ def hct_mod(HQ, n_sym=None, sym_metric_func = None, use_coeffs_eps=False, num_in
     add_epsilon = [] #eps at which added symmetries where found
 
     for idx, eps in enumerate(eps_grid):
-        # Truncate H
-        Ht = truncate_qubitop(HQ, float(eps))
-
-        G, _, _, _ = qubitop_to_G_matrix(Ht, n=n_qubits)
+        G = _stream_g_matrix(stream, float(eps))
         S_de = gf2_symp_nullspace(G, n_qubits, True)
 
         # SS = Sde \int null_symp(S) generating set for new symmetries commute with existing
@@ -193,6 +221,152 @@ def hct_mod(HQ, n_sym=None, sym_metric_func = None, use_coeffs_eps=False, num_in
             return Symmetries, add_epsilon
     
     assert False, print("Insufficient symmetries {}/{} found, check for bugs/logical errors!".format(len(Symmetries), n_sym))
+
+
+def HCT(
+    HQ,
+    n_sym=None,
+    sym_metric_func=None,
+    use_coeffs_eps=False,
+    num_intervals=100,
+    eps_max=None,
+    verbose=True,
+    tol=1e-5,
+):
+    """Hamiltonian coefficient thresholding with paper-faithful tapering.
+
+    At every threshold, the symplectic kernel is reduced to a maximal
+    pairwise-commuting (isotropic) subspace using symplectic Gram--Schmidt.
+    Previously selected generators are retained as the threshold increases.
+
+    Parameters are the same as :func:`hct_mod`, except that ``add_gen_type``
+    is intentionally omitted because symplectic Gram--Schmidt determines the
+    generator construction.
+    """
+    stream = as_pauli_term_stream(HQ)
+    n_qubits = stream.n_qubits
+    max_abs = max((item.abs_coeff for item in stream.terms), default=0.0)
+
+    if n_sym is None:
+        n_sym = n_qubits
+    if sym_metric_func is None:
+        sym_metric_func = lambda symmetry: _stream_commutator_l1(
+            symmetry, stream
+        )
+    if eps_max is None:
+        eps_max = max_abs * 1.000001
+
+    if not 0 <= n_sym <= n_qubits:
+        raise ValueError(
+            f"Invalid number of symmetries {n_sym} requested for "
+            f"{n_qubits}-qubit Hamiltonian."
+        )
+    if n_sym == 0:
+        return [], []
+
+    if use_coeffs_eps:
+        eps_grid = [0.0]
+        eps_grid.extend(
+            sorted(
+                # Terms with |h| == eps are retained.  Move one floating-point
+                # step past each coefficient so every threshold drops a term.
+                np.nextafter(item.abs_coeff, np.inf)
+                for item in stream.terms
+                if item.abs_coeff >= tol
+            )
+        )
+    else:
+        eps_grid = np.linspace(0.0, eps_max, num_intervals)
+
+    selected_basis = np.zeros((0, 2 * n_qubits), dtype=np.uint8)
+    symmetries = []
+    add_epsilon = []
+
+    for eps in eps_grid:
+        G = _stream_g_matrix(stream, float(eps))
+        kernel = gf2_symp_nullspace(G, n_qubits, True)
+
+        # The intersection makes the old selected basis part of the radical:
+        # it is contained in this space and commutes with every vector in it.
+        commuting_kernel = gf2_intersection(
+            kernel,
+            gf2_symp_nullspace(selected_basis, n_qubits),
+            n_qubits,
+        )
+
+        def generator_score(generator):
+            symmetry = QubitOperator(
+                symplectic_to_pauli_string(generator, n_qubits), 1.0
+            )
+            pauli_weight = int(
+                np.count_nonzero(
+                    generator[:n_qubits] | generator[n_qubits:]
+                )
+            )
+            packed_integer = gf2_matrix_to_int_rows(
+                np.asarray([generator], dtype=np.uint8)
+            )[0]
+            return (
+                sym_metric_func(symmetry),
+                pauli_weight,
+                packed_integer,
+            )
+
+        # Work in the quotient by the previously selected radical.  RREF may
+        # inspect the old span for rank tests, but the literal old rows are
+        # never replaced by its canonicalized representatives.
+        quotient_basis = gf2_basis_extension(
+            selected_basis, commuting_kernel, verify=True
+        )
+
+        def reduce_modulo_selected(generator):
+            return gf2_greedy_coset_representative(
+                generator,
+                selected_basis,
+                generator_score,
+            )
+
+        new_generators = gf2_maximal_isotropic_subspace(
+            quotient_basis,
+            n_qubits,
+            verify=True,
+            vector_cost=generator_score,
+            representative_func=reduce_modulo_selected,
+        )
+
+        candidates = [
+            (
+                generator,
+                QubitOperator(
+                    symplectic_to_pauli_string(generator, n_qubits), 1.0
+                ),
+            )
+            for generator in new_generators
+        ]
+        candidates.sort(key=lambda candidate: generator_score(candidate[0]))
+
+        for generator, symmetry in candidates:
+            if len(symmetries) >= n_sym:
+                return symmetries, add_epsilon
+            selected_basis = concatenate_matrices(
+                selected_basis, np.asarray([generator], dtype=np.uint8)
+            )
+            symmetries.append(symmetry)
+            add_epsilon.append(float(eps))
+            if verbose:
+                print(
+                    symmetry,
+                    " added at threshold {} with metric value ".format(eps),
+                    sym_metric_func(symmetry),
+                )
+
+        if len(symmetries) >= n_sym:
+            return symmetries, add_epsilon
+
+    raise RuntimeError(
+        f"Insufficient symmetries {len(symmetries)}/{n_sym} found; "
+        "increase eps_max or check the threshold schedule."
+    )
 
 @dataclass
 class SearchStateHCT:
@@ -292,12 +466,14 @@ def bs_hct(HQ, n_sym=None, beam_width=16, list_sym_metric_func = None, sym_metri
         ra, rb, rab = gf2_rank(A.basis), gf2_rank(B.basis), gf2_rank(concatenate_matrices(A.basis, B.basis))
         return ra == rb and ra == rab
 
-    n_qubits = count_qubits(HQ)
-    max_abs = max((abs(c) for c in HQ.terms.values()), default=0.0)
+    stream = as_pauli_term_stream(HQ)
+    n_qubits = stream.n_qubits
+    max_abs = max((item.abs_coeff for item in stream.terms), default=0.0)
 
     #defaults
     if n_sym is None: n_sym = n_qubits
-    if sym_metric_func is None: sym_metric_func = lambda sym: np.real(universal_grading([sym], HQ)) # Pauli L1 of NC
+    if sym_metric_func is None:
+        sym_metric_func = lambda sym: _stream_commutator_l1(sym, stream)
     if list_sym_metric_func is None: list_sym_metric_func = lambda sym_list: np.sum([sym_metric_func(sym) for sym in sym_list])
     if eps_max is None: eps_max = max_abs * 1.000001
 
@@ -306,12 +482,12 @@ def bs_hct(HQ, n_sym=None, beam_width=16, list_sym_metric_func = None, sym_metri
 
     if use_coeffs_eps:
         eps_grid = [0.0]
-        eps_grid.extend(sorted([np.abs(c) for c in truncate_qubitop(HQ, tol).terms.values()]))
+        eps_grid.extend(sorted(item.abs_coeff for item in stream.terms if item.abs_coeff >= tol))
     else:
         eps_grid = np.linspace(0.0, eps_max, num_intervals)
     
     # init with exact symmetries
-    G, _, _, _ = qubitop_to_G_matrix(HQ, n=n_qubits)
+    G = _stream_g_matrix(stream)
     directions = gf2_symp_nullspace(G, n_qubits, True)
     exact_syms = [QubitOperator(symplectic_to_pauli_string(c, n_qubits), 1.0) for c in directions]
     n_exact_syms = len(exact_syms)
@@ -328,10 +504,7 @@ def bs_hct(HQ, n_sym=None, beam_width=16, list_sym_metric_func = None, sym_metri
 
     #start beaming!
     for idx, eps in enumerate(eps_grid):
-        # Truncate H
-        Ht = truncate_qubitop(HQ, float(eps))
-
-        G, _, _, _ = qubitop_to_G_matrix(Ht, n=n_qubits)
+        G = _stream_g_matrix(stream, float(eps))
         S_de = gf2_symp_nullspace(G, n_qubits, True)
 
         # # SS = Sde \int null_symp(S) generating set for new symmetries commute with existing

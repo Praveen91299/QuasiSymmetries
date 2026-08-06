@@ -1,0 +1,20 @@
+{
+  "method": "pyscf_restricted_cisd_sparse_expansion",
+  "converged": true,
+  "correlation_energy": -0.2312666045652887,
+  "energy": -109.06704081449432,
+  "full_spatial_orbitals": 18,
+  "frozen_core_orbitals": 0,
+  "active_spatial_orbitals": 18,
+  "active_occupied_spatial_orbitals": 7,
+  "active_electrons": 14,
+  "n_qubits": 36,
+  "packed_cisd_vector_size": 6007,
+  "sparse_determinants": 8394,
+  "expanded_norm_before_normalization": 1.0000000000000007,
+  "coefficient_tolerance": 0.0,
+  "fci_layout_materialized": false,
+  "seconds": 0.7382608749903738,
+  "rss_gib_after": 0.2502288818359375,
+  "state_path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/n2_631g_benchmark/prepared/cisd_state.npz"
+}

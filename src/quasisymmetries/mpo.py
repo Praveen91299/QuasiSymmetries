@@ -49,6 +49,14 @@ def infer_largest_mpo_bond_dimension(mpo, verbose=True):
     """
     candidates = []
 
+    if hasattr(mpo, "get_bond_dims"):
+        try:
+            values = [int(value) for value in mpo.get_bond_dims()]
+            if values:
+                candidates.append(("get_bond_dims", max(values)))
+        except Exception:
+            pass
+
     for name in ("bond_dims", "bond_dim", "bond_dimensions", "dims"):
         if hasattr(mpo, name):
             try:
@@ -157,6 +165,7 @@ def build_qc_mpo_from_openfermion_molecule(
     active_orbitals=None,
     symm_type=SymmetryTypes.SU2,
     n_threads=None,
+    n_mkl_threads=1,
     stack_mem=int(2 * 1024**3),
     scratch=None,
     iprint=2,
@@ -178,6 +187,15 @@ def build_qc_mpo_from_openfermion_molecule(
         If None, uses all orbitals except the first ncore orbitals.
     symm_type :
         Usually SymmetryTypes.SU2 for closed-shell/singlet DMRG.
+    n_threads : int or None
+        Number of Block2 computational threads. If omitted, use the
+        ``OMP_NUM_THREADS`` environment variable, defaulting to four.
+    n_mkl_threads : int
+        Number of threads used by Intel MKL/BLAS operations called from
+        Block2. Keeping this at one avoids nested thread oversubscription when
+        ``n_threads`` is greater than one.
+    stack_mem : int
+        Block2 stack-memory allocation in bytes.
     scratch : str, Path, or None
         Scratch directory. If None, creates a temporary directory and keeps it
         alive by returning the TemporaryDirectory object.
@@ -193,6 +211,8 @@ def build_qc_mpo_from_openfermion_molecule(
     """
     if n_threads is None:
         n_threads = int(os.environ.get("OMP_NUM_THREADS", "4"))
+    if int(n_threads) < 1 or int(n_mkl_threads) < 1:
+        raise ValueError("n_threads and n_mkl_threads must be positive")
 
     h1e_full, g2e_full = _get_openfermion_integrals(molecule)
 
@@ -278,6 +298,7 @@ def build_qc_mpo_from_openfermion_molecule(
         scratch=str(scratch_path),
         symm_type=symm_type,
         n_threads=n_threads,
+        n_mkl_threads=int(n_mkl_threads),
         stack_mem=stack_mem,
     )
 

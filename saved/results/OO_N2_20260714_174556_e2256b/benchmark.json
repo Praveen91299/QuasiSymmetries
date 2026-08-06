@@ -85,8 +85,10 @@
     ],
     "canonical_terms_before": 2239,
     "canonical_terms_after": 2239,
-    "optimized_terms_before": 6931,
-    "optimized_terms_after": 6931
+    "optimized_terms_before": 6731,
+    "optimized_terms_after": 6731,
+    "canonical_antihermitian_residual_removed": 0.0,
+    "optimized_antihermitian_residual_removed": 5.665673399349923e-08
   },
   "dmrg_settings": {
     "skipped": false,
@@ -119,6 +121,8 @@
     "dmrg_tolerance": 0.0016,
     "sweep_tolerance": 1e-06,
     "mpo_cutoff": 1e-10,
+    "block2_mpo_builder": "blocked_sum",
+    "sum_mpo_mod": 20,
     "mps_cutoff": 1e-13,
     "initial_state": "cisd",
     "noise": 1.0,
@@ -126,20 +130,441 @@
     "full_curve": false,
     "qubit_backend": "block2",
     "n_threads": 1,
-    "stack_mem_gb": 0.5,
+    "stack_mem_gb": 0.25,
     "davidson_threshold": 1e-10,
     "sparse_batch_size": 32,
-    "sparse_compression_cutoff": 1e-13
+    "sparse_compression_cutoff": 1e-13,
+    "transform_mps_max_bond": 100,
+    "transform_mps_cutoff": 1e-13,
+    "save_tensor_networks": true
   },
   "warm_start": {
     "kind": "cisd",
     "energy": -107.64167024788341,
-    "canonical_nonzero_determinants": 610,
-    "optimized_nonzero_determinants": 14400,
+    "canonical_source_nonzero_determinants": 610,
+    "optimized_source_nonzero_determinants": 610,
     "determinant_coefficient_truncation": false,
+    "optimized_state_construction": "canonical selected-CI pyblock MPS followed by adjacent orbital Givens gates with capped two-site SVDs",
     "mps_numerical_rank_cutoff": 1e-13
   },
-  "dmrg_summary": {},
-  "comparison": {},
-  "dmrg_curve": []
+  "dmrg_summary": {
+    "canonical_orbitals": {
+      "frame": "canonical_orbitals",
+      "backend": "block2_pauli",
+      "first_converged_bond_dim": 30,
+      "converged_within_grid": true,
+      "mpo_bond_dimension": null,
+      "mpo_build_seconds": 0.3197639169993636,
+      "mpo_builder": "blocked_sum",
+      "mpo_cutoff": 1e-10,
+      "sum_mpo_mod": 20,
+      "warm_start": true,
+      "warm_start_kind": "cisd",
+      "imported_warm_start_energy": -107.64167024788334,
+      "expected_warm_start_energy": -107.64167024788341,
+      "warm_start_energy_difference": 7.105427357601002e-14,
+      "warm_start_energy_validation_requested": true,
+      "warm_start_energy_validation_performed": true,
+      "warm_start_construction": {
+        "method": "coefficient_ordered_determinant_sum",
+        "determinants": 610,
+        "batch_size": 32,
+        "compression_cutoff": 1e-13,
+        "largest_reported_compression_error": 2.5091115490340836e-15,
+        "max_constructed_mps_bond": 26,
+        "constructed_state_norm": 1.0000000000000095,
+        "tensor_circuit": {
+          "method": "pyblock2_local_gate_svd",
+          "max_bond_cap": 100,
+          "svd_cutoff": 1e-13,
+          "gate_counts": {
+            "CNOT": 13,
+            "routing_swap": 66,
+            "permutation_swap": 21
+          },
+          "number_of_svd_splits": 100,
+          "root_sum_squared_discarded_singular_values": 4.471724954518955e-14,
+          "largest_single_split_discarded_norm": 3.940296709970229e-14,
+          "norm_before_final_normalization": 1.0000000000000115,
+          "max_final_mps_bond": 16,
+          "max_intermediate_split_bond": 27
+        }
+      },
+      "saved_tensor_networks": {
+        "mpo": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/OO_N2_20260714_174556_e2256b/tensor_networks/canonical_orbitals_hamiltonian_mpo.block2.bin",
+          "format": "block2_native_mpo",
+          "tag": "SMP-HQC",
+          "n_sites": 20,
+          "bytes": 1460004
+        },
+        "warm_start_mps": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/OO_N2_20260714_174556_e2256b/tensor_networks/canonical_orbitals_cisd_warm_start_mps.block2",
+          "manifest": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/OO_N2_20260714_174556_e2256b/tensor_networks/canonical_orbitals_cisd_warm_start_mps.block2/manifest.json",
+          "file_count": 64
+        }
+      },
+      "complex_driver": false,
+      "davidson_threshold": 1e-10
+    },
+    "optimized_orbitals": {
+      "frame": "optimized_orbitals",
+      "backend": "block2_pauli",
+      "first_converged_bond_dim": 16,
+      "converged_within_grid": true,
+      "mpo_bond_dimension": null,
+      "mpo_build_seconds": 0.7111441669985652,
+      "mpo_builder": "blocked_sum",
+      "mpo_cutoff": 1e-10,
+      "sum_mpo_mod": 20,
+      "warm_start": true,
+      "warm_start_kind": "cisd",
+      "imported_warm_start_energy": -107.64167024793065,
+      "expected_warm_start_energy": -107.64167024788341,
+      "warm_start_energy_difference": -4.723688107333146e-11,
+      "warm_start_energy_validation_requested": false,
+      "warm_start_energy_validation_performed": false,
+      "warm_start_construction": {
+        "method": "coefficient_ordered_determinant_sum",
+        "determinants": 610,
+        "batch_size": 32,
+        "compression_cutoff": 1e-13,
+        "largest_reported_compression_error": 2.5091115490340836e-15,
+        "max_constructed_mps_bond": 26,
+        "constructed_state_norm": 1.0000000000000095,
+        "tensor_circuit": {
+          "method": "pyblock2_local_gate_svd",
+          "max_bond_cap": 100,
+          "svd_cutoff": 1e-13,
+          "gate_counts": {
+            "fermionic_swap": 90,
+            "orbital_givens": 90,
+            "CNOT": 13,
+            "routing_swap": 66,
+            "permutation_swap": 21
+          },
+          "number_of_svd_splits": 280,
+          "root_sum_squared_discarded_singular_values": 2.2100290404180751e-07,
+          "largest_single_split_discarded_norm": 1.5206196495067638e-07,
+          "norm_before_final_normalization": 1.0000000000000153,
+          "max_final_mps_bond": 100,
+          "max_intermediate_split_bond": 100
+        }
+      },
+      "saved_tensor_networks": {
+        "mpo": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/OO_N2_20260714_174556_e2256b/tensor_networks/optimized_orbitals_hamiltonian_mpo.block2.bin",
+          "format": "block2_native_mpo",
+          "tag": "SMP-HQC",
+          "n_sites": 20,
+          "bytes": 3739685
+        },
+        "warm_start_mps": {
+          "path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/OO_N2_20260714_174556_e2256b/tensor_networks/optimized_orbitals_cisd_warm_start_mps.block2",
+          "manifest": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/OO_N2_20260714_174556_e2256b/tensor_networks/optimized_orbitals_cisd_warm_start_mps.block2/manifest.json",
+          "file_count": 64
+        }
+      },
+      "complex_driver": false,
+      "davidson_threshold": 1e-10
+    }
+  },
+  "comparison": {
+    "canonical_first_converged_bond_dim": 30,
+    "optimized_first_converged_bond_dim": 16,
+    "bond_dimension_reduction": 14,
+    "optimized_over_canonical_ratio": 0.5333333333333333
+  },
+  "dmrg_curve": [
+    {
+      "frame": "canonical_orbitals",
+      "backend": "block2_pauli",
+      "bond_dim": 1,
+      "energy": -107.49650051179765,
+      "abs_energy_error": 0.15762193572489025,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 0.29871195899977465,
+      "max_result_mps_bond": 1
+    },
+    {
+      "frame": "canonical_orbitals",
+      "backend": "block2_pauli",
+      "bond_dim": 2,
+      "energy": -107.54147230699562,
+      "abs_energy_error": 0.11265014052692379,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 0.44945458300207974,
+      "max_result_mps_bond": 2
+    },
+    {
+      "frame": "canonical_orbitals",
+      "backend": "block2_pauli",
+      "bond_dim": 3,
+      "energy": -107.59103875322616,
+      "abs_energy_error": 0.06308369429638105,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 1.015847415997996,
+      "max_result_mps_bond": 3
+    },
+    {
+      "frame": "canonical_orbitals",
+      "backend": "block2_pauli",
+      "bond_dim": 4,
+      "energy": -107.61084114141251,
+      "abs_energy_error": 0.04328130611003189,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 1.1453772079985356,
+      "max_result_mps_bond": 4
+    },
+    {
+      "frame": "canonical_orbitals",
+      "backend": "block2_pauli",
+      "bond_dim": 5,
+      "energy": -107.61483841509269,
+      "abs_energy_error": 0.03928403242984757,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 1.117376874997717,
+      "max_result_mps_bond": 5
+    },
+    {
+      "frame": "canonical_orbitals",
+      "backend": "block2_pauli",
+      "bond_dim": 6,
+      "energy": -107.62330772459134,
+      "abs_energy_error": 0.030814722931197025,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 1.2618344170005003,
+      "max_result_mps_bond": 6
+    },
+    {
+      "frame": "canonical_orbitals",
+      "backend": "block2_pauli",
+      "bond_dim": 7,
+      "energy": -107.62663265838171,
+      "abs_energy_error": 0.027489789140830112,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 1.6907868749985937,
+      "max_result_mps_bond": 7
+    },
+    {
+      "frame": "canonical_orbitals",
+      "backend": "block2_pauli",
+      "bond_dim": 8,
+      "energy": -107.63393724043475,
+      "abs_energy_error": 0.020185207087791923,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 1.4478155420001713,
+      "max_result_mps_bond": 8
+    },
+    {
+      "frame": "canonical_orbitals",
+      "backend": "block2_pauli",
+      "bond_dim": 9,
+      "energy": -107.63508016673988,
+      "abs_energy_error": 0.019042280782656462,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 1.7972521250012505,
+      "max_result_mps_bond": 9
+    },
+    {
+      "frame": "canonical_orbitals",
+      "backend": "block2_pauli",
+      "bond_dim": 10,
+      "energy": -107.64020602498258,
+      "abs_energy_error": 0.013916422539963946,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 1.8529872079998313,
+      "max_result_mps_bond": 10
+    },
+    {
+      "frame": "canonical_orbitals",
+      "backend": "block2_pauli",
+      "bond_dim": 12,
+      "energy": -107.6463486709449,
+      "abs_energy_error": 0.007773776577636227,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 1.2792663750005886,
+      "max_result_mps_bond": 12
+    },
+    {
+      "frame": "canonical_orbitals",
+      "backend": "block2_pauli",
+      "bond_dim": 14,
+      "energy": -107.64909025509054,
+      "abs_energy_error": 0.005032192431997373,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 0.5693930000015825,
+      "max_result_mps_bond": 14
+    },
+    {
+      "frame": "canonical_orbitals",
+      "backend": "block2_pauli",
+      "bond_dim": 16,
+      "energy": -107.65039254496628,
+      "abs_energy_error": 0.003729902556258935,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 0.5353639999993902,
+      "max_result_mps_bond": 16
+    },
+    {
+      "frame": "canonical_orbitals",
+      "backend": "block2_pauli",
+      "bond_dim": 18,
+      "energy": -107.65101023036101,
+      "abs_energy_error": 0.003112217161529429,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 0.6796322499976668,
+      "max_result_mps_bond": 18
+    },
+    {
+      "frame": "canonical_orbitals",
+      "backend": "block2_pauli",
+      "bond_dim": 20,
+      "energy": -107.6512949308326,
+      "abs_energy_error": 0.002827516689933418,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 0.7317856660010875,
+      "max_result_mps_bond": 20
+    },
+    {
+      "frame": "canonical_orbitals",
+      "backend": "block2_pauli",
+      "bond_dim": 30,
+      "energy": -107.65394848405981,
+      "abs_energy_error": 0.00017396346272846586,
+      "within_dmrg_tolerance": true,
+      "dmrg_seconds": 6.510081083000841,
+      "max_result_mps_bond": 30
+    },
+    {
+      "frame": "optimized_orbitals",
+      "backend": "block2_pauli",
+      "bond_dim": 1,
+      "energy": -107.49615363095194,
+      "abs_energy_error": 0.1579688165706017,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 5.432371458999114,
+      "max_result_mps_bond": 1
+    },
+    {
+      "frame": "optimized_orbitals",
+      "backend": "block2_pauli",
+      "bond_dim": 2,
+      "energy": -107.54155487081468,
+      "abs_energy_error": 0.11256757670786044,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 6.509970417002478,
+      "max_result_mps_bond": 2
+    },
+    {
+      "frame": "optimized_orbitals",
+      "backend": "block2_pauli",
+      "bond_dim": 3,
+      "energy": -107.59329161701005,
+      "abs_energy_error": 0.0608308305124865,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 7.954910832999303,
+      "max_result_mps_bond": 3
+    },
+    {
+      "frame": "optimized_orbitals",
+      "backend": "block2_pauli",
+      "bond_dim": 4,
+      "energy": -107.61666540052884,
+      "abs_energy_error": 0.03745704699369412,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 6.576113041999633,
+      "max_result_mps_bond": 4
+    },
+    {
+      "frame": "optimized_orbitals",
+      "backend": "block2_pauli",
+      "bond_dim": 5,
+      "energy": -107.61816970445551,
+      "abs_energy_error": 0.03595274306702834,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 8.5209554580033,
+      "max_result_mps_bond": 5
+    },
+    {
+      "frame": "optimized_orbitals",
+      "backend": "block2_pauli",
+      "bond_dim": 6,
+      "energy": -107.63052792060645,
+      "abs_energy_error": 0.0235945269160851,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 8.122859416998836,
+      "max_result_mps_bond": 6
+    },
+    {
+      "frame": "optimized_orbitals",
+      "backend": "block2_pauli",
+      "bond_dim": 7,
+      "energy": -107.63402920512802,
+      "abs_energy_error": 0.02009324239452326,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 8.270276167000702,
+      "max_result_mps_bond": 7
+    },
+    {
+      "frame": "optimized_orbitals",
+      "backend": "block2_pauli",
+      "bond_dim": 8,
+      "energy": -107.64035878105236,
+      "abs_energy_error": 0.013763666470183011,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 11.584059584001807,
+      "max_result_mps_bond": 8
+    },
+    {
+      "frame": "optimized_orbitals",
+      "backend": "block2_pauli",
+      "bond_dim": 9,
+      "energy": -107.64151824705064,
+      "abs_energy_error": 0.012604200471898253,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 8.692238582996652,
+      "max_result_mps_bond": 9
+    },
+    {
+      "frame": "optimized_orbitals",
+      "backend": "block2_pauli",
+      "bond_dim": 10,
+      "energy": -107.64440310421239,
+      "abs_energy_error": 0.00971934331015234,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 8.754465540998353,
+      "max_result_mps_bond": 10
+    },
+    {
+      "frame": "optimized_orbitals",
+      "backend": "block2_pauli",
+      "bond_dim": 12,
+      "energy": -107.64894897550724,
+      "abs_energy_error": 0.005173472015300717,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 9.961158292000619,
+      "max_result_mps_bond": 12
+    },
+    {
+      "frame": "optimized_orbitals",
+      "backend": "block2_pauli",
+      "bond_dim": 14,
+      "energy": -107.65070818523178,
+      "abs_energy_error": 0.0034142622907609166,
+      "within_dmrg_tolerance": false,
+      "dmrg_seconds": 11.680052916999557,
+      "max_result_mps_bond": 14
+    },
+    {
+      "frame": "optimized_orbitals",
+      "backend": "block2_pauli",
+      "bond_dim": 16,
+      "energy": -107.65255900218679,
+      "abs_energy_error": 0.001563445335747815,
+      "within_dmrg_tolerance": true,
+      "dmrg_seconds": 7.900436334002734,
+      "max_result_mps_bond": 16
+    }
+  ]
 }

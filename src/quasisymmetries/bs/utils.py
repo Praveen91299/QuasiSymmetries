@@ -116,13 +116,277 @@ def pauli_weight(mask: PauliMask) -> int:
 class WeightedTerm:
     mask: PauliMask
     abs_coeff: float
-    term: Tuple[Tuple[int, str], ...]
+    term: Tuple[Tuple[int, str], ...] = ()
+    coefficient: complex | None = None
+
+    @property
+    def signed_coefficient(self) -> complex:
+        """Return the physical coefficient when it is available.
+
+        Older Beam-search callers only supplied ``abs_coeff``.  Keeping that
+        field preserves their inexpensive scoring representation, while the
+        streamed Hamiltonian path additionally retains signs and phases.
+        """
+        if self.coefficient is None:
+            return complex(self.abs_coeff)
+        return complex(self.coefficient)
+
+
+@dataclass(frozen=True)
+class PauliTermStream:
+    """Packed Pauli Hamiltonian without an OpenFermion operator dictionary.
+
+    Pauli words use the existing ``(x_mask, z_mask)`` convention.  Terms are
+    combined by mask on construction and include the identity, so this form is
+    suitable both for symmetry search and direct pyblock2 MPO construction.
+    """
+
+    n_qubits: int
+    terms: Tuple[WeightedTerm, ...]
+
+    @classmethod
+    def from_terms(
+        cls,
+        n_qubits: int,
+        terms: Iterable[tuple[PauliMask, complex]],
+        *,
+        tolerance: float = 0.0,
+    ) -> "PauliTermStream":
+        n_qubits = int(n_qubits)
+        if n_qubits < 0:
+            raise ValueError("n_qubits must be nonnegative")
+        limit = (1 << n_qubits) - 1
+        combined: Dict[PauliMask, complex] = {}
+        for mask, coefficient in terms:
+            x, z = int(mask[0]), int(mask[1])
+            if x < 0 or z < 0 or (x | z) & ~limit:
+                raise ValueError(f"Pauli mask {(x, z)} exceeds n_qubits={n_qubits}")
+            combined[(x, z)] = combined.get((x, z), 0.0j) + complex(coefficient)
+        packed = []
+        for mask, coefficient in combined.items():
+            if abs(coefficient) <= tolerance:
+                continue
+            packed.append(
+                WeightedTerm(
+                    mask=mask,
+                    abs_coeff=float(abs(coefficient)),
+                    coefficient=coefficient,
+                )
+            )
+        return cls(n_qubits=n_qubits, terms=tuple(packed))
+
+    @classmethod
+    def from_qubit_operator(
+        cls,
+        op: QubitOperator,
+        n_qubits: Optional[int] = None,
+        *,
+        tolerance: float = 0.0,
+    ) -> "PauliTermStream":
+        if n_qubits is None:
+            n_qubits = infer_n_qubits(op)
+        return cls.from_terms(
+            n_qubits,
+            (
+                (term_to_masks(term, n_qubits), complex(coefficient))
+                for term, coefficient in op.terms.items()
+            ),
+            tolerance=tolerance,
+        )
+
+    def without_identity(self) -> List[WeightedTerm]:
+        return [term for term in self.terms if term.mask != (0, 0)]
+
+    def truncated(self, threshold: float) -> "PauliTermStream":
+        return PauliTermStream(
+            self.n_qubits,
+            tuple(term for term in self.terms if term.abs_coeff >= threshold),
+        )
+
+    def to_qubit_operator(self) -> QubitOperator:
+        """Materialize an OpenFermion operator only at compatibility boundaries."""
+        op = QubitOperator()
+        for item in self.terms:
+            op += QubitOperator(
+                masks_to_term(item.mask, self.n_qubits),
+                item.signed_coefficient,
+            )
+        op.compress()
+        return op
+
+
+def as_pauli_term_stream(
+    operator,
+    n_qubits: Optional[int] = None,
+) -> PauliTermStream:
+    """Return a packed Pauli stream for a supported Hamiltonian object.
+
+    Parameters
+    ----------
+    operator
+        Existing ``PauliTermStream`` or OpenFermion ``QubitOperator``.
+    n_qubits
+        Optional required qubit count. It is used during conversion and checked
+        against an existing stream.
+
+    Returns
+    -------
+    stream
+        ``PauliTermStream`` preserving identity terms and signed coefficients.
+    """
+    if isinstance(operator, PauliTermStream):
+        if n_qubits is not None and int(n_qubits) != operator.n_qubits:
+            raise ValueError(
+                f"stream has {operator.n_qubits} qubits, requested {n_qubits}"
+            )
+        return operator
+    if isinstance(operator, QubitOperator):
+        return PauliTermStream.from_qubit_operator(operator, n_qubits)
+    raise TypeError(
+        "expected an OpenFermion QubitOperator or PauliTermStream, got "
+        f"{type(operator).__name__}"
+    )
+
+
+def pauli_stream_l1_norm(operator, *, include_identity: bool = True) -> float:
+    """Return the coefficient 1-norm of a packed Pauli expansion.
+
+    Parameters
+    ----------
+    operator
+        ``PauliTermStream`` or OpenFermion ``QubitOperator``.
+    include_identity
+        Whether the scalar identity coefficient contributes to the sum.
+
+    Returns
+    -------
+    norm
+        Sum of absolute coefficients of the selected Pauli terms.
+
+    Notes
+    -----
+    Excluding the identity gives a tighter expectation-difference bound,
+    because a scalar energy shift cancels between normalized states.
+    """
+    stream = as_pauli_term_stream(operator)
+    return float(
+        sum(
+            item.abs_coeff
+            for item in stream.terms
+            if include_identity or item.mask != (0, 0)
+        )
+    )
+
+
+def multiply_pauli_masks(
+    first: PauliMask,
+    second: PauliMask,
+) -> tuple[PauliMask, complex]:
+    """Multiply two Hermitian Pauli words represented by binary masks.
+
+    Parameters
+    ----------
+    first, second
+        ``(x_mask, z_mask)`` representations of Hermitian Pauli products.
+
+    Returns
+    -------
+    product_mask, phase
+        Mask of the product after extracting its phase, and a phase in
+        ``{1, 1j, -1, -1j}`` satisfying ``P(first)P(second)=phase*P(product)``.
+    """
+    ax, az = first
+    bx, bz = second
+    out = (ax ^ bx, az ^ bz)
+    exponent = (
+        popcount(ax & az)
+        + popcount(bx & bz)
+        - popcount(out[0] & out[1])
+        + 2 * popcount(az & bx)
+    ) % 4
+    return out, (1.0, 1.0j, -1.0, -1.0j)[exponent]
+
+
+def jordan_wigner_pauli_stream(
+    fermion_operator,
+    n_qubits: Optional[int] = None,
+    *,
+    tolerance: float = 1e-12,
+) -> PauliTermStream:
+    """Jordan--Wigner map directly into packed masks and coefficients.
+
+    Parameters
+    ----------
+    fermion_operator
+        OpenFermion ``FermionOperator`` to transform.
+    n_qubits
+        Number of Jordan--Wigner modes/qubits. If omitted, it is inferred from
+        the largest occupied mode index.
+    tolerance
+        Combined Pauli coefficients with magnitude at or below this value are
+        removed.
+
+    Returns
+    -------
+    stream
+        Combined ``PauliTermStream`` containing the Jordan--Wigner image.
+
+    Notes
+    -----
+    This avoids constructing OpenFermion ``QubitOperator`` term objects.  A
+    coefficient dictionary is still used to combine equal Pauli words, which
+    is necessary before coefficient-threshold HCT and MPO compression.
+    """
+    if n_qubits is None:
+        n_qubits = 0
+        for term in fermion_operator.terms:
+            for mode, _action in term:
+                n_qubits = max(n_qubits, int(mode) + 1)
+    n_qubits = int(n_qubits)
+    output: Dict[PauliMask, complex] = {}
+    for fermion_term, fermion_coefficient in fermion_operator.terms.items():
+        expansion: Dict[PauliMask, complex] = {
+            (0, 0): complex(fermion_coefficient)
+        }
+        for mode, action in fermion_term:
+            mode = int(mode)
+            if not 0 <= mode < n_qubits:
+                raise ValueError("fermionic mode exceeds n_qubits")
+            if action not in (0, 1):
+                raise ValueError(f"invalid ladder action {action!r}")
+            z_prefix = (1 << mode) - 1
+            ladder_terms = (
+                ((1 << mode, z_prefix), 0.5),
+                (
+                    (1 << mode, z_prefix | (1 << mode)),
+                    -0.5j if action == 1 else 0.5j,
+                ),
+            )
+            updated: Dict[PauliMask, complex] = {}
+            for left_mask, left_coefficient in expansion.items():
+                for right_mask, right_coefficient in ladder_terms:
+                    mask, phase = multiply_pauli_masks(left_mask, right_mask)
+                    updated[mask] = updated.get(mask, 0.0j) + (
+                        left_coefficient * right_coefficient * phase
+                    )
+            expansion = updated
+        for mask, coefficient in expansion.items():
+            output[mask] = output.get(mask, 0.0j) + coefficient
+    return PauliTermStream.from_terms(
+        n_qubits,
+        output.items(),
+        tolerance=tolerance,
+    )
 
 
 def qubit_operator_terms(
-    op: QubitOperator,
+    op,
     n_qubits: Optional[int] = None,
 ) -> Tuple[int, List[WeightedTerm]]:
+    if isinstance(op, PauliTermStream):
+        stream = as_pauli_term_stream(op, n_qubits)
+        return stream.n_qubits, stream.without_identity()
+
     if n_qubits is None:
         n_qubits = infer_n_qubits(op)
 
@@ -141,15 +405,26 @@ def qubit_operator_terms(
         if mask == (0, 0):
             continue
 
-        terms.append(WeightedTerm(mask=mask, abs_coeff=w, term=term))
+        terms.append(
+            WeightedTerm(
+                mask=mask,
+                abs_coeff=w,
+                term=term,
+                coefficient=c,
+            )
+        )
 
     return n_qubits, terms
 
 def terms_to_HQ(terms):
-    "Takes in weighted turns it into HQ: note that this doesnt get the same H rather it destroys sign and all I paulis"
+    """Compatibility conversion; prefer :class:`PauliTermStream`."""
     op = QubitOperator()
     for t in terms:
-        op += QubitOperator(t.term, t.abs_coeff)
+        term = t.term
+        if not term and t.mask != (0, 0):
+            n_qubits = max(t.mask[0].bit_length(), t.mask[1].bit_length())
+            term = masks_to_term(t.mask, n_qubits)
+        op += QubitOperator(term, t.signed_coefficient)
     return op
 
 def heavy_core(terms: Sequence[WeightedTerm], fraction: float) -> List[WeightedTerm]:

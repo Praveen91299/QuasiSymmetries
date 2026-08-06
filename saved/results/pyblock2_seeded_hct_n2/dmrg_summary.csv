@@ -1,0 +1,7 @@
+system,distance_angstrom,frame,symmetry_count,n_symmetries,first_converged_bond_dim,converged_within_grid,mpo_bond_dimension
+N2_eqm,1.1,new_HCT_Nover2_Comm,N/2,10,20,True,762
+N2_eqm,1.1,new_HCT_N_Comm,N,20,8,True,591
+N2_corr,1.5,new_HCT_Nover2_Comm,N/2,10,30,True,880
+N2_corr,1.5,new_HCT_N_Comm,N,20,18,True,1027
+N2_diss,2.0,new_HCT_Nover2_Comm,N/2,10,30,True,928
+N2_diss,2.0,new_HCT_N_Comm,N,20,20,True,986

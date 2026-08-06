@@ -1,0 +1,5 @@
+system,iteration,kind,first_converged_bond_dim,converged_within_grid,mpo_bond_dimension,search_seconds,fiedler_seconds,selected_score
+N2_eqm,0,baseline,50,True,366,,,
+N2_eqm,1,beam_clifford_fiedler,8,True,987,7.427571124993847,0.9965030839957763,-1.8006688153891048
+N2_eqm,2,beam_clifford_fiedler,7,True,920,6.329904208003427,1.227047666994622,-1.7962387612417834
+N2_eqm,3,beam_clifford_fiedler,7,True,980,6.168480374995852,1.209613208004157,-1.7948865709783284

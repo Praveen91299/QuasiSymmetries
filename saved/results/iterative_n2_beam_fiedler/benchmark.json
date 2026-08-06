@@ -1,0 +1,74 @@
+{
+  "systems": [
+    "N2_corr"
+  ],
+  "requested_iterations": 5,
+  "summary": [
+    {
+      "system": "N2_corr",
+      "iteration": 0,
+      "kind": "baseline",
+      "first_converged_bond_dim": 40,
+      "converged_within_grid": true,
+      "mpo_bond_dimension": 291,
+      "search_seconds": null,
+      "fiedler_seconds": null,
+      "selected_score": null
+    },
+    {
+      "system": "N2_corr",
+      "iteration": 1,
+      "kind": "beam_clifford_fiedler",
+      "first_converged_bond_dim": 8,
+      "converged_within_grid": true,
+      "mpo_bond_dimension": 660,
+      "search_seconds": 7.453185541991843,
+      "fiedler_seconds": 1.096311458008131,
+      "selected_score": -2.139443206073494
+    },
+    {
+      "system": "N2_corr",
+      "iteration": 2,
+      "kind": "beam_clifford_fiedler",
+      "first_converged_bond_dim": 10,
+      "converged_within_grid": true,
+      "mpo_bond_dimension": 629,
+      "search_seconds": 6.18342220899649,
+      "fiedler_seconds": 1.322181791998446,
+      "selected_score": -2.133781835637618
+    },
+    {
+      "system": "N2_corr",
+      "iteration": 3,
+      "kind": "beam_clifford_fiedler",
+      "first_converged_bond_dim": 10,
+      "converged_within_grid": true,
+      "mpo_bond_dimension": 630,
+      "search_seconds": 6.406035833002534,
+      "fiedler_seconds": 1.3170470409968402,
+      "selected_score": -2.133781835637618
+    },
+    {
+      "system": "N2_corr",
+      "iteration": 4,
+      "kind": "beam_clifford_fiedler",
+      "first_converged_bond_dim": 10,
+      "converged_within_grid": true,
+      "mpo_bond_dimension": 716,
+      "search_seconds": 6.072041459003231,
+      "fiedler_seconds": 0.9747034590109251,
+      "selected_score": -2.133781835637618
+    },
+    {
+      "system": "N2_corr",
+      "iteration": 5,
+      "kind": "beam_clifford_fiedler",
+      "first_converged_bond_dim": 9,
+      "converged_within_grid": true,
+      "mpo_bond_dimension": 880,
+      "search_seconds": 6.247613291008747,
+      "fiedler_seconds": 1.2344318329996895,
+      "selected_score": -2.125309715049414
+    }
+  ]
+}

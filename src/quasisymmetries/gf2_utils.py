@@ -483,6 +483,239 @@ def gf2_find_commuting_basis(G, n_qubits):
 def gf2_check_commuting(A, B, n_qubits):
     return gf2_check_in_nullspace(exchange_Gx_Gz(A, n_qubits), B)
 
+
+def gf2_symplectic_inner_product(a, b, n_qubits):
+    """Return the binary symplectic inner product of two Pauli vectors."""
+    a = np.asarray(a, dtype=np.uint8) & 1
+    b = np.asarray(b, dtype=np.uint8) & 1
+    if a.shape != (2 * n_qubits,) or b.shape != (2 * n_qubits,):
+        raise ValueError(
+            f"Expected Pauli vectors of length {2 * n_qubits}; "
+            f"got {a.shape} and {b.shape}."
+        )
+    return int(
+        (
+            np.dot(a[:n_qubits], b[n_qubits:])
+            + np.dot(a[n_qubits:], b[:n_qubits])
+        )
+        & 1
+    )
+
+
+def gf2_symplectic_gram_schmidt(vectors, n_qubits, verify=True):
+    """Decompose a binary Pauli space into its radical and hyperbolic pairs.
+
+    The returned ``radical`` rows commute with the entire input space.  Each
+    pair ``(a, b)`` anticommutes, while distinct pairs and the radical commute
+    symplectically.  All returned vectors together form a basis for the input
+    row span.
+    """
+    vectors = np.asarray(vectors, dtype=np.uint8) & 1
+    if vectors.ndim != 2 or vectors.shape[1] != 2 * n_qubits:
+        raise ValueError(
+            f"Expected a matrix with {2 * n_qubits} columns; "
+            f"got shape {vectors.shape}."
+        )
+
+    basis, _ = gf2_rref(vectors)
+    work = [row.copy() for row in basis if np.any(row)]
+    radical = []
+    pairs = []
+
+    while work:
+        first = work.pop(0)
+        partner_index = next(
+            (
+                index
+                for index, candidate in enumerate(work)
+                if gf2_symplectic_inner_product(
+                    first, candidate, n_qubits
+                )
+            ),
+            None,
+        )
+        if partner_index is None:
+            radical.append(first)
+            continue
+
+        second = work.pop(partner_index)
+        orthogonalized = []
+        for vector in work:
+            # In characteristic two, v + <v,b>a + <v,a>b is orthogonal
+            # to both members of the new hyperbolic pair (a, b).
+            updated = vector.copy()
+            if gf2_symplectic_inner_product(vector, second, n_qubits):
+                updated ^= first
+            if gf2_symplectic_inner_product(vector, first, n_qubits):
+                updated ^= second
+            orthogonalized.append(updated)
+        work = orthogonalized
+        pairs.append((first, second))
+
+    radical_matrix = (
+        np.asarray(radical, dtype=np.uint8)
+        if radical
+        else np.zeros((0, 2 * n_qubits), dtype=np.uint8)
+    )
+
+    if verify:
+        flattened_pairs = [vector for pair in pairs for vector in pair]
+        decomposition = list(radical_matrix) + flattened_pairs
+        decomposition_matrix = (
+            np.asarray(decomposition, dtype=np.uint8)
+            if decomposition
+            else np.zeros((0, 2 * n_qubits), dtype=np.uint8)
+        )
+        assert gf2_rank(decomposition_matrix) == gf2_rank(vectors)
+        assert gf2_rank(
+            concatenate_matrices(vectors, decomposition_matrix)
+        ) == gf2_rank(vectors)
+        assert gf2_check_commuting(radical_matrix, vectors, n_qubits)
+        for index, (first, second) in enumerate(pairs):
+            assert gf2_symplectic_inner_product(first, second, n_qubits) == 1
+            others = list(radical_matrix)
+            for other_index, pair in enumerate(pairs):
+                if other_index != index:
+                    others.extend(pair)
+            if others:
+                assert gf2_check_commuting(
+                    np.asarray([first, second], dtype=np.uint8),
+                    np.asarray(others, dtype=np.uint8),
+                    n_qubits,
+                )
+
+    return radical_matrix, pairs
+
+
+def gf2_maximal_isotropic_subspace(
+    vectors,
+    n_qubits,
+    verify=True,
+    vector_cost=None,
+    representative_func=None,
+):
+    """Return a maximal pairwise-commuting subspace of ``span(vectors)``.
+
+    If ``vector_cost`` is supplied, choose the lowest-cost nonzero direction
+    from each hyperbolic plane: ``a``, ``b``, or ``a + b``.  These are the
+    three possible one-dimensional isotropic subspaces of that plane.  Ties
+    are resolved deterministically in that order, preserving the historical
+    choice of ``a`` when all costs agree.  ``representative_func`` may replace
+    each direction by an equivalent representative before it is scored; this
+    is useful when ``vectors`` represents a quotient by a seeded radical.
+    """
+    radical, pairs = gf2_symplectic_gram_schmidt(
+        vectors, n_qubits, verify=verify
+    )
+    representative = (
+        representative_func
+        if representative_func is not None
+        else lambda vector: vector
+    )
+    selected = []
+    for first, second in pairs:
+        if vector_cost is None:
+            choice = representative(first)
+        else:
+            candidates = tuple(
+                representative(candidate)
+                for candidate in (first, second, first ^ second)
+            )
+            choice = min(candidates, key=vector_cost)
+        selected.append(choice)
+
+    rows = [representative(vector) for vector in radical] + selected
+    isotropic = (
+        np.asarray(rows, dtype=np.uint8)
+        if rows
+        else np.zeros((0, 2 * n_qubits), dtype=np.uint8)
+    )
+    if verify:
+        assert gf2_check_commuting(isotropic, isotropic, n_qubits)
+        assert gf2_rank(isotropic) == len(isotropic)
+    return isotropic
+
+
+def gf2_greedy_coset_representative(vector, basis, vector_score):
+    """Reduce ``vector`` modulo ``span(basis)`` by deterministic descent.
+
+    The returned row is in the coset ``vector + span(basis)``.  At each pass,
+    every single basis-row toggle is considered and the best strict score
+    improvement is accepted.  This avoids exponential enumeration of the
+    entire coset while still removing avoidable seeded-generator support.
+    """
+    vector = np.asarray(vector, dtype=np.uint8) & 1
+    basis = np.asarray(basis, dtype=np.uint8) & 1
+    if vector.ndim != 1 or basis.ndim != 2:
+        raise ValueError("Expected a GF(2) vector and a two-dimensional basis.")
+    if basis.shape[1] != vector.shape[0]:
+        raise ValueError(
+            f"Incompatible widths {vector.shape[0]} and {basis.shape[1]}."
+        )
+
+    best = vector.copy()
+    best_score = vector_score(best)
+    while True:
+        improved = None
+        improved_score = best_score
+        for row in basis:
+            candidate = best ^ row
+            candidate_score = vector_score(candidate)
+            if candidate_score < improved_score:
+                improved = candidate
+                improved_score = candidate_score
+        if improved is None:
+            return best
+        best = improved
+        best_score = improved_score
+
+
+def gf2_basis_extension(existing, containing, verify=True):
+    """Return rows that extend ``existing`` to a basis of ``containing``.
+
+    ``span(existing)`` must be a subspace of ``span(containing)``.
+    """
+    existing = np.asarray(existing, dtype=np.uint8) & 1
+    containing = np.asarray(containing, dtype=np.uint8) & 1
+    if existing.ndim != 2 or containing.ndim != 2:
+        raise ValueError("Expected two GF(2) matrices.")
+    if existing.shape[1] != containing.shape[1]:
+        raise ValueError(
+            f"Incompatible matrix widths {existing.shape[1]} and "
+            f"{containing.shape[1]}."
+        )
+
+    current, _ = gf2_rref(existing)
+    current = np.asarray(
+        [row for row in current if np.any(row)], dtype=np.uint8
+    )
+    if current.size == 0:
+        current = np.zeros((0, containing.shape[1]), dtype=np.uint8)
+    containing_basis, _ = gf2_rref(containing)
+    containing_basis = [row for row in containing_basis if np.any(row)]
+
+    if verify and gf2_rank(
+        concatenate_matrices(containing, current)
+    ) != gf2_rank(containing):
+        raise ValueError("The existing span is not contained in the target span.")
+
+    added = []
+    for row in containing_basis:
+        if gf2_rank(
+            concatenate_matrices(current, np.asarray([row]))
+        ) > gf2_rank(current):
+            current = concatenate_matrices(current, np.asarray([row]))
+            added.append(row)
+
+    result = (
+        np.asarray(added, dtype=np.uint8)
+        if added
+        else np.zeros((0, containing.shape[1]), dtype=np.uint8)
+    )
+    if verify:
+        assert gf2_rank(current) == gf2_rank(containing)
+    return result
+
 #new
 def gf2_symp_nullspace(G, n_qubits, verify=True):
     """

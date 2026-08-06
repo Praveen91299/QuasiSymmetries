@@ -86,9 +86,14 @@ def build_candidate_pool_hct(
     if include_hct_symmetries:
         print("Adding HCT symmetries to the pool:")
         from ..sym import hct_mod
-        from .utils import terms_to_HQ, qubitops_to_masks
+        from .utils import PauliTermStream, qubitops_to_masks
 
-        HQ_rt = terms_to_HQ(terms)
+        # HCT only needs masks and coefficient magnitudes.  Keep the candidate
+        # Hamiltonian packed instead of rebuilding an OpenFermion dictionary.
+        HQ_rt = PauliTermStream.from_terms(
+            n_qubits,
+            ((item.mask, item.signed_coefficient) for item in terms),
+        )
         n_sym = hct_n_sym if hct_n_sym is not None else n_qubits
         try:
             hct_syms, _ = hct_mod(
@@ -674,6 +679,9 @@ def BeamSearch_Symmetries(
     max_exact_symmetry_seeds: Optional[int] = None,
     score_func = None,
     score_is_separable: bool = False,
+    maximize_score: bool = True,
+    max_candidate_pool_size: Optional[int] = None,
+    diagnostics: Optional[MutableMapping[str, Any]] = None,
     n_processes: int = 1,
     mp_start_method: Optional[str] = None,
 ) -> List[QubitOperator]:
@@ -690,6 +698,9 @@ def BeamSearch_Symmetries(
     Optional:
       - seed the search with exact Pauli symmetries of the Hamiltonian
       - cache singleton scores when ``score_is_separable=True``
+      - rank and cap the candidate pool using the supplied singleton
+        cost/score, retaining low costs or high scores according to
+        ``maximize_score``
       - parallelize extension/RREF work with ``n_processes``
     """
     seed_generators: Optional[List[QubitOperator]] = None
@@ -713,15 +724,77 @@ def BeamSearch_Symmetries(
         hct_n_sym = hct_n_sym,
         hct_use_coeffs_eps = hct_use_coeffs_eps,
     )
+    pool_size_before_cap = len(candidate_pool)
+    if max_candidate_pool_size is not None and max_candidate_pool_size < 1:
+        raise ValueError("max_candidate_pool_size must be positive or None.")
+
+    if score_func is None:
+        effective_score_func = None
+    elif maximize_score:
+        effective_score_func = score_func
+    else:
+        def effective_score_func(symmetries):
+            return -score_func(symmetries)
+
     separable_score_cache = {} if score_is_separable else None
     if score_is_separable:
-        if score_func is None:
+        if effective_score_func is None:
             raise ValueError("score_is_separable=True requires a score_func.")
-        SeparableScoreEvaluator(
-            score_func,
+        evaluator = SeparableScoreEvaluator(
+            effective_score_func,
             n_qubits,
             cache=separable_score_cache,
-        ).prime(candidate_pool)
+        )
+        evaluator.prime(candidate_pool)
+        if (
+            max_candidate_pool_size is not None
+            and len(candidate_pool) > max_candidate_pool_size
+        ):
+            # Python's sort is stable, preserving deterministic source order
+            # when singleton objectives tie.
+            candidate_pool = sorted(
+                candidate_pool,
+                key=evaluator.singleton,
+                reverse=True,
+            )[:max_candidate_pool_size]
+            separable_score_cache = {
+                mask: separable_score_cache[mask]
+                for mask in candidate_pool
+            }
+    elif (
+        max_candidate_pool_size is not None
+        and len(candidate_pool) > max_candidate_pool_size
+    ):
+        if effective_score_func is None:
+            raise ValueError(
+                "Capping the candidate pool by the supplied objective "
+                "requires score_func."
+            )
+        # A non-separable full-basis objective still has a well-defined
+        # singleton value for ranking the candidate pool. These values are not
+        # reused by the subsequent full-basis search.
+        candidate_pool = sorted(
+            candidate_pool,
+            key=lambda mask: effective_score_func(
+                [mask_to_qubit_operator(mask, n_qubits)]
+            ),
+            reverse=True,
+        )[:max_candidate_pool_size]
+
+    if diagnostics is not None:
+        diagnostics.update(
+            {
+                "candidate_pool_size_before_cap": pool_size_before_cap,
+                "candidate_pool_size_after_cap": len(candidate_pool),
+                "max_candidate_pool_size": max_candidate_pool_size,
+                "objective_direction": (
+                    "maximize" if maximize_score else "minimize"
+                ),
+                "candidate_pool_was_capped": (
+                    len(candidate_pool) < pool_size_before_cap
+                ),
+            }
+        )
 
     with _make_process_pool(
         n_processes,
@@ -739,7 +812,7 @@ def BeamSearch_Symmetries(
             beam_width=beam_width,
             heavy_core_fraction=heavy_core_fraction,
             initial_generators=seed_generators,
-            score_func=score_func,
+            score_func=effective_score_func,
             score_is_separable=score_is_separable,
             separable_score_cache=separable_score_cache,
             n_processes=n_processes,
@@ -754,7 +827,7 @@ def BeamSearch_Symmetries(
                 candidate_pool,
                 n_qubits=n_qubits,
                 max_passes=local_refine_passes,
-                score_func=score_func,
+                score_func=effective_score_func,
                 score_is_separable=score_is_separable,
                 separable_score_cache=separable_score_cache,
                 n_processes=n_processes,

@@ -3,7 +3,7 @@
 See `scripts/hct_bs_sample.py` for example script to find symmetries and test various metrics.
 
 Notes:  
-- HCT_mod should give the same symmetries as found in the HCT paper, but the diagonalizing Clifford is not unique, hence need not match.  
+- `HCT` follows the tapering paper by applying symplectic Gram--Schmidt to each threshold kernel; `hct_mod` retains the original greedy implementation.
 - BS-HCT has been observed to not improve much upon HCT, hence redundant.  
 - Beam search (with HCT symmetries added) currently performs best (lowest entanglement/bond dimension for DMRG convergence).  
 - DO NOT MODIFY ARCHIVED DATA IN ./saved/results/thesis_data
@@ -84,3 +84,59 @@ from quasisymmetries.tn import cleanup_block2_driver
 
 cleanup_block2_driver(driver)
 ```
+
+### N2/6-31G scalable benchmark
+
+Generate the full 18-spatial-orbital, 36-qubit Hamiltonian and test its raw
+pyblock2 Pauli MPO without running FCI or DMRG:
+
+```bash
+python -u scripts/probe_n2_631g_qubit_mpo.py
+```
+
+The larger-basis benchmark is checkpointed by stage. A cautious first run is:
+
+```bash
+python -u scripts/benchmark_n2_631g_pyblock2.py --stage cisd
+python -u scripts/benchmark_n2_631g_pyblock2.py --stage symmetries
+python -u scripts/benchmark_n2_631g_pyblock2.py --stage reference
+python -u scripts/benchmark_n2_631g_pyblock2.py --stage frames
+python -u scripts/benchmark_n2_631g_pyblock2.py --stage dmrg
+```
+
+Block2 and MKL/BLAS thread counts are controlled independently. For example,
+to use four Block2 threads while avoiding nested BLAS parallelism:
+
+```bash
+python -u scripts/benchmark_n2_631g_pyblock2.py \
+  --stage reference \
+  --n-threads 4 \
+  --n-mkl-threads 1
+```
+
+Thread/process counts, stack-memory allocation, and verbosity are execution
+settings: changing them does not invalidate completed CISD, reference,
+symmetry, or frame checkpoints. They are still recorded in ``settings.json``.
+Completed DMRG outputs are also reused; use ``--force-stage`` or a new output
+directory only when those calculations themselves should be repeated.
+
+Each command reuses completed prerequisites. The reference stage currently
+uses fixed bond dimension 100; dimension 150 remains in the requested grid but
+is skipped by default because its memory requirement is impractical for this
+N2/6-31G MPO. Consequently, the M=100 energy is a converged fixed-bond
+variational reference but is not independently validated against a larger
+bond dimension. The DMRG stage processes and releases one fermionic or qubit
+frame at a time. To pilot only the raw representations before transformed
+frames, use:
+
+```bash
+python -u scripts/benchmark_n2_631g_pyblock2.py \
+  --stage dmrg \
+  --output-dir saved/results/n2_631g_raw_pilot \
+  --frames raw_fermionic_su2 raw_qubit \
+  --bond-dims 10 20 30 40 60 80 100
+```
+
+Changing a result-defining saved-run setting requires a new ``--output-dir``.
+Use ``--force-stage`` only when the selected stage and all prerequisites should
+be recomputed deliberately.

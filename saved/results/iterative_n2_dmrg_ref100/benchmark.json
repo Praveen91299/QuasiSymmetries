@@ -1,0 +1,52 @@
+{
+  "systems": [
+    "N2_eqm"
+  ],
+  "requested_iterations": 3,
+  "summary": [
+    {
+      "system": "N2_eqm",
+      "iteration": 0,
+      "kind": "baseline",
+      "first_converged_bond_dim": 50,
+      "converged_within_grid": true,
+      "mpo_bond_dimension": 366,
+      "search_seconds": null,
+      "fiedler_seconds": null,
+      "selected_score": null
+    },
+    {
+      "system": "N2_eqm",
+      "iteration": 1,
+      "kind": "beam_clifford_fiedler",
+      "first_converged_bond_dim": 8,
+      "converged_within_grid": true,
+      "mpo_bond_dimension": 792,
+      "search_seconds": 7.2425577089888975,
+      "fiedler_seconds": 287.138483207993,
+      "selected_score": -1.8006688153891048
+    },
+    {
+      "system": "N2_eqm",
+      "iteration": 2,
+      "kind": "beam_clifford_fiedler",
+      "first_converged_bond_dim": 8,
+      "converged_within_grid": true,
+      "mpo_bond_dimension": 825,
+      "search_seconds": 6.083188458986115,
+      "fiedler_seconds": 255.35532583401073,
+      "selected_score": -1.7962387612417834
+    },
+    {
+      "system": "N2_eqm",
+      "iteration": 3,
+      "kind": "beam_clifford_fiedler",
+      "first_converged_bond_dim": 8,
+      "converged_within_grid": true,
+      "mpo_bond_dimension": 684,
+      "search_seconds": 6.001528249995317,
+      "fiedler_seconds": 246.50144508399535,
+      "selected_score": -1.7948865709783284
+    }
+  ]
+}
