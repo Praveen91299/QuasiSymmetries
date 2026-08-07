@@ -27,6 +27,52 @@ def _spin_strings_to_interleaved_jw_indices(
     return indices
 
 
+def _pyscf_to_interleaved_jw_phases(
+    alpha_strings,
+    beta_strings,
+    n_spatial_orbitals: int,
+) -> np.ndarray:
+    """Return fermionic phases for PySCF-to-interleaved-JW conversion.
+
+    Parameters
+    ----------
+    alpha_strings, beta_strings
+        Equal-length arrays of PySCF occupation bit strings. PySCF's CI
+        coefficient convention groups the complete alpha determinant before
+        the complete beta determinant.
+    n_spatial_orbitals
+        Number of spatial orbitals encoded by each occupation string.
+
+    Returns
+    -------
+    phases
+        Real array containing ``+1`` or ``-1`` for each determinant. Multiplying
+        a PySCF CI coefficient by this phase expresses it in ascending
+        interleaved spin-orbital order
+        ``alpha_0, beta_0, alpha_1, beta_1, ...``.
+
+    Notes
+    -----
+    Every occupied beta orbital ``j`` must cross every occupied alpha orbital
+    ``i > j`` when changing from grouped alpha/beta creation operators to the
+    interleaved order. The phase is minus one when the number of such crossings
+    is odd.
+    """
+    alpha_strings = np.asarray(alpha_strings, dtype=np.int64).reshape(-1)
+    beta_strings = np.asarray(beta_strings, dtype=np.int64).reshape(-1)
+    if alpha_strings.shape != beta_strings.shape:
+        raise ValueError("alpha_strings and beta_strings must have equal shape")
+    inversion_parity = np.zeros(len(alpha_strings), dtype=np.int8)
+    beta_occupied_below = np.zeros(len(alpha_strings), dtype=np.int64)
+    for orbital in range(int(n_spatial_orbitals)):
+        alpha_occupied = (alpha_strings >> orbital) & 1
+        inversion_parity ^= (
+            alpha_occupied & (beta_occupied_below & 1)
+        ).astype(np.int8, copy=False)
+        beta_occupied_below += (beta_strings >> orbital) & 1
+    return np.where(inversion_parity == 0, 1.0, -1.0)
+
+
 def restricted_cisd_vector_to_sparse_qubit_state(
     cisd_vector,
     n_spatial_orbitals: int,
@@ -152,6 +198,9 @@ def restricted_cisd_vector_to_sparse_qubit_state(
     indices = _spin_strings_to_interleaved_jw_indices(
         alpha_strings, beta_strings, nmo
     )
+    coefficients *= _pyscf_to_interleaved_jw_phases(
+        alpha_strings, beta_strings, nmo
+    )
     return SparseQubitState(
         indices,
         coefficients,
@@ -263,5 +312,6 @@ def run_restricted_cisd_from_molecular_data(
         "sparse_determinants": int(state.nnz),
         "expanded_norm_before_normalization": raw_norm,
         "coefficient_tolerance": float(coefficient_tolerance),
+        "jw_phase_convention": "interleaved_spin_orbital_v1",
         "fci_layout_materialized": False,
     }

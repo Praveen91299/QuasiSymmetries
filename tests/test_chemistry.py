@@ -3,6 +3,7 @@ from pyscf.ci import cisd
 from pyscf.fci import cistring
 
 from quasisymmetries.chemistry import (
+    _pyscf_to_interleaved_jw_phases,
     restricted_cisd_vector_to_sparse_qubit_state,
 )
 
@@ -21,7 +22,10 @@ def _fci_matrix_to_interleaved_dense(fcivec, nmo, nocc):
                 index |= (
                     (int(beta_string) >> orbital) & 1
                 ) << (2 * nmo - 2 - 2 * orbital)
-            output[index] = fcivec[alpha_address, beta_address]
+            phase = _pyscf_to_interleaved_jw_phases(
+                [alpha_string], [beta_string], nmo
+            )[0]
+            output[index] = phase * fcivec[alpha_address, beta_address]
     return output
 
 
@@ -55,3 +59,14 @@ def test_sparse_cisd_expansion_applies_coefficient_tolerance():
 
     assert state.nnz == 1
     assert state.coeffs[0] == 1.0
+
+
+def test_pyscf_to_interleaved_phase_counts_alpha_beta_crossings():
+    # alpha orbital 1 crosses occupied beta orbital 0: one minus sign.
+    phases = _pyscf_to_interleaved_jw_phases(
+        alpha_strings=[0b10, 0b01, 0b11],
+        beta_strings=[0b01, 0b10, 0b11],
+        n_spatial_orbitals=2,
+    )
+
+    np.testing.assert_array_equal(phases, [-1.0, 1.0, -1.0])

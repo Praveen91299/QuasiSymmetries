@@ -260,8 +260,17 @@ def prepare_cisd(data: dict, args) -> tuple[float, object, dict]:
     metadata_path = directory / "cisd.json"
     if state_path.exists() and metadata_path.exists() and not args.force_stage:
         metadata = load_json(metadata_path)
-        state = load_sparse_qubit_state(state_path).normalize()
-        return float(metadata["energy"]), state, metadata
+        if (
+            metadata.get("jw_phase_convention")
+            == "interleaved_spin_orbital_v1"
+        ):
+            state = load_sparse_qubit_state(state_path).normalize()
+            return float(metadata["energy"]), state, metadata
+        print(
+            "Saved CISD state predates the interleaved-JW fermionic phase "
+            "fix; regenerating only the CISD checkpoint.",
+            flush=True,
+        )
 
     print(f"Preparing determinant-sparse CISD state.{rss_message()}", flush=True)
     start = perf_counter()

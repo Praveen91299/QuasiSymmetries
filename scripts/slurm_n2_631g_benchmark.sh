@@ -2,7 +2,6 @@
 #SBATCH --account=rrg-izmaylov
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=20
 #SBATCH --time=15:00:00
 #SBATCH --job-name=n2_631g_dmrg
 #SBATCH --output=/scratch/jpraveen/slurm_logs/n2_631g_dmrg_%j.out
@@ -13,9 +12,13 @@ module purge
 module load StdEnv/2023
 module load python/3.12 scipy-stack
 
-# Block2 owns the outer parallelism. Keep numerical libraries serial to avoid
-# nested thread teams competing for the same allocated CPUs.
-export OMP_NUM_THREADS="$SLURM_CPUS_PER_TASK"
+# Trillium allocates all 192 CPU cores on a node. Select a small, explicit
+# Block2 thread team rather than inheriting that allocation size. Override at
+# submission with --export=ALL,BLOCK2_THREADS=<n> when testing thread scaling.
+BLOCK2_THREADS="${BLOCK2_THREADS:-4}"
+export OMP_NUM_THREADS="$BLOCK2_THREADS"
+export OMP_PROC_BIND=close
+export OMP_PLACES=cores
 export MKL_NUM_THREADS=1
 export OPENBLAS_NUM_THREADS=1
 export NUMEXPR_NUM_THREADS=1
@@ -73,7 +76,7 @@ python -u scripts/benchmark_n2_631g_pyblock2.py \
   --output-dir "$BENCHMARK_DIR" \
   --stage "$QS_STAGE" \
   --skip-reference-bond-dims 150 \
-  --n-threads "$SLURM_CPUS_PER_TASK" \
+  --n-threads "$BLOCK2_THREADS" \
   --n-mkl-threads 1 \
   --stack-mem-gb 32.0 \
   --verbose
