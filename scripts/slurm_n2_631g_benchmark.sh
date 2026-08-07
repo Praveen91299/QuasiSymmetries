@@ -76,6 +76,9 @@ python -u scripts/benchmark_n2_631g_pyblock2.py \
   --output-dir "$BENCHMARK_DIR" \
   --stage "$QS_STAGE" \
   --skip-reference-bond-dims 150 \
+  --energy-reference-bond-dim 200 \
+  --energy-reference-bond-increment 10 \
+  --require-reference-validation \
   --n-threads "$BLOCK2_THREADS" \
   --n-mkl-threads 1 \
   --stack-mem-gb 32.0 \

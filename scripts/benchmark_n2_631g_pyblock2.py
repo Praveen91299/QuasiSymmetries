@@ -402,42 +402,241 @@ def prepare_references(
 
     if largest_tensors is None:
         raise RuntimeError("largest reference MPS was not loaded")
-    difference = (
-        None
-        if len(summaries) < 2
-        else abs(float(summaries[-1]["energy"]) - float(summaries[-2]["energy"]))
+    state_energy = float(summaries[-1]["energy"])
+    energy_reference = prepare_fermionic_energy_reference(
+        data,
+        cisd_energy,
+        cisd_state,
+        provisional_energy=state_energy,
+        args=args,
     )
     validation = {
-        "method": "fixed_bond_pyblock2_qubit_dmrg",
+        "method": "fermionic_su2_fixed_bond_validation",
         "calculations": summaries,
+        "energy_reference": energy_reference,
         "requested_bond_dims": sorted(
             set(int(value) for value in args.reference_bond_dims)
         ),
         "skipped_bond_dims": sorted(skipped_dimensions),
-        "selected_bond_dim": dimensions[-1],
-        "energy": float(summaries[-1]["energy"]),
-        "comparison_bond_dim": (
-            None if len(dimensions) < 2 else dimensions[-2]
-        ),
-        "largest_two_energy_difference": difference,
+        "state_selected_bond_dim": dimensions[-1],
+        "state_energy": state_energy,
+        "selected_bond_dim": energy_reference["selected_bond_dim"],
+        "energy": energy_reference["energy"],
+        "comparison_bond_dim": energy_reference["comparison_bond_dim"],
+        "largest_two_energy_difference": energy_reference[
+            "energy_difference"
+        ],
         "validation_tolerance": args.reference_validation_tolerance,
-        "validated": bool(
-            difference is not None
-            and difference <= args.reference_validation_tolerance
-            and summaries[-1].get("sweep_converged", False)
+        "validated": energy_reference["validated"],
+        "reference_state_source": (
+            "fixed-bond qubit DMRG MPS used for entropy and Fiedler analysis"
         ),
-        "reference_state_source": "largest fixed-bond qubit DMRG MPS",
+        "reference_energy_source": (
+            "lower variational energy from the two SU(2) fermionic fixed-bond "
+            "checks; validity additionally requires sweep convergence"
+        ),
     }
     save_json(reference_dir / "reference_validation.json", validation)
     if not validation["validated"]:
         print(
-            "WARNING: largest-bond reference is not independently validated "
-            f"to {args.reference_validation_tolerance:.3e} Ha.",
+            "WARNING: the fermionic SU(2) reference pair is not validated: "
+            "both runs must converge in sweep energy and differ by at most "
+            f"{args.reference_validation_tolerance:.3e} Ha.",
             flush=True,
         )
         if args.require_reference_validation:
             raise RuntimeError("reference DMRG validation requirement failed")
     return largest_tensors, validation
+
+
+def select_fermionic_energy_reference(
+    rows: list[dict],
+    *,
+    requested_bond_dims: tuple[int, int],
+    validation_tolerance: float,
+) -> dict:
+    """Select and validate an energy from two fixed-bond SU(2) DMRG runs.
+
+    Parameters
+    ----------
+    rows
+        Fermionic DMRG result dictionaries. Each requested bond dimension must
+        occur exactly once and provide ``energy`` and ``sweep_converged``.
+    requested_bond_dims
+        Pair ``(M_ref, M_ref + delta_M)`` used for the reference and its
+        finite-bond check.
+    validation_tolerance
+        Maximum allowed absolute energy difference between the two runs.
+
+    Returns
+    -------
+    reference
+        Mapping containing the lower variational energy, its bond dimension,
+        the other comparison dimension, the energy difference, individual
+        sweep-convergence flags, and the combined validation flag.
+
+    Notes
+    -----
+    The lower of the two energies is selected because both are variational
+    upper bounds. Validation additionally requires both DMRG calculations to
+    satisfy their sweep-energy stopping criterion.
+    """
+    requested = tuple(int(value) for value in requested_bond_dims)
+    if len(requested) != 2 or requested[0] == requested[1]:
+        raise ValueError("requested_bond_dims must contain two distinct values")
+    selected_rows = {}
+    for row in rows:
+        bond_dim = int(row["bond_dim"])
+        if bond_dim in requested:
+            if bond_dim in selected_rows:
+                raise ValueError(f"duplicate reference row for M={bond_dim}")
+            selected_rows[bond_dim] = row
+    missing = sorted(set(requested) - set(selected_rows))
+    if missing:
+        raise ValueError(f"missing fermionic reference rows for M={missing}")
+
+    energies = {
+        bond_dim: float(selected_rows[bond_dim]["energy"])
+        for bond_dim in requested
+    }
+    best_bond_dim = min(requested, key=lambda value: energies[value])
+    other_bond_dim = next(
+        value for value in requested if value != best_bond_dim
+    )
+    sweep_converged = {
+        str(bond_dim): bool(selected_rows[bond_dim]["sweep_converged"])
+        for bond_dim in requested
+    }
+    difference = abs(energies[requested[1]] - energies[requested[0]])
+    return {
+        "energy": energies[best_bond_dim],
+        "selected_bond_dim": best_bond_dim,
+        "comparison_bond_dim": other_bond_dim,
+        "requested_bond_dims": list(requested),
+        "energies": {str(key): value for key, value in energies.items()},
+        "energy_difference": difference,
+        "validation_tolerance": float(validation_tolerance),
+        "sweep_converged": sweep_converged,
+        "validated": bool(
+            all(sweep_converged.values())
+            and difference <= float(validation_tolerance)
+        ),
+    }
+
+
+def prepare_fermionic_energy_reference(
+    data: dict,
+    cisd_energy: float,
+    cisd_state,
+    *,
+    provisional_energy: float,
+    args,
+) -> dict:
+    """Run or reload the high-bond SU(2) energy-reference pair.
+
+    Parameters
+    ----------
+    data
+        Loaded molecular data and Hamiltonian metadata.
+    cisd_energy, cisd_state
+        Correctly phased sparse CISD energy and warm-start state.
+    provisional_energy
+        Quasi-exact qubit-MPS energy used only by the generic fermionic curve
+        routine while the improved reference is being constructed.
+    args
+        Benchmark namespace supplying the base reference bond dimension,
+        ``+delta_M`` check, sweep settings, threads, memory, and output path.
+
+    Returns
+    -------
+    reference
+        Cached payload containing both fixed-bond rows, their settings, and
+        the selected/validated fermionic SU(2) reference energy.
+    """
+    reference_dir = args.output_dir / "reference"
+    path = reference_dir / "fermionic_energy_reference.json"
+    requested = (
+        int(args.energy_reference_bond_dim),
+        int(args.energy_reference_bond_dim)
+        + int(args.energy_reference_bond_increment),
+    )
+    settings = {
+        "requested_bond_dims": list(requested),
+        "dmrg_sweeps": int(args.reference_sweeps),
+        "sweep_tolerance": float(args.reference_sweep_tolerance),
+        "validation_tolerance": float(args.reference_validation_tolerance),
+        "davidson_threshold": float(args.davidson_threshold),
+        "warm_start_noises": list(args.warm_start_noises),
+        "jw_phase_convention": "interleaved_spin_orbital_v1",
+    }
+    if path.exists() and not args.force_stage:
+        cached = load_json(path)
+        if cached.get("settings") == settings:
+            print(
+                "Reusing fermionic energy reference at "
+                f"M={requested[0]} and M={requested[1]}.",
+                flush=True,
+            )
+            return cached
+
+    print(
+        "Running fermionic SU(2) energy reference at "
+        f"M={requested[0]} and M={requested[1]}.",
+        flush=True,
+    )
+    override_values = {
+        "output_dir": reference_dir / "fermionic_energy_reference",
+        "bond_dims": list(requested),
+        "dmrg_sweeps": int(args.reference_sweeps),
+        "sweep_tol": float(args.reference_sweep_tolerance),
+        "dmrg_tol": float(args.dmrg_tolerance),
+        "initial_state": "cisd",
+        "save_tensor_networks": False,
+        "full_curve": True,
+    }
+    missing = object()
+    original_values = {
+        name: getattr(args, name, missing) for name in override_values
+    }
+    for name, value in override_values.items():
+        setattr(args, name, value)
+    try:
+        rows, summary = fermionic_backend.run_fermionic_dmrg_curve(
+            molecule=data["molecule"],
+            warm_start_state=cisd_state,
+            warm_start_energy=cisd_energy,
+            fci_energy=float(provisional_energy),
+            args=args,
+        )
+    finally:
+        for name, value in original_values.items():
+            if value is missing:
+                delattr(args, name)
+            else:
+                setattr(args, name, value)
+
+    selected = select_fermionic_energy_reference(
+        rows,
+        requested_bond_dims=requested,
+        validation_tolerance=args.reference_validation_tolerance,
+    )
+    payload = {
+        **selected,
+        "method": "fermionic_su2_fixed_bond_validation",
+        "settings": settings,
+        "rows": rows,
+        "dmrg_summary": summary,
+    }
+    save_json(path, payload)
+    print(
+        "Fermionic energy reference: "
+        f"E={payload['energy']:.12f} at M={payload['selected_bond_dim']}; "
+        f"|E({requested[1]})-E({requested[0]})|="
+        f"{payload['energy_difference']:.3e}; "
+        f"validated={payload['validated']}.",
+        flush=True,
+    )
+    return payload
 
 
 def prepare_symmetries(data: dict, args) -> dict:
@@ -633,7 +832,14 @@ def prepare_frames(
     """
     path = args.output_dir / "prepared" / "frames.json"
     if path.exists() and not args.force_stage:
-        return load_json(path)
+        frames = load_json(path)
+        # Energy refinement does not change the saved reference MPS,
+        # Clifford circuits, entropies, or Fiedler permutations. Refresh only
+        # their provenance instead of recomputing those expensive objects.
+        for frame in frames.values():
+            frame["reference"] = reference_validation
+        save_json(path, frames)
+        return frames
 
     n_qubits = data["n_qubits"]
     frames = {}
@@ -799,10 +1005,25 @@ def run_dmrg_frames(
         result_path = frame_dir / "result.json"
         curve_path = frame_dir / "dmrg_curve.csv"
         if result_path.exists() and curve_path.exists() and not args.force_stage:
-            print(f"Reusing completed DMRG frame {frame}.", flush=True)
-            summaries[frame] = load_json(result_path)
-            all_rows.extend(read_csv(curve_path))
-            continue
+            cached_summary = load_json(result_path)
+            cached_reference = cached_summary.get(
+                "benchmark_reference", {}
+            ).get("energy")
+            if cached_reference is not None and np.isclose(
+                float(cached_reference),
+                float(reference_validation["energy"]),
+                rtol=0.0,
+                atol=1e-12,
+            ):
+                print(f"Reusing completed DMRG frame {frame}.", flush=True)
+                summaries[frame] = cached_summary
+                all_rows.extend(read_csv(curve_path))
+                continue
+            print(
+                f"DMRG frame {frame} used the previous energy reference; "
+                "rerunning its stopping curve with the refined reference.",
+                flush=True,
+            )
 
         frame_dir.mkdir(parents=True, exist_ok=True)
         print(f"Running DMRG frame {frame}.{rss_message()}", flush=True)
@@ -956,7 +1177,27 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--reference-sweeps", type=int, default=100)
     parser.add_argument("--reference-sweep-tolerance", type=float, default=1e-8)
     parser.add_argument("--reference-validation-tolerance", type=float, default=1e-4)
-    parser.add_argument("--require-reference-validation", action="store_true")
+    parser.add_argument(
+        "--energy-reference-bond-dim",
+        type=int,
+        default=200,
+        help="base SU(2) fermionic bond dimension for the energy reference",
+    )
+    parser.add_argument(
+        "--energy-reference-bond-increment",
+        type=int,
+        default=10,
+        help="additional bond dimension used to validate the energy reference",
+    )
+    parser.add_argument(
+        "--require-reference-validation",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help=(
+            "stop before benchmarks unless both high-bond reference runs "
+            "converge and agree within the reference tolerance"
+        ),
+    )
     parser.add_argument("--reference-transform-max-bond", type=int, default=150)
 
     parser.add_argument("--hct-intervals", type=int, default=100)
@@ -1017,6 +1258,10 @@ def validate_args(args) -> None:
         raise ValueError("reference bond dimensions must be positive")
     if any(value < 1 for value in args.skip_reference_bond_dims):
         raise ValueError("skipped reference bond dimensions must be positive")
+    if args.energy_reference_bond_dim < 1:
+        raise ValueError("energy reference bond dimension must be positive")
+    if args.energy_reference_bond_increment < 1:
+        raise ValueError("energy reference bond increment must be positive")
     if any(value < 1 for value in args.bond_dims):
         raise ValueError("benchmark bond dimensions must be positive")
     if len(set(args.frames)) != len(args.frames):
@@ -1040,6 +1285,7 @@ EXECUTION_ONLY_SETTING_KEYS = frozenset(
         "stack_mem_gb",
         "verbose",
         "skip_reference_bond_dims",
+        "require_reference_validation",
     }
 )
 
@@ -1111,8 +1357,16 @@ def preparation_settings_from_saved(payload: dict) -> dict:
         permits transparent migration of existing benchmark directories.
     """
     if payload.get("format") == "n2_631g_benchmark_settings_v2":
-        return dict(payload["preparation"])
-    return partition_checkpoint_settings(payload)[0]
+        preparation = dict(payload["preparation"])
+    else:
+        preparation = partition_checkpoint_settings(payload)[0]
+    preparation.pop("require_reference_validation", None)
+    # These defaults were introduced after the original N2/6-31G run. Treat
+    # an absent value as the new default so existing scientific checkpoints
+    # migrate without --force-stage.
+    preparation.setdefault("energy_reference_bond_dim", 200)
+    preparation.setdefault("energy_reference_bond_increment", 10)
+    return preparation
 
 
 def main() -> None:

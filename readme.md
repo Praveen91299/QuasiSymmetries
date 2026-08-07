@@ -120,14 +120,14 @@ symmetry, or frame checkpoints. They are still recorded in ``settings.json``.
 Completed DMRG outputs are also reused; use ``--force-stage`` or a new output
 directory only when those calculations themselves should be repeated.
 
-Each command reuses completed prerequisites. The reference stage currently
-uses fixed bond dimension 100; dimension 150 remains in the requested grid but
-is skipped by default because its memory requirement is impractical for this
-N2/6-31G MPO. Consequently, the M=100 energy is a converged fixed-bond
-variational reference but is not independently validated against a larger
-bond dimension. The DMRG stage processes and releases one fermionic or qubit
-frame at a time. To pilot only the raw representations before transformed
-frames, use:
+Each command reuses completed prerequisites. The reference stage uses the
+qubit M=100 MPS for entropy and Fiedler analysis; qubit M=150 remains skipped
+by default. The benchmark energy is obtained separately with spin-adapted
+fermionic DMRG at M=200 and M=210. The lower variational energy is accepted
+only when both runs reach sweep convergence and differ by no more than
+``--reference-validation-tolerance`` (default 0.1 mHa). The DMRG stage then
+processes and releases one fermionic or qubit frame at a time. To pilot only
+the raw representations before transformed frames, use:
 
 ```bash
 python -u scripts/benchmark_n2_631g_pyblock2.py \
