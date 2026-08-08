@@ -1,6 +1,7 @@
 import itertools
 import numpy as np
 from scipy.optimize import linprog
+from scipy import sparse
 
 from openfermion import FermionOperator, normal_ordered, jordan_wigner
 
@@ -171,10 +172,32 @@ def lp_bliss_paper_real_pauli_1norm(
     term_list = sorted(all_pauli_terms)
 
     h = qubit_to_real_vector(Q_H, term_list, tol)
-    A = np.column_stack([
-        qubit_to_real_vector(Q, term_list, tol)
-        for Q in Q_K
-    ])
+    # Each Jordan--Wigner mapped killer contains only a small subset of the
+    # union of Pauli words.  Keeping this matrix sparse is essential for
+    # larger basis sets: the two LP constraint blocks also contain an
+    # identity matrix with one row per Pauli word.
+    term_positions = {term: row for row, term in enumerate(term_list)}
+    matrix_rows = []
+    matrix_columns = []
+    matrix_values = []
+    max_imag = 0.0
+    for column, operator in enumerate(Q_K):
+        for term, coefficient in operator.terms.items():
+            value = complex(coefficient)
+            max_imag = max(max_imag, abs(value.imag))
+            if abs(value.real) > tol:
+                matrix_rows.append(term_positions[term])
+                matrix_columns.append(column)
+                matrix_values.append(value.real)
+    if max_imag > tol:
+        raise ValueError(
+            f"Non-negligible imaginary Pauli coefficient encountered: {max_imag}"
+        )
+    A = sparse.csc_matrix(
+        (matrix_values, (matrix_rows, matrix_columns)),
+        shape=(len(term_list), len(Q_K)),
+        dtype=float,
+    )
 
     n_vars = A.shape[1]
     n_paulis = A.shape[0]
@@ -193,10 +216,14 @@ def lp_bliss_paper_real_pauli_1norm(
         np.ones(n_paulis),
     ])
 
-    A_ub = np.vstack([
-        np.hstack([-A, -np.eye(n_paulis)]),
-        np.hstack([ A, -np.eye(n_paulis)]),
-    ])
+    negative_identity = -sparse.eye(n_paulis, format="csc")
+    A_ub = sparse.vstack(
+        (
+            sparse.hstack((-A, negative_identity), format="csc"),
+            sparse.hstack((A, negative_identity), format="csc"),
+        ),
+        format="csc",
+    )
 
     b_ub = np.concatenate([-h, h])
 
@@ -255,6 +282,8 @@ def lp_bliss_paper_real_pauli_1norm(
         "n_killers": len(killers),
         "n_pauli_terms_initial": len(Q_H.terms),
         "n_pauli_terms_final": len(Q_bliss.terms),
+        "lp_constraint_matrix_format": "sparse_csc",
+        "lp_killer_matrix_nnz": int(A.nnz),
         "lp_result": result,
     }
 

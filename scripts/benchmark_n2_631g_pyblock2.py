@@ -20,6 +20,7 @@ from time import perf_counter
 
 import numpy as np
 from openfermion import MolecularData
+from openfermion.transforms import get_fermion_operator
 
 import _bootstrap
 
@@ -34,10 +35,12 @@ from quasisymmetries.bs.beam import (
     validate_symmetry_generators,
 )
 from quasisymmetries.bs.utils import (
+    jordan_wigner_pauli_stream,
     qubit_operator_terms,
     qubitops_to_masks,
     symplectic_commutes,
 )
+from quasisymmetries.bliss import lp_bliss_paper_real_pauli_1norm
 from quasisymmetries.chemistry import (
     run_restricted_cisd_from_molecular_data,
 )
@@ -62,6 +65,7 @@ from quasisymmetries.save import (
     load_sparse_qubit_state,
     read_csv,
     save_json,
+    save_pauli_term_stream,
     save_sparse_qubit_state,
     to_jsonable,
     write_csv,
@@ -87,6 +91,8 @@ BEAM_HALF = "Beam_Nover2_CommL1"
 BEAM_FULL = "Beam_N_CommL1"
 HCT_FIEDLER = "HCT_N_CommL1_Fiedler"
 BEAM_FIEDLER = "Beam_N_CommL1_Fiedler"
+BLISS_HCT_FULL = "BLISS_HCT_N_CommL1"
+BLISS_BEAM_FULL = "BLISS_Beam_N_CommL1"
 ALL_FRAMES = (
     RAW_FERMION,
     RAW,
@@ -97,6 +103,8 @@ ALL_FRAMES = (
     BEAM_FULL,
     HCT_FIEDLER,
     BEAM_FIEDLER,
+    BLISS_HCT_FULL,
+    BLISS_BEAM_FULL,
 )
 
 
@@ -236,6 +244,220 @@ def commutator_l1_for_mask(mask, terms) -> float:
         for term in terms
         if term.mask != (0, 0) and not symplectic_commutes(mask, term.mask)
     )
+
+
+def build_active_fermion_hamiltonian(data: dict):
+    """Construct the active-space fermionic Hamiltonian used by BLISS.
+
+    Parameters
+    ----------
+    data
+        Probe data returned by :func:`load_probe_input`. Its manifest supplies
+        the frozen and active spatial-orbital indices.
+
+    Returns
+    -------
+    hamiltonian
+        OpenFermion ``FermionOperator`` in the same active spin-orbital space
+        and Jordan--Wigner ordering as ``data["hamiltonian"]``.
+    """
+    active_space = data["manifest"]["active_space"]
+    frozen = list(active_space["frozen_core_orbitals"])
+    active = list(active_space["active_orbitals"])
+    if frozen:
+        molecular_hamiltonian = data["molecule"].get_molecular_hamiltonian(
+            occupied_indices=frozen,
+            active_indices=active,
+        )
+    else:
+        molecular_hamiltonian = data["molecule"].get_molecular_hamiltonian()
+    return get_fermion_operator(molecular_hamiltonian)
+
+
+def bliss_info_summary(info: dict) -> dict:
+    """Return the JSON-safe numerical diagnostics from a BLISS calculation.
+
+    Parameters
+    ----------
+    info
+        Diagnostic mapping returned by
+        :func:`lp_bliss_paper_real_pauli_1norm`.
+
+    Returns
+    -------
+    summary
+        Scalar convergence, term-count, norm-reduction, and sparse-LP data.
+        Large operator objects and optimizer internals are intentionally
+        omitted.
+    """
+    keys = (
+        "success",
+        "message",
+        "initial_pauli_l1",
+        "final_pauli_l1",
+        "pauli_l1_reduction",
+        "relative_pauli_l1_reduction",
+        "n_killers",
+        "n_pauli_terms_initial",
+        "n_pauli_terms_final",
+        "lp_constraint_matrix_format",
+        "lp_killer_matrix_nnz",
+    )
+    return {key: info[key] for key in keys if key in info}
+
+
+def prepare_bliss_symmetries(data: dict, args) -> dict:
+    """Run Pauli-L1 BLISS and find full-rank HCT and Beam generators.
+
+    Parameters
+    ----------
+    data
+        Loaded molecular data and raw packed Jordan--Wigner Hamiltonian.
+    args
+        BLISS, HCT, Beam, candidate-pool, and process settings.
+
+    Returns
+    -------
+    result
+        BLISS diagnostics plus full-rank HCT and Beam generator records. Both
+        searches use the BLISS-shifted Hamiltonian, while later DMRG frames
+        apply the resulting Clifford circuits to the original Hamiltonian.
+    """
+    n_qubits = int(data["n_qubits"])
+    active_electrons = int(
+        data["manifest"]["active_space"]["active_electrons"]
+    )
+    print(
+        "Running sparse-LP Pauli BLISS before HCT and Beam search; "
+        f"n_electrons={active_electrons}.{rss_message()}",
+        flush=True,
+    )
+    start = perf_counter()
+    fermion_hamiltonian = build_active_fermion_hamiltonian(data)
+    bliss_hamiltonian, bliss_info = lp_bliss_paper_real_pauli_1norm(
+        fermion_hamiltonian,
+        n_electrons=active_electrons,
+        n_orb=n_qubits,
+        tol=args.bliss_tolerance,
+    )
+    if not bliss_info.get("success", False):
+        raise RuntimeError(f"Pauli BLISS failed: {bliss_info.get('message')}")
+    bliss_stream = jordan_wigner_pauli_stream(
+        bliss_hamiltonian,
+        n_qubits=n_qubits,
+        tolerance=args.bliss_tolerance,
+    )
+    stream_path = args.output_dir / "prepared" / "bliss_pauli_stream.json"
+    save_pauli_term_stream(stream_path, bliss_stream)
+    bliss_seconds = perf_counter() - start
+    del fermion_hamiltonian, bliss_hamiltonian
+    gc.collect()
+
+    _, terms = qubit_operator_terms(bliss_stream, n_qubits)
+    print(f"Finding {n_qubits} HCT generators on BLISS Hamiltonian.", flush=True)
+    start = perf_counter()
+    hct, hct_epsilons = HCT(
+        bliss_stream,
+        n_sym=n_qubits,
+        use_coeffs_eps=args.hct_use_coefficient_thresholds,
+        num_intervals=args.hct_intervals,
+        tol=args.hct_term_tolerance,
+        verbose=args.verbose,
+    )
+    hct_seconds = perf_counter() - start
+    hct_masks = qubitops_to_masks(hct, n_qubits)
+    hct_validation = validate_symmetry_generators(
+        bliss_stream, hct, n_qubits=n_qubits
+    )
+    hct_validation["target_rank"] = n_qubits
+
+    base_pool = build_candidate_pool(
+        terms,
+        n_qubits,
+        max_candidates_from_terms=args.max_candidates_from_terms,
+        include_pairwise_products=True,
+        pairwise_seed_terms=args.pairwise_seed_terms,
+        max_pauli_weight=args.max_pauli_weight,
+    )
+    ordered_pool = list(OrderedDict.fromkeys([*hct_masks, *base_pool]))
+    pool_before_cap = len(ordered_pool)
+    pool_scores = {
+        mask: -commutator_l1_for_mask(mask, terms) for mask in ordered_pool
+    }
+    if len(ordered_pool) > args.max_candidate_pool_size:
+        position = {mask: index for index, mask in enumerate(ordered_pool)}
+        ordered_pool.sort(
+            key=lambda mask: (pool_scores[mask], -position[mask]), reverse=True
+        )
+        ordered_pool = ordered_pool[: args.max_candidate_pool_size]
+
+    def beam_score(generators):
+        masks = qubitops_to_masks(generators, n_qubits)
+        return sum(pool_scores[mask] for mask in masks)
+
+    print(
+        f"Finding {n_qubits} Beam generators on BLISS Hamiltonian from "
+        f"{len(ordered_pool)} candidates.",
+        flush=True,
+    )
+    start = perf_counter()
+    beam = beam_search_symmetries(
+        bliss_stream,
+        ordered_pool,
+        target_rank=n_qubits,
+        n_qubits=n_qubits,
+        beam_width=args.beam_width,
+        heavy_core_fraction=args.heavy_core_fraction,
+        score_func=beam_score,
+        score_is_separable=True,
+        separable_score_cache=pool_scores.copy(),
+        n_processes=args.n_processes,
+        mp_start_method=args.mp_start_method,
+    )
+    beam_seconds = perf_counter() - start
+    beam_validation = validate_symmetry_generators(
+        bliss_stream, beam, n_qubits=n_qubits
+    )
+    beam_validation["target_rank"] = n_qubits
+    return {
+        "selection_hamiltonian": "Pauli-L1 BLISS shifted Hamiltonian",
+        "dmrg_hamiltonian": "original Hamiltonian",
+        "active_electrons": active_electrons,
+        "pauli_stream": str(stream_path.resolve()),
+        "bliss_seconds": bliss_seconds,
+        "bliss": bliss_info_summary(bliss_info),
+        "hct": {
+            "symmetries": encode_symmetries(hct),
+            "individual_scores": [
+                commutator_l1_for_mask(mask, terms) for mask in hct_masks
+            ],
+            "total_score": sum(
+                commutator_l1_for_mask(mask, terms) for mask in hct_masks
+            ),
+            "score_name": "sum of Pauli 1-norms of individual commutators",
+            "score_convention": "minimize",
+            "epsilons": hct_epsilons,
+            "seconds": hct_seconds,
+            "validation": hct_validation,
+        },
+        "beam": {
+            "symmetries": encode_symmetries(beam),
+            "score": beam_score(beam),
+            "score_name": "negative sum of individual Pauli commutator 1-norms",
+            "score_convention": "maximize",
+            "seconds": beam_seconds,
+            "validation": beam_validation,
+        },
+        "candidate_pool": {
+            "masks": [[int(x), int(z)] for x, z in ordered_pool],
+            "size_before_cap": pool_before_cap,
+            "size_after_cap": len(ordered_pool),
+            "maximum_size": args.max_candidate_pool_size,
+            "ranking_score": "negative individual Pauli commutator 1-norm",
+            "ranking_convention": "maximize",
+            "pairwise_seed_terms": args.pairwise_seed_terms,
+        },
+    }
 
 
 def prepare_cisd(data: dict, args) -> tuple[float, object, dict]:
@@ -658,8 +880,20 @@ def prepare_symmetries(data: dict, args) -> dict:
     directory = args.output_dir / "prepared"
     directory.mkdir(parents=True, exist_ok=True)
     path = directory / "symmetries.json"
+    needs_bliss = bool(
+        {BLISS_HCT_FULL, BLISS_BEAM_FULL}.intersection(args.frames)
+    )
     if path.exists() and not args.force_stage:
-        return load_json(path)
+        cached = load_json(path)
+        if not needs_bliss or "bliss" in cached:
+            return cached
+        print(
+            "Extending the saved symmetry checkpoint with BLISS searches.",
+            flush=True,
+        )
+        cached["bliss"] = prepare_bliss_symmetries(data, args)
+        save_json(path, cached)
+        return cached
 
     n_qubits, terms = qubit_operator_terms(
         data["hamiltonian"], data["n_qubits"]
@@ -789,6 +1023,8 @@ def prepare_symmetries(data: dict, args) -> dict:
             "pairwise_seed_terms": args.pairwise_seed_terms,
         },
     }
+    if needs_bliss:
+        payload["bliss"] = prepare_bliss_symmetries(data, args)
     save_json(path, payload)
     return payload
 
@@ -797,6 +1033,10 @@ def _frame_symmetries(symmetry_data: dict, frame: str):
     """Return decoded generators for one non-raw benchmark frame."""
     if frame == SENIORITY:
         return None
+    if frame == BLISS_HCT_FULL:
+        return decode_symmetries(symmetry_data["bliss"]["hct"]["symmetries"])
+    if frame == BLISS_BEAM_FULL:
+        return decode_symmetries(symmetry_data["bliss"]["beam"]["symmetries"])
     source = "hct" if frame.startswith("HCT") else "beam"
     key = frame.replace("_Fiedler", "")
     return decode_symmetries(symmetry_data[source][key]["symmetries"])
@@ -831,6 +1071,8 @@ def prepare_frames(
         reference-MPS cut entropies, and transformation diagnostics.
     """
     path = args.output_dir / "prepared" / "frames.json"
+    requested = set(args.frames)
+    required_saved_frames = requested - {RAW_FERMION}
     if path.exists() and not args.force_stage:
         frames = load_json(path)
         # Energy refinement does not change the saved reference MPS,
@@ -838,30 +1080,48 @@ def prepare_frames(
         # their provenance instead of recomputing those expensive objects.
         for frame in frames.values():
             frame["reference"] = reference_validation
-        save_json(path, frames)
-        return frames
+        if required_saved_frames.issubset(frames):
+            save_json(path, frames)
+            return frames
+        print(
+            "Extending the saved frame checkpoint with: "
+            + ", ".join(sorted(required_saved_frames - set(frames))),
+            flush=True,
+        )
+    else:
+        frames = {}
 
     n_qubits = data["n_qubits"]
-    frames = {}
-    if RAW in args.frames:
+    if RAW in requested and RAW not in frames:
         raw_entropies = qubit_mps_cut_entropies(reference_tensors, base=np.e)
         frames[RAW] = {
             "unitaries": [],
             "reference_cut_entropies": raw_entropies,
             "reference": reference_validation,
         }
-    requested = set(args.frames)
     symmetry_frames = []
-    if SENIORITY in requested:
+    if SENIORITY in requested and SENIORITY not in frames:
         symmetry_frames.append(SENIORITY)
-    if HCT_HALF in requested:
+    if HCT_HALF in requested and HCT_HALF not in frames:
         symmetry_frames.append(HCT_HALF)
-    if HCT_FULL in requested or HCT_FIEDLER in requested:
+    if (
+        HCT_FULL in requested and HCT_FULL not in frames
+    ) or (
+        HCT_FIEDLER in requested and HCT_FIEDLER not in frames
+    ):
         symmetry_frames.append(HCT_FULL)
-    if BEAM_HALF in requested:
+    if BEAM_HALF in requested and BEAM_HALF not in frames:
         symmetry_frames.append(BEAM_HALF)
-    if BEAM_FULL in requested or BEAM_FIEDLER in requested:
+    if (
+        BEAM_FULL in requested and BEAM_FULL not in frames
+    ) or (
+        BEAM_FIEDLER in requested and BEAM_FIEDLER not in frames
+    ):
         symmetry_frames.append(BEAM_FULL)
+    if BLISS_HCT_FULL in requested and BLISS_HCT_FULL not in frames:
+        symmetry_frames.append(BLISS_HCT_FULL)
+    if BLISS_BEAM_FULL in requested and BLISS_BEAM_FULL not in frames:
+        symmetry_frames.append(BLISS_BEAM_FULL)
     for frame in symmetry_frames:
         print(f"Preparing Clifford and MPS entropies for {frame}.", flush=True)
         generators = (
@@ -891,6 +1151,11 @@ def prepare_frames(
             "reference_transform": transform_info,
             "reference": reference_validation,
         }
+        if frame in {BLISS_HCT_FULL, BLISS_BEAM_FULL}:
+            frames[frame]["symmetry_selection"] = {
+                "hamiltonian": "Pauli-L1 BLISS shifted Hamiltonian",
+                "dmrg_hamiltonian": "original Hamiltonian",
+            }
         target = HCT_FIEDLER if frame == HCT_FULL else BEAM_FIEDLER
         if frame in {HCT_FULL, BEAM_FULL} and target in requested:
             fiedler = fiedler_order_from_mps(
@@ -968,6 +1233,72 @@ def construct_frame(data: dict, frame_data: dict):
     return hamiltonian, tuple(unitaries)
 
 
+def aggregate_dmrg_outputs(
+    output_dir: Path,
+    requested_frames,
+    *,
+    require_all: bool = False,
+) -> tuple[list[dict], dict, list[str]]:
+    """Combine independently checkpointed frame results into root summaries.
+
+    Parameters
+    ----------
+    output_dir
+        Benchmark output root containing ``dmrg/<frame>`` directories.
+    requested_frames
+        Frame names expected in the aggregate output.
+    require_all
+        If true, raise an error when any requested frame is incomplete.
+
+    Returns
+    -------
+    rows, summaries, missing
+        Combined per-bond rows, mapping of completed frame summaries, and the
+        requested frame names for which no complete checkpoint was found.
+    """
+    rows = []
+    summaries = {}
+    missing = []
+    for frame in requested_frames:
+        frame_dir = output_dir / "dmrg" / frame
+        result_path = frame_dir / "result.json"
+        curve_path = frame_dir / "dmrg_curve.csv"
+        if not result_path.exists() or not curve_path.exists():
+            missing.append(frame)
+            continue
+        summaries[frame] = load_json(result_path)
+        rows.extend(read_csv(curve_path))
+    if missing and require_all:
+        raise RuntimeError(
+            "Cannot aggregate because these DMRG frames are incomplete: "
+            + ", ".join(missing)
+        )
+    write_csv(output_dir / "dmrg_curves.csv", rows)
+    save_json(output_dir / "dmrg_summaries.json", summaries)
+    write_csv(
+        output_dir / "dmrg_summary.csv",
+        [
+            {
+                "system": "N2_631g",
+                "frame": frame,
+                "first_converged_bond_dim": summary.get(
+                    "first_converged_bond_dim"
+                ),
+                "converged_within_grid": summary.get(
+                    "converged_within_grid", False
+                ),
+                "mpo_bond_dimension": summary.get("mpo_bond_dimension"),
+                "mpo_build_seconds": summary.get("mpo_build_seconds"),
+                "first_converged_dmrg_seconds": summary.get(
+                    "first_converged_dmrg_optimization_seconds"
+                ),
+            }
+            for frame, summary in summaries.items()
+        ],
+    )
+    return rows, summaries, missing
+
+
 def run_dmrg_frames(
     data: dict,
     cisd_energy: float,
@@ -976,7 +1307,7 @@ def run_dmrg_frames(
     frames: dict,
     args,
 ) -> tuple[list[dict], dict]:
-    """Run requested frames sequentially and checkpoint after each one.
+    """Run requested frames and checkpoint each independently.
 
     Parameters
     ----------
@@ -1029,6 +1360,14 @@ def run_dmrg_frames(
         print(f"Running DMRG frame {frame}.{rss_message()}", flush=True)
         rss_before = rss_gib()
         peak_before = peak_rss_gib()
+        row_context = {
+            "system": "N2_631g",
+            "frame": frame,
+            "basis": data["manifest"]["basis"],
+            "n_qubits": data["n_qubits"],
+            "reference_energy": reference_validation["energy"],
+            "reference_validated": reference_validation["validated"],
+        }
         if frame == RAW_FERMION:
             if args.frozen_core_orbitals:
                 raise NotImplementedError(
@@ -1052,15 +1391,68 @@ def run_dmrg_frames(
                 args.output_dir = original_output
             hamiltonian = unitaries = None
         else:
+            checkpointed_rows = (
+                read_csv(curve_path)
+                if curve_path.exists() and not args.force_stage
+                else []
+            )
+            if checkpointed_rows and any(
+                not np.isclose(
+                    float(row.get("reference_energy", "nan")),
+                    float(reference_validation["energy"]),
+                    rtol=0.0,
+                    atol=1e-12,
+                )
+                for row in checkpointed_rows
+            ):
+                print(
+                    f"{frame}: discarding partial curve from an older "
+                    "reference energy.",
+                    flush=True,
+                )
+                checkpointed_rows = []
+            completed_bond_dims = {
+                int(row["bond_dim"]) for row in checkpointed_rows
+            }
+            remaining_bond_dims = [
+                int(value)
+                for value in args.bond_dims
+                if int(value) not in completed_bond_dims
+            ]
+            if not remaining_bond_dims:
+                # A process can be killed after its final per-bond checkpoint
+                # but before writing result.json. Repeating only the last point
+                # reconstructs a complete curve-level summary.
+                repeated = int(args.bond_dims[-1])
+                checkpointed_rows = [
+                    row
+                    for row in checkpointed_rows
+                    if int(row["bond_dim"]) != repeated
+                ]
+                remaining_bond_dims = [repeated]
+            if checkpointed_rows:
+                print(
+                    f"{frame}: resuming after {len(checkpointed_rows)} "
+                    "checkpointed bond dimensions; remaining="
+                    f"{remaining_bond_dims}.",
+                    flush=True,
+                )
+
+            def checkpoint_bond_result(row):
+                saved_row = dict(row)
+                saved_row.update(row_context)
+                write_csv(curve_path, [*checkpointed_rows, saved_row])
+                checkpointed_rows.append(saved_row)
+
             hamiltonian, unitaries = construct_frame(data, frames[frame])
-            rows, summary = run_block2_qubit_dmrg_curve(
+            new_rows, summary = run_block2_qubit_dmrg_curve(
                 label=frame,
                 hamiltonian=hamiltonian,
                 sparse_state=(cisd_state.indices, cisd_state.coeffs),
                 exact_energy=reference_validation["energy"],
                 warm_start_energy=cisd_energy,
                 n_qubits=data["n_qubits"],
-                bond_dims=args.bond_dims,
+                bond_dims=remaining_bond_dims,
                 dmrg_sweeps=args.dmrg_sweeps,
                 dmrg_tolerance=args.dmrg_tolerance,
                 sweep_tolerance=args.sweep_tolerance,
@@ -1082,18 +1474,26 @@ def run_dmrg_frames(
                 warm_start_noises=args.warm_start_noises,
                 verbose=args.verbose,
                 artifact_dir=(frame_dir / "tensor_networks"),
+                bond_result_callback=checkpoint_bond_result,
             )
+            rows = [*checkpointed_rows[: -len(new_rows)], *new_rows]
+            converged_rows = [
+                row
+                for row in rows
+                if str(row.get("within_dmrg_tolerance", "")).lower()
+                == "true"
+            ]
+            if converged_rows:
+                first = min(
+                    converged_rows, key=lambda row: int(row["bond_dim"])
+                )
+                summary["first_converged_bond_dim"] = int(first["bond_dim"])
+                summary["converged_within_grid"] = True
+                summary["first_converged_dmrg_optimization_seconds"] = float(
+                    first["dmrg_seconds"]
+                )
         for row in rows:
-            row.update(
-                {
-                    "system": "N2_631g",
-                    "frame": frame,
-                    "basis": data["manifest"]["basis"],
-                    "n_qubits": data["n_qubits"],
-                    "reference_energy": reference_validation["energy"],
-                    "reference_validated": reference_validation["validated"],
-                }
-            )
+            row.update(row_context)
         summary["benchmark_reference"] = reference_validation
         summary["memory_gib"] = {
             "rss_before": rss_before,
@@ -1112,29 +1512,10 @@ def run_dmrg_frames(
         summaries[frame] = summary
         del hamiltonian, unitaries
         gc.collect()
-    write_csv(args.output_dir / "dmrg_curves.csv", all_rows)
-    save_json(args.output_dir / "dmrg_summaries.json", summaries)
-    write_csv(
-        args.output_dir / "dmrg_summary.csv",
-        [
-            {
-                "system": "N2_631g",
-                "frame": frame,
-                "first_converged_bond_dim": summary.get(
-                    "first_converged_bond_dim"
-                ),
-                "converged_within_grid": summary.get(
-                    "converged_within_grid", False
-                ),
-                "mpo_bond_dimension": summary.get("mpo_bond_dimension"),
-                "mpo_build_seconds": summary.get("mpo_build_seconds"),
-                "first_converged_dmrg_seconds": summary.get(
-                    "first_converged_dmrg_optimization_seconds"
-                ),
-            }
-            for frame, summary in summaries.items()
-        ],
-    )
+    if not args.worker_mode:
+        all_rows, summaries, _missing = aggregate_dmrg_outputs(
+            args.output_dir, args.frames
+        )
     return all_rows, summaries
 
 
@@ -1152,12 +1533,31 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--frozen-core-orbitals", type=int, default=0)
     parser.add_argument(
         "--stage",
-        choices=("cisd", "reference", "symmetries", "frames", "dmrg", "all"),
+        choices=(
+            "cisd",
+            "reference",
+            "symmetries",
+            "frames",
+            "dmrg",
+            "aggregate",
+            "all",
+        ),
         default="all",
-        help="Run this stage and any prerequisites; 'all' ends with DMRG.",
+        help=(
+            "Run this stage and any prerequisites; 'aggregate' only combines "
+            "completed frame checkpoints and 'all' ends with DMRG."
+        ),
     )
     parser.add_argument("--force-stage", action="store_true")
     parser.add_argument("--frames", nargs="+", choices=ALL_FRAMES, default=list(ALL_FRAMES))
+    parser.add_argument(
+        "--worker-mode",
+        action="store_true",
+        help=(
+            "run frame-local DMRG checkpoints without writing shared root "
+            "settings or aggregate files; intended for Slurm array tasks"
+        ),
+    )
 
     parser.add_argument("--cisd-tolerance", type=float, default=1e-10)
     parser.add_argument("--cisd-max-cycle", type=int, default=100)
@@ -1202,6 +1602,12 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument("--hct-intervals", type=int, default=100)
     parser.add_argument("--hct-term-tolerance", type=float, default=1e-5)
+    parser.add_argument(
+        "--bliss-tolerance",
+        type=float,
+        default=1e-10,
+        help="coefficient tolerance used by Pauli-L1 BLISS and its JW stream",
+    )
     parser.add_argument(
         "--hct-use-coefficient-thresholds",
         action=argparse.BooleanOptionalAction,
@@ -1274,6 +1680,10 @@ def validate_args(args) -> None:
         raise ValueError("warm-start noises must be nonnegative")
     if args.n_threads < 1 or args.n_mkl_threads < 1:
         raise ValueError("n_threads and n_mkl_threads must be positive")
+    if args.bliss_tolerance < 0:
+        raise ValueError("bliss tolerance must be nonnegative")
+    if args.worker_mode and args.stage != "dmrg":
+        raise ValueError("--worker-mode is only valid with --stage dmrg")
 
 
 EXECUTION_ONLY_SETTING_KEYS = frozenset(
@@ -1286,6 +1696,9 @@ EXECUTION_ONLY_SETTING_KEYS = frozenset(
         "verbose",
         "skip_reference_bond_dims",
         "require_reference_validation",
+        "frames",
+        "worker_mode",
+        "frames_processed_sequentially",
     }
 )
 
@@ -1366,6 +1779,7 @@ def preparation_settings_from_saved(payload: dict) -> dict:
     # migrate without --force-stage.
     preparation.setdefault("energy_reference_bond_dim", 200)
     preparation.setdefault("energy_reference_bond_increment", 10)
+    preparation.setdefault("bliss_tolerance", 1e-10)
     return preparation
 
 
@@ -1394,7 +1808,7 @@ def main() -> None:
             "probe_manifest": str(data["manifest_path"]),
             "fci_used": False,
             "symmetry_scoring_state": None,
-            "frames_processed_sequentially": True,
+            "frames_processed_sequentially": not args.worker_mode,
         }
     )
     invocation_settings = to_jsonable(invocation_settings)
@@ -1410,7 +1824,44 @@ def main() -> None:
             )
     # Always update execution controls and transparently migrate old flat
     # settings files after result-defining settings have been validated.
-    save_json(settings_path, settings)
+    if not args.worker_mode:
+        save_json(settings_path, settings)
+
+    if args.stage == "aggregate":
+        rows, summaries, missing = aggregate_dmrg_outputs(
+            args.output_dir,
+            args.frames,
+            require_all=False,
+        )
+        if missing:
+            print(
+                "WARNING: aggregate output is partial; incomplete frames: "
+                + ", ".join(missing),
+                flush=True,
+            )
+        save_json(
+            args.output_dir / "benchmark.json",
+            {
+                "system": "N2_631g",
+                "settings": settings,
+                "probe": data["manifest"],
+                "cisd": load_json(args.output_dir / "prepared" / "cisd.json"),
+                "reference": load_json(
+                    args.output_dir / "reference" / "reference_validation.json"
+                ),
+                "symmetries": load_json(
+                    args.output_dir / "prepared" / "symmetries.json"
+                ),
+                "frames": load_json(
+                    args.output_dir / "prepared" / "frames.json"
+                ),
+                "dmrg_summaries": summaries,
+                "dmrg_rows": len(rows),
+                "missing_frames": missing,
+            },
+        )
+        print(f"Aggregated benchmark outputs in {args.output_dir}", flush=True)
+        return
 
     cisd_energy = cisd_state = cisd_metadata = None
     reference_tensors = reference_validation = None
@@ -1422,9 +1873,20 @@ def main() -> None:
         return
 
     if args.stage in {"reference", "frames", "dmrg", "all"}:
-        reference_tensors, reference_validation = prepare_references(
-            data, cisd_energy, cisd_state, args
-        )
+        if args.worker_mode:
+            validation_path = (
+                args.output_dir / "reference" / "reference_validation.json"
+            )
+            if not validation_path.exists():
+                raise FileNotFoundError(
+                    "parallel DMRG worker requires completed preparation: "
+                    f"missing {validation_path}"
+                )
+            reference_validation = load_json(validation_path)
+        else:
+            reference_tensors, reference_validation = prepare_references(
+                data, cisd_energy, cisd_state, args
+            )
     if args.stage == "reference":
         return
 
@@ -1435,6 +1897,8 @@ def main() -> None:
         BEAM_FULL,
         HCT_FIEDLER,
         BEAM_FIEDLER,
+        BLISS_HCT_FULL,
+        BLISS_BEAM_FULL,
     }
     needs_symmetries = bool(set(args.frames) & searched_frames)
     if args.stage == "symmetries" or (
@@ -1445,13 +1909,28 @@ def main() -> None:
         return
 
     if args.stage in {"frames", "dmrg", "all"}:
-        frame_data = prepare_frames(
-            data,
-            symmetry_data,
-            reference_tensors,
-            reference_validation,
-            args,
-        )
+        if args.worker_mode:
+            frames_path = args.output_dir / "prepared" / "frames.json"
+            if not frames_path.exists():
+                raise FileNotFoundError(
+                    "parallel DMRG worker requires completed preparation: "
+                    f"missing {frames_path}"
+                )
+            frame_data = load_json(frames_path)
+            missing = set(args.frames) - {RAW_FERMION} - set(frame_data)
+            if missing:
+                raise RuntimeError(
+                    "parallel DMRG worker is missing prepared frames: "
+                    + ", ".join(sorted(missing))
+                )
+        else:
+            frame_data = prepare_frames(
+                data,
+                symmetry_data,
+                reference_tensors,
+                reference_validation,
+                args,
+            )
     if args.stage == "frames":
         return
 
@@ -1463,20 +1942,21 @@ def main() -> None:
         frame_data,
         args,
     )
-    save_json(
-        args.output_dir / "benchmark.json",
-        {
-            "system": "N2_631g",
-            "settings": settings,
-            "probe": data["manifest"],
-            "cisd": cisd_metadata,
-            "reference": reference_validation,
-            "symmetries": symmetry_data,
-            "frames": frame_data,
-            "dmrg_summaries": summaries,
-            "dmrg_rows": len(rows),
-        },
-    )
+    if not args.worker_mode:
+        save_json(
+            args.output_dir / "benchmark.json",
+            {
+                "system": "N2_631g",
+                "settings": settings,
+                "probe": data["manifest"],
+                "cisd": cisd_metadata,
+                "reference": reference_validation,
+                "symmetries": symmetry_data,
+                "frames": frame_data,
+                "dmrg_summaries": summaries,
+                "dmrg_rows": len(rows),
+            },
+        )
     print(f"Completed benchmark outputs in {args.output_dir}", flush=True)
 
 

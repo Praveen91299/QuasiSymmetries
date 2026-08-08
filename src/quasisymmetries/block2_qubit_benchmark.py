@@ -1793,11 +1793,23 @@ def run_block2_qubit_dmrg_curve(
     verbose: bool = False,
     scratch: str | Path | None = None,
     artifact_dir: str | Path | None = None,
+    bond_result_callback=None,
 ) -> tuple[list[dict], dict]:
     """Benchmark Pauli-mode Block2 DMRG with a selected-CI warm start.
 
+    Parameters
+    ----------
+    bond_result_callback
+        Optional callable invoked with a copy of each completed per-bond row.
+        It can persist incremental checkpoints before the full curve returns.
+
     A fresh copy of the imported warm-start MPS is used at every tested bond
     dimension. Random initialization remains available for control runs.
+
+    Returns
+    -------
+    rows, summary
+        Per-bond DMRG measurements and a curve-level convergence/MPO summary.
     """
     _, _, _, _, DMRGDriver, SymmetryTypes = _require_block2()
     if initial_state not in {"cisd", "exact_fci", "random"}:
@@ -2061,6 +2073,8 @@ def run_block2_qubit_dmrg_curve(
                 **sweep_status,
             }
             rows.append(row)
+            if bond_result_callback is not None:
+                bond_result_callback(dict(row))
             print(
                 f"{label:26s} bond_dim={bond_dim:3d} "
                 f"E={energy:.12f} |dE|={error:.3e} "

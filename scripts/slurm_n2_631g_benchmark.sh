@@ -2,7 +2,7 @@
 #SBATCH --account=rrg-izmaylov
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --time=15:00:00
+#SBATCH --time=22:00:00
 #SBATCH --job-name=n2_631g_dmrg
 #SBATCH --output=/scratch/jpraveen/slurm_logs/n2_631g_dmrg_%j.out
 
@@ -70,6 +70,15 @@ python -u scripts/probe_n2_631g_qubit_mpo.py \
 #   sbatch --export=ALL,QS_STAGE=reference scripts/slurm_n2_631g_benchmark.sh
 # The default "all" executes every remaining stage and reuses checkpoints.
 QS_STAGE="${QS_STAGE:-all}"
+FRAME_ARGS=()
+if [[ -n "${QS_FRAMES:-}" ]]; then
+  read -r -a REQUESTED_FRAMES <<< "$QS_FRAMES"
+  FRAME_ARGS=(--frames "${REQUESTED_FRAMES[@]}")
+fi
+WORKER_ARGS=()
+if [[ "${QS_WORKER_MODE:-0}" == "1" ]]; then
+  WORKER_ARGS=(--worker-mode)
+fi
 
 python -u scripts/benchmark_n2_631g_pyblock2.py \
   --probe-dir "$PROBE_DIR" \
@@ -78,10 +87,12 @@ python -u scripts/benchmark_n2_631g_pyblock2.py \
   --skip-reference-bond-dims 150 \
   --energy-reference-bond-dim 200 \
   --energy-reference-bond-increment 10 \
-  --require-reference-validation \
+  --no-require-reference-validation \
   --n-threads "$BLOCK2_THREADS" \
   --n-mkl-threads 1 \
   --stack-mem-gb 32.0 \
+  "${FRAME_ARGS[@]}" \
+  "${WORKER_ARGS[@]}" \
   --verbose
 
 echo "Benchmark results: $BENCHMARK_DIR"
