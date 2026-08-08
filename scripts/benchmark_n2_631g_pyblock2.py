@@ -1770,7 +1770,12 @@ def preparation_settings_from_saved(payload: dict) -> dict:
         permits transparent migration of existing benchmark directories.
     """
     if payload.get("format") == "n2_631g_benchmark_settings_v2":
-        preparation = dict(payload["preparation"])
+        # A key classified as result-defining by an older v2 writer may have
+        # become execution-only later. Repartition the saved preparation block
+        # with the current classification instead of trusting its old section.
+        preparation = partition_checkpoint_settings(
+            dict(payload["preparation"])
+        )[0]
     else:
         preparation = partition_checkpoint_settings(payload)[0]
     preparation.pop("require_reference_validation", None)
@@ -1781,6 +1786,32 @@ def preparation_settings_from_saved(payload: dict) -> dict:
     preparation.setdefault("energy_reference_bond_increment", 10)
     preparation.setdefault("bliss_tolerance", 1e-10)
     return preparation
+
+
+def checkpoint_setting_differences(saved: dict, requested: dict) -> dict:
+    """Describe unequal checkpoint settings by key.
+
+    Parameters
+    ----------
+    saved, requested
+        Comparable result-defining setting mappings from a saved checkpoint
+        and the current invocation.
+
+    Returns
+    -------
+    differences
+        Mapping from every unequal or missing key to its saved and requested
+        values. Missing values are represented by ``"<absent>"``.
+    """
+    absent = "<absent>"
+    return {
+        key: {
+            "saved": saved.get(key, absent),
+            "requested": requested.get(key, absent),
+        }
+        for key in sorted(set(saved) | set(requested))
+        if saved.get(key, absent) != requested.get(key, absent)
+    }
 
 
 def main() -> None:
@@ -1816,11 +1847,16 @@ def main() -> None:
     settings_path = args.output_dir / "settings.json"
     if settings_path.exists() and not args.force_stage:
         prior = load_json(settings_path)
-        if preparation_settings_from_saved(prior) != settings["preparation"]:
+        saved_preparation = preparation_settings_from_saved(prior)
+        differences = checkpoint_setting_differences(
+            saved_preparation, settings["preparation"]
+        )
+        if differences:
             raise ValueError(
                 "Saved result-defining settings differ from this invocation; "
                 "use a new --output-dir or --force-stage. Thread, process, "
-                "memory, and verbosity settings may be changed freely."
+                "memory, and verbosity settings may be changed freely. "
+                f"Differences: {differences}"
             )
     # Always update execution controls and transparently migrate old flat
     # settings files after result-defining settings have been validated.
