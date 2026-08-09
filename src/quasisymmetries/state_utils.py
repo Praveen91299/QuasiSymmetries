@@ -14,12 +14,15 @@ from dataclasses import dataclass
 
 def _parity_array(values):
     """Return parity of integer bit counts as a boolean NumPy array."""
-    values = np.asarray(values, dtype=np.int64).reshape(-1)
-    return np.fromiter(
-        (bin(int(v)).count("1") & 1 for v in values),
-        dtype=bool,
-        count=len(values),
-    )
+    values = np.asarray(values, dtype=np.uint64).reshape(-1).copy()
+    # Fold every 64-bit word down to four bits, then use the hexadecimal
+    # parity lookup 0x6996.  Keeping this operation in NumPy avoids one Python
+    # ``bin(...).count`` call per determinant during repeated Pauli actions.
+    values ^= values >> np.uint64(32)
+    values ^= values >> np.uint64(16)
+    values ^= values >> np.uint64(8)
+    values ^= values >> np.uint64(4)
+    return ((np.uint64(0x6996) >> (values & np.uint64(0xF))) & 1).astype(bool)
 
 def to_str(occ_list):
     st = ''

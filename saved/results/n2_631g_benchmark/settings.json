@@ -4,17 +4,6 @@
     "probe_dir": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/n2_631g_mpo_probe",
     "output_dir": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/n2_631g_benchmark",
     "frozen_core_orbitals": 0,
-    "frames": [
-      "raw_fermionic_su2",
-      "raw_qubit",
-      "seniority_Nover2",
-      "HCT_Nover2_CommL1",
-      "HCT_N_CommL1",
-      "Beam_Nover2_CommL1",
-      "Beam_N_CommL1",
-      "HCT_N_CommL1_Fiedler",
-      "Beam_N_CommL1_Fiedler"
-    ],
     "cisd_tolerance": 1e-10,
     "cisd_max_cycle": 100,
     "cisd_coefficient_tolerance": 0.0,
@@ -25,10 +14,12 @@
     "reference_sweeps": 100,
     "reference_sweep_tolerance": 1e-08,
     "reference_validation_tolerance": 0.0001,
-    "require_reference_validation": false,
+    "energy_reference_bond_dim": 200,
+    "energy_reference_bond_increment": 10,
     "reference_transform_max_bond": 150,
     "hct_intervals": 100,
     "hct_term_tolerance": 1e-05,
+    "bliss_tolerance": 1e-10,
     "hct_use_coefficient_thresholds": false,
     "beam_width": 16,
     "heavy_core_fraction": 0.95,
@@ -70,16 +61,24 @@
     "n_qubits": 36,
     "probe_manifest": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/n2_631g_mpo_probe/probe_fc0.json",
     "fci_used": false,
-    "symmetry_scoring_state": null,
-    "frames_processed_sequentially": true
+    "symmetry_scoring_state": null
   },
   "execution": {
-    "n_threads": 1,
     "mp_start_method": null,
+    "worker_mode": false,
+    "require_reference_validation": true,
+    "verbose": false,
+    "n_threads": 1,
     "n_mkl_threads": 1,
     "stack_mem_gb": 0.5,
+    "frames": [
+      "HCT_Nover2_CommSqCISD",
+      "HCT_N_CommSqCISD",
+      "Beam_Nover2_CommSqCISD",
+      "Beam_N_CommSqCISD"
+    ],
     "n_processes": 1,
-    "verbose": true,
+    "frames_processed_sequentially": true,
     "skip_reference_bond_dims": [
       150
     ]

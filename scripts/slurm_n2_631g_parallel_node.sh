@@ -12,15 +12,27 @@ module purge
 module load StdEnv/2023
 module load python/3.12 scipy-stack
 
-# Each DMRG frame is an independent Python/Block2 process. Eight processes
-# with twenty Block2 threads each use 160 of the 192 CPU cores while keeping
-# the aggregate Block2 stack allowance well below node memory on a
-# 192-core, 745-GiB Trillium node. Override these at submission with
-# --export=ALL,FRAME_WORKERS=<n>,BLOCK2_THREADS=<n>.
-FRAME_WORKERS="${FRAME_WORKERS:-8}"
-BLOCK2_THREADS="${BLOCK2_THREADS:-20}"
-if (( FRAME_WORKERS < 1 || BLOCK2_THREADS < 1 )); then
-  echo "FRAME_WORKERS and BLOCK2_THREADS must both be positive" >&2
+# Each DMRG frame is an independent Python/Block2 process. Block2 performed
+# better with four threads than with twenty in the N2/6-31G timing tests, so
+# Block2 is hard-capped at four threads. CPU affinity is deliberately separate:
+# by default each process may be scheduled on a disjoint set of 16 cores even
+# though Block2 uses at most four of them. The eleven concurrent frame workers
+# therefore occupy 176 of the 192 allocated cores. Override the worker count or
+# affinity width at submission with, for example,
+# --export=ALL,FRAME_WORKERS=8,CPUS_PER_FRAME=20,BLOCK2_THREADS=4.
+FRAME_WORKERS="${FRAME_WORKERS:-11}"
+CPUS_PER_FRAME="${CPUS_PER_FRAME:-16}"
+BLOCK2_THREADS="${BLOCK2_THREADS:-4}"
+if (( FRAME_WORKERS < 1 || CPUS_PER_FRAME < 1 || BLOCK2_THREADS < 1 )); then
+  echo "FRAME_WORKERS, CPUS_PER_FRAME, and BLOCK2_THREADS must be positive" >&2
+  exit 2
+fi
+if (( BLOCK2_THREADS > 4 )); then
+  echo "BLOCK2_THREADS=$BLOCK2_THREADS exceeds the four-thread DMRG cap" >&2
+  exit 2
+fi
+if (( BLOCK2_THREADS > CPUS_PER_FRAME )); then
+  echo "BLOCK2_THREADS cannot exceed CPUS_PER_FRAME" >&2
   exit 2
 fi
 
@@ -67,7 +79,7 @@ fi
 mapfile -t ALLOWED_CPUS < <(
   python -c 'import os; print(*sorted(os.sched_getaffinity(0)), sep="\n")'
 )
-REQUIRED_CPUS=$((FRAME_WORKERS * BLOCK2_THREADS))
+REQUIRED_CPUS=$((FRAME_WORKERS * CPUS_PER_FRAME))
 if (( REQUIRED_CPUS > ${#ALLOWED_CPUS[@]} )); then
   echo "Requested $REQUIRED_CPUS worker CPUs but only ${#ALLOWED_CPUS[@]} are available" >&2
   exit 2
@@ -83,7 +95,7 @@ import os
 import sys
 
 n_workers = int(sys.argv[1])
-n_threads = int(sys.argv[2])
+n_cpus_per_frame = int(sys.argv[2])
 by_socket = collections.defaultdict(list)
 for cpu in sorted(os.sched_getaffinity(0)):
     path = f"/sys/devices/system/cpu/cpu{cpu}/topology/physical_package_id"
@@ -97,13 +109,13 @@ for worker in range(n_workers):
     choices = [preferred] + [s for s in sockets if s != preferred]
     socket = next(
         s for s in choices
-        if offsets[s] + n_threads <= len(by_socket[s])
+        if offsets[s] + n_cpus_per_frame <= len(by_socket[s])
     )
     start = offsets[socket]
-    cpus = by_socket[socket][start : start + n_threads]
-    offsets[socket] += n_threads
+    cpus = by_socket[socket][start : start + n_cpus_per_frame]
+    offsets[socket] += n_cpus_per_frame
     print(",".join(map(str, cpus)))
-' "$FRAME_WORKERS" "$BLOCK2_THREADS"
+' "$FRAME_WORKERS" "$CPUS_PER_FRAME"
 )
 if (( ${#WORKER_CPU_SETS[@]} != FRAME_WORKERS )); then
   echo "Failed to construct one disjoint CPU set per worker" >&2
@@ -115,7 +127,9 @@ python -c "import block2, pyblock2; print('block2:', block2.__file__); print('py
 python -c "import pyscf, openfermion, openfermionpyscf; print('chemistry dependencies ok')"
 python -c "import quasisymmetries; print('quasisymmetries:', quasisymmetries.__file__)"
 echo "Available CPUs: ${#ALLOWED_CPUS[@]}"
-echo "Frame workers: $FRAME_WORKERS; Block2 threads per worker: $BLOCK2_THREADS"
+echo "Frame workers: $FRAME_WORKERS"
+echo "CPU affinity width per worker: $CPUS_PER_FRAME"
+echo "Block2 threads per DMRG: $BLOCK2_THREADS (maximum allowed: 4)"
 for ((slot = 0; slot < FRAME_WORKERS; slot++)); do
   echo "Worker slot $slot CPU set: ${WORKER_CPU_SETS[$slot]}"
 done
@@ -145,14 +159,14 @@ FRAMES=(
   raw_fermionic_su2
   raw_qubit
   seniority_Nover2
-  HCT_Nover2_CommL1
-  HCT_N_CommL1
-  Beam_Nover2_CommL1
-  Beam_N_CommL1
-  HCT_N_CommL1_Fiedler
-  Beam_N_CommL1_Fiedler
-  BLISS_HCT_N_CommL1
-  BLISS_Beam_N_CommL1
+  HCT_Nover2_CommSqCISD
+  HCT_N_CommSqCISD
+  Beam_Nover2_CommSqCISD
+  Beam_N_CommSqCISD
+  HCT_N_CommSqCISD_Fiedler
+  Beam_N_CommSqCISD_Fiedler
+  BLISS_HCT_N_CommSqCISD
+  BLISS_Beam_N_CommSqCISD
 )
 
 run_frame() {
@@ -170,6 +184,9 @@ run_frame() {
     export XDG_CACHE_HOME="$frame_root/cache"
     export NUMBA_CACHE_DIR="$frame_root/numba_cache"
     export MPLCONFIGDIR="$frame_root/matplotlib_cache"
+    export QS_FRAME_WORKER_SLOT="$slot"
+    export QS_FRAME_CPU_COUNT="$CPUS_PER_FRAME"
+    export QS_FRAME_CPU_AFFINITY="$cpu_list"
     taskset --cpu-list "$cpu_list" \
     python -u scripts/benchmark_n2_631g_pyblock2.py \
       "${COMMON_ARGS[@]}" \

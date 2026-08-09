@@ -95,6 +95,213 @@ class PauliTermOverlapCommutatorEvaluator:
             total += self.cost_mask(term_to_masks(term, self.n_qubits))
         return total
 
+
+class GroupedSparsePauliCommutatorEvaluator:
+    r"""Evaluate CISD squared-commutator costs without dense operators.
+
+    For a Hermitian Pauli product ``S`` and Pauli Hamiltonian ``H``, this
+    evaluator uses
+
+    .. math::
+
+        \langle\psi|[H,S]^\dagger[H,S]|\psi\rangle
+        = 4\|H_{\mathrm{anti}(S)}|\psi\rangle\|^2,
+
+    where ``H_anti(S)`` contains exactly the Hamiltonian Pauli terms that
+    anticommute with ``S``. Hamiltonian terms with the same computational-basis
+    bit-flip pattern are combined before their action is stored. This recovers
+    the cancellations among Jordan--Wigner terms and is particularly effective
+    for diagonal (Z-only) candidate symmetries.
+
+    Parameters
+    ----------
+    hamiltonian
+        A ``PauliTermStream`` or an OpenFermion ``QubitOperator``.
+    sparse_state
+        Normalized :class:`~quasisymmetries.state_utils.SparseQubitState`, such
+        as the determinant-sparse CISD state.
+    cancellation_tolerance
+        Absolute tolerance used only to discard numerical roundoff remaining
+        after terms with a common flip pattern have been summed.
+
+    Attributes
+    ----------
+    preparation_seconds
+        Wall time used to prepare and cache the grouped Hamiltonian action.
+    grouped_action_nnz
+        Total number of cached nonzero amplitudes across all flip groups.
+
+    Notes
+    -----
+    No vector of length ``2**n_qubits`` and no Hamiltonian sparse matrix is
+    constructed. Individual results are cached by packed Pauli mask, which is
+    useful because HCT may rank the same candidate more than once.
+    """
+
+    def __init__(self, hamiltonian, sparse_state, cancellation_tolerance=1e-14):
+        from collections import defaultdict
+        from time import perf_counter
+
+        from .bs.utils import as_pauli_term_stream
+        from .state_utils import PauliActionMask, SparseQubitState
+
+        if not isinstance(sparse_state, SparseQubitState):
+            raise TypeError("sparse_state must be a SparseQubitState")
+        if cancellation_tolerance < 0:
+            raise ValueError("cancellation_tolerance must be nonnegative")
+        norm = sparse_state.norm()
+        if not np.isclose(norm, 1.0, rtol=0.0, atol=1e-10):
+            raise ValueError(f"sparse_state must be normalized; norm={norm}")
+
+        start = perf_counter()
+        self.n_qubits = int(sparse_state.n_qubits)
+        self.sparse_state = sparse_state
+        self.cancellation_tolerance = float(cancellation_tolerance)
+        stream = as_pauli_term_stream(hamiltonian, self.n_qubits)
+        groups = defaultdict(list)
+        self._term_records = []
+        for item in stream.terms:
+            action = PauliActionMask.from_pauli_mask(
+                item.mask,
+                self.n_qubits,
+                item.signed_coefficient,
+            )
+            x_mask, z_mask = (int(item.mask[0]), int(item.mask[1]))
+            groups[x_mask].append((z_mask, action))
+            self._term_records.append((x_mask, z_mask, action))
+
+        self._groups = tuple(
+            (x_mask, tuple(records)) for x_mask, records in groups.items()
+        )
+        self._z_candidate_actions = []
+        grouped_action_nnz = 0
+        for x_mask, records in self._groups:
+            indices, coefficients = self._combined_group_action(records)
+            self._z_candidate_actions.append(
+                (x_mask, indices, coefficients)
+            )
+            grouped_action_nnz += len(indices)
+        self._z_candidate_actions = tuple(self._z_candidate_actions)
+        self.grouped_action_nnz = int(grouped_action_nnz)
+        self._cost_cache = {}
+        self.preparation_seconds = float(perf_counter() - start)
+
+    @staticmethod
+    def _parity(value):
+        """Return the population-count parity of a nonnegative integer."""
+        return bin(int(value)).count("1") & 1
+
+    def _combined_group_action(self, records):
+        """Return coalescible output indices/amplitudes for one flip group."""
+        coefficients = np.zeros(
+            self.sparse_state.nnz, dtype=np.complex128
+        )
+        for _z_mask, action in records:
+            coefficients += (
+                action.phases(self.sparse_state.indices)
+                * self.sparse_state.coeffs
+            )
+        keep = np.abs(coefficients) > self.cancellation_tolerance
+        if not np.any(keep):
+            return (
+                np.empty(0, dtype=np.int64),
+                np.empty(0, dtype=np.complex128),
+            )
+        flip_mask = records[0][1].flip_mask
+        return (
+            (self.sparse_state.indices ^ int(flip_mask))[keep],
+            coefficients[keep],
+        )
+
+    @staticmethod
+    def _coalesced_norm_squared(indices, coefficients):
+        """Return the squared norm after summing equal basis indices."""
+        if len(indices) == 0:
+            return 0.0
+        order = np.argsort(indices, kind="stable")
+        sorted_indices = indices[order]
+        sorted_coefficients = coefficients[order]
+        starts = np.concatenate(
+            ([0], np.flatnonzero(sorted_indices[1:] != sorted_indices[:-1]) + 1)
+        )
+        summed = np.add.reduceat(sorted_coefficients, starts)
+        return float(np.vdot(summed, summed).real)
+
+    def _selected_group_actions(self, symmetry_mask):
+        """Yield grouped actions of terms anticommuting with one candidate."""
+        symmetry_x, symmetry_z = map(int, symmetry_mask)
+        if symmetry_x == 0:
+            for hamiltonian_x, indices, coefficients in self._z_candidate_actions:
+                if self._parity(hamiltonian_x & symmetry_z):
+                    yield indices, coefficients
+            return
+
+        for hamiltonian_x, records in self._groups:
+            xz_parity = self._parity(hamiltonian_x & symmetry_z)
+            selected = tuple(
+                record
+                for record in records
+                if xz_parity ^ self._parity(record[0] & symmetry_x)
+            )
+            if selected:
+                indices, coefficients = self._combined_group_action(selected)
+                if len(indices):
+                    yield indices, coefficients
+
+    def cost_mask(self, symmetry_mask):
+        r"""Return ``<psi|[H,S]^dagger[H,S]|psi>`` for one packed mask.
+
+        Parameters
+        ----------
+        symmetry_mask
+            ``(x_mask, z_mask)`` using the packed convention in
+            :mod:`quasisymmetries.bs.utils`.
+
+        Returns
+        -------
+        cost
+            Nonnegative squared-commutator expectation as a Python ``float``.
+        """
+        key = tuple(map(int, symmetry_mask))
+        if key in self._cost_cache:
+            return self._cost_cache[key]
+        pieces = list(self._selected_group_actions(key))
+        if pieces:
+            indices = np.concatenate([piece[0] for piece in pieces])
+            coefficients = np.concatenate([piece[1] for piece in pieces])
+            value = 4.0 * self._coalesced_norm_squared(indices, coefficients)
+        else:
+            value = 0.0
+        if value < 0 and abs(value) < 1e-12:
+            value = 0.0
+        self._cost_cache[key] = float(value)
+        return float(value)
+
+    def cost(self, symmetries):
+        r"""Return the sum of individual squared-commutator expectations.
+
+        Parameters
+        ----------
+        symmetries
+            Iterable of single-product OpenFermion ``QubitOperator`` objects.
+
+        Returns
+        -------
+        total_cost
+            Sum of ``<psi|[H,S_k]^dagger[H,S_k]|psi>`` over the inputs.
+        """
+        from .bs.utils import term_to_masks
+
+        total = 0.0
+        for symmetry in symmetries:
+            if len(symmetry.terms) != 1:
+                raise ValueError("Every symmetry must be one Pauli product.")
+            (term, coefficient), = symmetry.terms.items()
+            if not np.isclose(abs(coefficient), 1.0, atol=1e-12):
+                raise ValueError("Every symmetry must have a unit-modulus coefficient.")
+            total += self.cost_mask(term_to_masks(term, self.n_qubits))
+        return float(total)
+
 def construct_projectors(sym_list: list[QubitOperator]):
     """
     Construct projectors to all subspaces defined by Pauli symmetries sym_list

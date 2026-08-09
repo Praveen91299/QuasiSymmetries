@@ -12,6 +12,9 @@ from __future__ import annotations
 
 import argparse
 import gc
+import hashlib
+import json
+import os
 import resource
 import sys
 from collections import OrderedDict
@@ -38,7 +41,6 @@ from quasisymmetries.bs.utils import (
     jordan_wigner_pauli_stream,
     qubit_operator_terms,
     qubitops_to_masks,
-    symplectic_commutes,
 )
 from quasisymmetries.bliss import lp_bliss_paper_real_pauli_1norm
 from quasisymmetries.chemistry import (
@@ -57,6 +59,7 @@ from quasisymmetries.mps_unitary import (
     PermutationUnitary,
     transform_qubit_mps_arrays,
 )
+from quasisymmetries.metrics import GroupedSparsePauliCommutatorEvaluator
 from quasisymmetries.save import (
     decode_qubit_operator,
     encode_qubit_operator,
@@ -70,7 +73,7 @@ from quasisymmetries.save import (
     to_jsonable,
     write_csv,
 )
-from quasisymmetries.sym import HCT, get_seniority_symmetries
+from quasisymmetries.sym import get_seniority_symmetries, hct_mod
 
 import benchmark_raw_n2_dmrg as fermionic_backend
 
@@ -85,14 +88,15 @@ DEFAULT_BOND_DIMS = (10, 20, 30, 40, 60, 80, 100, 150, 200)
 RAW_FERMION = "raw_fermionic_su2"
 RAW = "raw_qubit"
 SENIORITY = "seniority_Nover2"
-HCT_HALF = "HCT_Nover2_CommL1"
-HCT_FULL = "HCT_N_CommL1"
-BEAM_HALF = "Beam_Nover2_CommL1"
-BEAM_FULL = "Beam_N_CommL1"
-HCT_FIEDLER = "HCT_N_CommL1_Fiedler"
-BEAM_FIEDLER = "Beam_N_CommL1_Fiedler"
-BLISS_HCT_FULL = "BLISS_HCT_N_CommL1"
-BLISS_BEAM_FULL = "BLISS_Beam_N_CommL1"
+HCT_HALF = "HCT_Nover2_CommSqCISD"
+HCT_FULL = "HCT_N_CommSqCISD"
+BEAM_HALF = "Beam_Nover2_CommSqCISD"
+BEAM_FULL = "Beam_N_CommSqCISD"
+HCT_FIEDLER = "HCT_N_CommSqCISD_Fiedler"
+BEAM_FIEDLER = "Beam_N_CommSqCISD_Fiedler"
+BLISS_HCT_FULL = "BLISS_HCT_N_CommSqCISD"
+BLISS_BEAM_FULL = "BLISS_Beam_N_CommSqCISD"
+SYMMETRY_CHECKPOINT_FORMAT = "n2_631g_cisd_comm_sq_v2"
 ALL_FRAMES = (
     RAW_FERMION,
     RAW,
@@ -223,27 +227,112 @@ def decode_symmetries(payload) -> list:
     return [decode_qubit_operator(item) for item in payload]
 
 
-def commutator_l1_for_mask(mask, terms) -> float:
-    """Return the Pauli coefficient 1-norm of ``[H, S]``.
+def sparse_state_fingerprint(sparse_state) -> str:
+    """Return a deterministic SHA-256 fingerprint of a sparse qubit state.
 
     Parameters
     ----------
-    mask
-        Packed Pauli mask of the single-product candidate ``S``.
-    terms
-        Weighted packed Pauli terms of ``H``.
+    sparse_state
+        ``SparseQubitState`` whose qubit count, ordered basis indices, and
+        complex coefficients define the scoring state.
 
     Returns
     -------
-    value
-        ``2 * sum(abs(h_j))`` over Hamiltonian terms anticommuting with ``S``.
-        This is minimized by the HCT ranking convention.
+    fingerprint
+        Hexadecimal SHA-256 digest used to prevent reuse of symmetries scored
+        with a different CISD state.
     """
-    return 2.0 * sum(
-        term.abs_coeff
-        for term in terms
-        if term.mask != (0, 0) and not symplectic_commutes(mask, term.mask)
+    digest = hashlib.sha256()
+    digest.update(np.asarray([sparse_state.n_qubits], dtype=np.int64).tobytes())
+    digest.update(
+        np.ascontiguousarray(sparse_state.indices, dtype=np.int64).tobytes()
     )
+    digest.update(
+        np.ascontiguousarray(
+            sparse_state.coeffs, dtype=np.complex128
+        ).tobytes()
+    )
+    return digest.hexdigest()
+
+
+def pauli_hamiltonian_fingerprint(hamiltonian, n_qubits: int) -> str:
+    """Fingerprint a streamed Pauli Hamiltonian including all coefficients.
+
+    Parameters
+    ----------
+    hamiltonian
+        ``PauliTermStream`` or OpenFermion ``QubitOperator``.
+    n_qubits
+        Explicit qubit count defining the packed-mask width.
+
+    Returns
+    -------
+    fingerprint
+        Hexadecimal SHA-256 digest over the ordered packed masks and signed
+        complex coefficients.
+    """
+    resolved_n_qubits, terms = qubit_operator_terms(hamiltonian, n_qubits)
+    digest = hashlib.sha256()
+    digest.update(
+        np.asarray([resolved_n_qubits, len(terms)], dtype=np.int64).tobytes()
+    )
+    for item in terms:
+        digest.update(np.asarray(item.mask, dtype=np.uint64).tobytes())
+        digest.update(
+            np.asarray(
+                [item.signed_coefficient], dtype=np.complex128
+            ).tobytes()
+        )
+    return digest.hexdigest()
+
+
+def frame_definition_fingerprint(
+    frame: str,
+    frames: dict,
+    hamiltonian_fingerprint: str,
+) -> str:
+    """Fingerprint the transformation and symmetry provenance of a DMRG frame.
+
+    Parameters
+    ----------
+    frame
+        Benchmark frame name.
+    frames
+        Prepared frame mapping. The raw fermionic frame is intentionally not
+        present and receives a fixed representation identifier.
+    hamiltonian_fingerprint
+        Digest of the original Hamiltonian transformed by the frame.
+
+    Returns
+    -------
+    fingerprint
+        SHA-256 digest used to invalidate complete or partial DMRG curves when
+        a Clifford, permutation, symmetry set, or CISD scoring state changes.
+    """
+    if frame == RAW_FERMION:
+        payload = {
+            "frame": frame,
+            "hamiltonian_fingerprint": hamiltonian_fingerprint,
+            "representation": "spin-adapted SU(2) fermionic MPO v1",
+        }
+    else:
+        prepared = frames[frame]
+        payload = {
+            "frame": frame,
+            "hamiltonian_fingerprint": hamiltonian_fingerprint,
+            "unitaries": prepared["unitaries"],
+            "symmetries": prepared.get("symmetries"),
+            "symmetry_checkpoint_format": prepared.get(
+                "symmetry_checkpoint_format"
+            ),
+            "symmetry_state_fingerprint": prepared.get(
+                "symmetry_state_fingerprint"
+            ),
+        }
+    encoded = json.dumps(
+        to_jsonable(payload), sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
 
 
 def build_active_fermion_hamiltonian(data: dict):
@@ -306,13 +395,18 @@ def bliss_info_summary(info: dict) -> dict:
     return {key: info[key] for key in keys if key in info}
 
 
-def prepare_bliss_symmetries(data: dict, args) -> dict:
+def prepare_bliss_symmetries(data: dict, cisd_metric, args) -> dict:
     """Run Pauli-L1 BLISS and find full-rank HCT and Beam generators.
 
     Parameters
     ----------
     data
         Loaded molecular data and raw packed Jordan--Wigner Hamiltonian.
+    cisd_metric
+        Prepared squared-commutator evaluator for the original Hamiltonian and
+        determinant-sparse CISD state. BLISS changes the thresholded search
+        Hamiltonian, while candidate ranking retains the benchmark's physical
+        CISD objective.
     args
         BLISS, HCT, Beam, candidate-pool, and process settings.
 
@@ -356,9 +450,10 @@ def prepare_bliss_symmetries(data: dict, args) -> dict:
     _, terms = qubit_operator_terms(bliss_stream, n_qubits)
     print(f"Finding {n_qubits} HCT generators on BLISS Hamiltonian.", flush=True)
     start = perf_counter()
-    hct, hct_epsilons = HCT(
+    hct, hct_epsilons = hct_mod(
         bliss_stream,
         n_sym=n_qubits,
+        sym_metric_func=lambda symmetry: cisd_metric.cost([symmetry]),
         use_coeffs_eps=args.hct_use_coefficient_thresholds,
         num_intervals=args.hct_intervals,
         tol=args.hct_term_tolerance,
@@ -380,10 +475,13 @@ def prepare_bliss_symmetries(data: dict, args) -> dict:
         max_pauli_weight=args.max_pauli_weight,
     )
     ordered_pool = list(OrderedDict.fromkeys([*hct_masks, *base_pool]))
+    precap_pool = tuple(ordered_pool)
     pool_before_cap = len(ordered_pool)
+    pool_score_start = perf_counter()
     pool_scores = {
-        mask: -commutator_l1_for_mask(mask, terms) for mask in ordered_pool
+        mask: -cisd_metric.cost_mask(mask) for mask in ordered_pool
     }
+    pool_score_seconds = perf_counter() - pool_score_start
     if len(ordered_pool) > args.max_candidate_pool_size:
         position = {mask: index for index, mask in enumerate(ordered_pool)}
         ordered_pool.sort(
@@ -419,8 +517,30 @@ def prepare_bliss_symmetries(data: dict, args) -> dict:
         bliss_stream, beam, n_qubits=n_qubits
     )
     beam_validation["target_rank"] = n_qubits
+    beam_masks = qubitops_to_masks(beam, n_qubits)
+    beam_individual_costs = [
+        cisd_metric.cost_mask(mask) for mask in beam_masks
+    ]
     return {
         "selection_hamiltonian": "Pauli-L1 BLISS shifted Hamiltonian",
+        "ranking_hamiltonian": "original Hamiltonian",
+        "ranking_state": "determinant-sparse CISD",
+        "ranking_objective": "CISD squared-commutator expectation",
+        "score": {
+            "formula": "<CISD|[H,S]^dagger[H,S]|CISD>",
+            "hamiltonian": "original Hamiltonian",
+            "hamiltonian_fingerprint": pauli_hamiltonian_fingerprint(
+                data["hamiltonian"], n_qubits
+            ),
+            "state": "determinant-sparse CISD",
+            "state_fingerprint": sparse_state_fingerprint(
+                cisd_metric.sparse_state
+            ),
+            "backend": "grouped sparse Pauli action",
+            "cancellation_tolerance": cisd_metric.cancellation_tolerance,
+            "state_nnz": cisd_metric.sparse_state.nnz,
+            "state_norm": cisd_metric.sparse_state.norm(),
+        },
         "dmrg_hamiltonian": "original Hamiltonian",
         "active_electrons": active_electrons,
         "pauli_stream": str(stream_path.resolve()),
@@ -429,12 +549,12 @@ def prepare_bliss_symmetries(data: dict, args) -> dict:
         "hct": {
             "symmetries": encode_symmetries(hct),
             "individual_scores": [
-                commutator_l1_for_mask(mask, terms) for mask in hct_masks
+                cisd_metric.cost_mask(mask) for mask in hct_masks
             ],
             "total_score": sum(
-                commutator_l1_for_mask(mask, terms) for mask in hct_masks
+                cisd_metric.cost_mask(mask) for mask in hct_masks
             ),
-            "score_name": "sum of Pauli 1-norms of individual commutators",
+            "score_name": "sum of CISD squared-commutator expectations",
             "score_convention": "minimize",
             "epsilons": hct_epsilons,
             "seconds": hct_seconds,
@@ -443,19 +563,31 @@ def prepare_bliss_symmetries(data: dict, args) -> dict:
         "beam": {
             "symmetries": encode_symmetries(beam),
             "score": beam_score(beam),
-            "score_name": "negative sum of individual Pauli commutator 1-norms",
+            "individual_costs": beam_individual_costs,
+            "total_cost": sum(beam_individual_costs),
+            "score_name": "negative sum of CISD squared-commutator expectations",
             "score_convention": "maximize",
             "seconds": beam_seconds,
             "validation": beam_validation,
         },
         "candidate_pool": {
+            "precap_masks": [
+                [int(x), int(z)] for x, z in precap_pool
+            ],
+            "precap_individual_costs": [
+                cisd_metric.cost_mask(mask) for mask in precap_pool
+            ],
             "masks": [[int(x), int(z)] for x, z in ordered_pool],
+            "individual_costs": [
+                cisd_metric.cost_mask(mask) for mask in ordered_pool
+            ],
             "size_before_cap": pool_before_cap,
             "size_after_cap": len(ordered_pool),
             "maximum_size": args.max_candidate_pool_size,
-            "ranking_score": "negative individual Pauli commutator 1-norm",
+            "ranking_score": "negative CISD squared-commutator expectation",
             "ranking_convention": "maximize",
             "pairwise_seed_terms": args.pairwise_seed_terms,
+            "score_seconds_before_cap": pool_score_seconds,
         },
     }
 
@@ -861,13 +993,16 @@ def prepare_fermionic_energy_reference(
     return payload
 
 
-def prepare_symmetries(data: dict, args) -> dict:
-    """Find/reload HCT and Beam generators using scalable Pauli-only scores.
+def prepare_symmetries(data: dict, cisd_state, args) -> dict:
+    """Find/reload HCT and Beam generators using the CISD commutator score.
 
     Parameters
     ----------
     data
         Loaded packed Pauli Hamiltonian and qubit count.
+    cisd_state
+        Normalized determinant-sparse CISD ``SparseQubitState`` used in
+        ``<CISD|[H,S]^dagger[H,S]|CISD>``.
     args
         HCT, Beam, pool-capping, and output settings.
 
@@ -879,30 +1014,67 @@ def prepare_symmetries(data: dict, args) -> dict:
     """
     directory = args.output_dir / "prepared"
     directory.mkdir(parents=True, exist_ok=True)
-    path = directory / "symmetries.json"
+    path = directory / "symmetries_cisd_comm_sq.json"
+    state_fingerprint = sparse_state_fingerprint(cisd_state)
+    hamiltonian_fingerprint = pauli_hamiltonian_fingerprint(
+        data["hamiltonian"], data["n_qubits"]
+    )
     needs_bliss = bool(
         {BLISS_HCT_FULL, BLISS_BEAM_FULL}.intersection(args.frames)
     )
     if path.exists() and not args.force_stage:
         cached = load_json(path)
-        if not needs_bliss or "bliss" in cached:
+        compatible = (
+            cached.get("format") == SYMMETRY_CHECKPOINT_FORMAT
+            and cached.get("score", {}).get("state_fingerprint")
+            == state_fingerprint
+            and cached.get("score", {}).get("hamiltonian_fingerprint")
+            == hamiltonian_fingerprint
+        )
+        if compatible:
+            if not needs_bliss or "bliss" in cached:
+                return cached
+            print(
+                "Extending the saved symmetry checkpoint with BLISS searches.",
+                flush=True,
+            )
+            cisd_metric = GroupedSparsePauliCommutatorEvaluator(
+                data["hamiltonian"], cisd_state
+            )
+            cached["bliss"] = prepare_bliss_symmetries(
+                data, cisd_metric, args
+            )
+            save_json(path, cached)
             return cached
         print(
-            "Extending the saved symmetry checkpoint with BLISS searches.",
+            "Saved symmetry checkpoint has an older metric schema or a "
+            "different CISD state; recomputing it.",
             flush=True,
         )
-        cached["bliss"] = prepare_bliss_symmetries(data, args)
-        save_json(path, cached)
-        return cached
 
     n_qubits, terms = qubit_operator_terms(
         data["hamiltonian"], data["n_qubits"]
     )
+    print(
+        "Preparing grouped determinant-sparse CISD commutator evaluator.",
+        flush=True,
+    )
+    cisd_metric = GroupedSparsePauliCommutatorEvaluator(
+        data["hamiltonian"], cisd_state
+    )
+    print(
+        "CISD commutator evaluator prepared in "
+        f"{cisd_metric.preparation_seconds:.3f} s with "
+        f"{cisd_metric.grouped_action_nnz} grouped action amplitudes."
+        f"{rss_message()}",
+        flush=True,
+    )
     print(f"Finding {n_qubits} HCT generators.{rss_message()}", flush=True)
     start = perf_counter()
-    hct_full, hct_epsilons = HCT(
+    hct_full, hct_epsilons = hct_mod(
         data["hamiltonian"],
         n_sym=n_qubits,
+        sym_metric_func=lambda symmetry: cisd_metric.cost([symmetry]),
         use_coeffs_eps=args.hct_use_coefficient_thresholds,
         num_intervals=args.hct_intervals,
         tol=args.hct_term_tolerance,
@@ -920,10 +1092,13 @@ def prepare_symmetries(data: dict, args) -> dict:
         max_pauli_weight=args.max_pauli_weight,
     )
     ordered_pool = list(OrderedDict.fromkeys([*hct_masks, *base_pool]))
+    precap_pool = tuple(ordered_pool)
     pool_before_cap = len(ordered_pool)
+    score_start = perf_counter()
     pool_scores = {
-        mask: -commutator_l1_for_mask(mask, terms) for mask in ordered_pool
+        mask: -cisd_metric.cost_mask(mask) for mask in ordered_pool
     }
+    pool_score_seconds = perf_counter() - score_start
     if len(ordered_pool) > args.max_candidate_pool_size:
         position = {mask: index for index, mask in enumerate(ordered_pool)}
         ordered_pool.sort(
@@ -942,7 +1117,7 @@ def prepare_symmetries(data: dict, args) -> dict:
         total = 0.0
         for mask in masks:
             if mask not in pool_scores:
-                pool_scores[mask] = -commutator_l1_for_mask(mask, terms)
+                pool_scores[mask] = -cisd_metric.cost_mask(mask)
             total += pool_scores[mask]
         return total
 
@@ -966,11 +1141,17 @@ def prepare_symmetries(data: dict, args) -> dict:
             data["hamiltonian"], generators, n_qubits=n_qubits
         )
         validation["target_rank"] = target
+        individual_costs = [
+            cisd_metric.cost_mask(mask)
+            for mask in qubitops_to_masks(generators, n_qubits)
+        ]
         beam_sets[name] = {
             "symmetries": encode_symmetries(generators),
             "score": beam_score(generators),
+            "individual_costs": individual_costs,
+            "total_cost": sum(individual_costs),
             "score_name": (
-                "negative sum of individual Pauli commutator 1-norms"
+                "negative sum of CISD squared-commutator expectations"
             ),
             "score_convention": "maximize",
             "seconds": perf_counter() - start,
@@ -990,19 +1171,35 @@ def prepare_symmetries(data: dict, args) -> dict:
         hct_sets[name] = {
             "symmetries": encode_symmetries(generators),
             "individual_scores": [
-                commutator_l1_for_mask(mask, terms) for mask in masks
+                cisd_metric.cost_mask(mask) for mask in masks
             ],
             "total_score": sum(
-                commutator_l1_for_mask(mask, terms) for mask in masks
+                cisd_metric.cost_mask(mask) for mask in masks
             ),
-            "score_name": "sum of Pauli 1-norms of individual commutators",
+            "score_name": "sum of CISD squared-commutator expectations",
             "score_convention": "minimize",
             "epsilons": hct_epsilons[: len(generators)],
             "validation": validation,
         }
 
     payload = {
+        "format": SYMMETRY_CHECKPOINT_FORMAT,
         "n_qubits": n_qubits,
+        "score": {
+            "name": "CISD squared-commutator expectation",
+            "formula": "<CISD|[H,S]^dagger[H,S]|CISD>",
+            "hamiltonian": "original Hamiltonian",
+            "hamiltonian_fingerprint": hamiltonian_fingerprint,
+            "state": "determinant-sparse CISD",
+            "state_fingerprint": state_fingerprint,
+            "state_nnz": cisd_state.nnz,
+            "state_norm": cisd_state.norm(),
+            "backend": "grouped sparse Pauli action",
+            "cancellation_tolerance": cisd_metric.cancellation_tolerance,
+            "preparation_seconds": cisd_metric.preparation_seconds,
+            "grouped_action_nnz": cisd_metric.grouped_action_nnz,
+            "candidate_pool_score_seconds": pool_score_seconds,
+        },
         "hct": hct_sets,
         "beam": beam_sets,
         "hct_full_search_seconds": hct_seconds,
@@ -1012,19 +1209,30 @@ def prepare_symmetries(data: dict, args) -> dict:
             else f"{args.hct_intervals} linear intervals"
         ),
         "candidate_pool": {
+            "precap_masks": [
+                [int(x), int(z)] for x, z in precap_pool
+            ],
+            "precap_individual_costs": [
+                cisd_metric.cost_mask(mask) for mask in precap_pool
+            ],
             "masks": [[int(x), int(z)] for x, z in ordered_pool],
+            "individual_costs": [
+                cisd_metric.cost_mask(mask) for mask in ordered_pool
+            ],
             "size_before_cap": pool_before_cap,
             "size_after_cap": len(ordered_pool),
             "maximum_size": args.max_candidate_pool_size,
             "ranking_score": (
-                "negative individual Pauli commutator 1-norm"
+                "negative CISD squared-commutator expectation"
             ),
             "ranking_convention": "maximize",
             "pairwise_seed_terms": args.pairwise_seed_terms,
         },
     }
     if needs_bliss:
-        payload["bliss"] = prepare_bliss_symmetries(data, args)
+        payload["bliss"] = prepare_bliss_symmetries(
+            data, cisd_metric, args
+        )
     save_json(path, payload)
     return payload
 
@@ -1070,11 +1278,54 @@ def prepare_frames(
         Mapping from frame name to serialized Clifford/permutation data,
         reference-MPS cut entropies, and transformation diagnostics.
     """
-    path = args.output_dir / "prepared" / "frames.json"
+    path = args.output_dir / "prepared" / "frames_cisd_comm_sq.json"
     requested = set(args.frames)
     required_saved_frames = requested - {RAW_FERMION}
     if path.exists() and not args.force_stage:
         frames = load_json(path)
+        searched = {
+            HCT_HALF,
+            HCT_FULL,
+            BEAM_HALF,
+            BEAM_FULL,
+            HCT_FIEDLER,
+            BEAM_FIEDLER,
+            BLISS_HCT_FULL,
+            BLISS_BEAM_FULL,
+        }
+        expected_state_fingerprint = (
+            None
+            if symmetry_data is None
+            else symmetry_data.get("score", {}).get("state_fingerprint")
+        )
+        expected_hamiltonian_fingerprint = (
+            None
+            if symmetry_data is None
+            else symmetry_data.get("score", {}).get(
+                "hamiltonian_fingerprint"
+            )
+        )
+        stale = {
+            frame
+            for frame in required_saved_frames & searched
+            if frame in frames
+            and (
+                frames[frame].get("symmetry_checkpoint_format")
+                != SYMMETRY_CHECKPOINT_FORMAT
+                or frames[frame].get("symmetry_state_fingerprint")
+                != expected_state_fingerprint
+                or frames[frame].get("symmetry_hamiltonian_fingerprint")
+                != expected_hamiltonian_fingerprint
+            )
+        }
+        for frame in stale:
+            del frames[frame]
+        if stale:
+            print(
+                "Rebuilding frames with older symmetry provenance: "
+                + ", ".join(sorted(stale)),
+                flush=True,
+            )
         # Energy refinement does not change the saved reference MPS,
         # Clifford circuits, entropies, or Fiedler permutations. Refresh only
         # their provenance instead of recomputing those expensive objects.
@@ -1142,20 +1393,80 @@ def prepare_frames(
             max_bond=args.reference_transform_max_bond,
             cutoff=args.mps_cutoff,
         )
+        if frame == SENIORITY:
+            checkpoint_format = "fixed_seniority_parity_v1"
+            state_fingerprint = None
+            symmetry_hamiltonian_fingerprint = None
+            selection_provenance = {
+                "method": "fixed seniority-parity baseline",
+                "optimized": False,
+            }
+        elif frame in {BLISS_HCT_FULL, BLISS_BEAM_FULL}:
+            checkpoint_format = symmetry_data.get("format")
+            state_fingerprint = symmetry_data.get("score", {}).get(
+                "state_fingerprint"
+            )
+            symmetry_hamiltonian_fingerprint = symmetry_data.get(
+                "score", {}
+            ).get("hamiltonian_fingerprint")
+            method = "hct" if frame == BLISS_HCT_FULL else "beam"
+            record = symmetry_data["bliss"][method]
+            selection_provenance = {
+                "method": method,
+                "search_hamiltonian": "Pauli-L1 BLISS shifted Hamiltonian",
+                "ranking_objective": (
+                    "CISD squared-commutator expectation with original Hamiltonian"
+                ),
+                "score_name": record["score_name"],
+                "score_convention": record["score_convention"],
+                "individual_costs": record.get(
+                    "individual_costs", record.get("individual_scores")
+                ),
+                "total_cost": record.get(
+                    "total_cost", record.get("total_score")
+                ),
+            }
+        else:
+            checkpoint_format = symmetry_data.get("format")
+            state_fingerprint = symmetry_data.get("score", {}).get(
+                "state_fingerprint"
+            )
+            symmetry_hamiltonian_fingerprint = symmetry_data.get(
+                "score", {}
+            ).get("hamiltonian_fingerprint")
+            method = "hct" if frame.startswith("HCT") else "beam"
+            record = symmetry_data[method][frame]
+            selection_provenance = {
+                "method": method,
+                "search_hamiltonian": "original Hamiltonian",
+                "ranking_objective": (
+                    "CISD squared-commutator expectation with original Hamiltonian"
+                ),
+                "score_name": record["score_name"],
+                "score_convention": record["score_convention"],
+                "individual_costs": record.get(
+                    "individual_costs", record.get("individual_scores")
+                ),
+                "total_cost": record.get(
+                    "total_cost", record.get("total_score")
+                ),
+            }
         frames[frame] = {
             "unitaries": [{"kind": "clifford", "data": clifford.to_dict()}],
+            "symmetries": encode_symmetries(generators),
             "n_symmetries": len(generators),
+            "symmetry_checkpoint_format": checkpoint_format,
+            "symmetry_state_fingerprint": state_fingerprint,
+            "symmetry_hamiltonian_fingerprint": (
+                symmetry_hamiltonian_fingerprint
+            ),
+            "symmetry_selection": selection_provenance,
             "reference_cut_entropies": qubit_mps_cut_entropies(
                 transformed, base=np.e
             ),
             "reference_transform": transform_info,
             "reference": reference_validation,
         }
-        if frame in {BLISS_HCT_FULL, BLISS_BEAM_FULL}:
-            frames[frame]["symmetry_selection"] = {
-                "hamiltonian": "Pauli-L1 BLISS shifted Hamiltonian",
-                "dmrg_hamiltonian": "original Hamiltonian",
-            }
         target = HCT_FIEDLER if frame == HCT_FULL else BEAM_FIEDLER
         if frame in {HCT_FULL, BEAM_FULL} and target in requested:
             fiedler = fiedler_order_from_mps(
@@ -1176,7 +1487,14 @@ def prepare_frames(
                     {"kind": "clifford", "data": clifford.to_dict()},
                     {"kind": "permutation", "old_to_new": list(permutation)},
                 ],
+                "symmetries": encode_symmetries(generators),
                 "n_symmetries": len(generators),
+                "symmetry_checkpoint_format": checkpoint_format,
+                "symmetry_state_fingerprint": state_fingerprint,
+                "symmetry_hamiltonian_fingerprint": (
+                    symmetry_hamiltonian_fingerprint
+                ),
+                "symmetry_selection": selection_provenance,
                 "fiedler": {
                     "ordering": ordering,
                     "old_to_new": list(permutation),
@@ -1331,28 +1649,45 @@ def run_dmrg_frames(
     benchmark_dir.mkdir(parents=True, exist_ok=True)
     all_rows = []
     summaries = {}
+    hamiltonian_fingerprint = pauli_hamiltonian_fingerprint(
+        data["hamiltonian"], data["n_qubits"]
+    )
     for frame in args.frames:
         frame_dir = benchmark_dir / frame
         result_path = frame_dir / "result.json"
         curve_path = frame_dir / "dmrg_curve.csv"
+        definition_fingerprint = frame_definition_fingerprint(
+            frame, frames, hamiltonian_fingerprint
+        )
         if result_path.exists() and curve_path.exists() and not args.force_stage:
             cached_summary = load_json(result_path)
             cached_reference = cached_summary.get(
                 "benchmark_reference", {}
             ).get("energy")
-            if cached_reference is not None and np.isclose(
+            reference_matches = cached_reference is not None and np.isclose(
                 float(cached_reference),
                 float(reference_validation["energy"]),
                 rtol=0.0,
                 atol=1e-12,
-            ):
+            )
+            definition_matches = (
+                cached_summary.get("frame_definition_fingerprint")
+                == definition_fingerprint
+            )
+            if reference_matches and definition_matches:
                 print(f"Reusing completed DMRG frame {frame}.", flush=True)
                 summaries[frame] = cached_summary
                 all_rows.extend(read_csv(curve_path))
                 continue
+            reasons = []
+            if not reference_matches:
+                reasons.append("energy reference changed")
+            if not definition_matches:
+                reasons.append("frame transformation/provenance changed")
             print(
-                f"DMRG frame {frame} used the previous energy reference; "
-                "rerunning its stopping curve with the refined reference.",
+                f"DMRG frame {frame} cannot reuse its completed curve: "
+                + "; ".join(reasons)
+                + ".",
                 flush=True,
             )
 
@@ -1367,6 +1702,9 @@ def run_dmrg_frames(
             "n_qubits": data["n_qubits"],
             "reference_energy": reference_validation["energy"],
             "reference_validated": reference_validation["validated"],
+            "frame_definition_fingerprint": definition_fingerprint,
+            "block2_threads": args.n_threads,
+            "assigned_cpu_count": os.environ.get("QS_FRAME_CPU_COUNT"),
         }
         if frame == RAW_FERMION:
             if args.frozen_core_orbitals:
@@ -1397,17 +1735,21 @@ def run_dmrg_frames(
                 else []
             )
             if checkpointed_rows and any(
-                not np.isclose(
-                    float(row.get("reference_energy", "nan")),
-                    float(reference_validation["energy"]),
-                    rtol=0.0,
-                    atol=1e-12,
+                (
+                    not np.isclose(
+                        float(row.get("reference_energy", "nan")),
+                        float(reference_validation["energy"]),
+                        rtol=0.0,
+                        atol=1e-12,
+                    )
+                    or row.get("frame_definition_fingerprint")
+                    != definition_fingerprint
                 )
                 for row in checkpointed_rows
             ):
                 print(
-                    f"{frame}: discarding partial curve from an older "
-                    "reference energy.",
+                    f"{frame}: discarding a partial curve with an older "
+                    "reference or frame definition.",
                     flush=True,
                 )
                 checkpointed_rows = []
@@ -1495,6 +1837,16 @@ def run_dmrg_frames(
         for row in rows:
             row.update(row_context)
         summary["benchmark_reference"] = reference_validation
+        summary["frame_definition_fingerprint"] = definition_fingerprint
+        summary["execution_allocation"] = {
+            "block2_threads": args.n_threads,
+            "mkl_threads": args.n_mkl_threads,
+            "assigned_cpu_count": os.environ.get("QS_FRAME_CPU_COUNT"),
+            "assigned_cpu_affinity": os.environ.get(
+                "QS_FRAME_CPU_AFFINITY"
+            ),
+            "worker_slot": os.environ.get("QS_FRAME_WORKER_SLOT"),
+        }
         summary["memory_gib"] = {
             "rss_before": rss_before,
             "rss_after": rss_gib(),
@@ -1680,6 +2032,11 @@ def validate_args(args) -> None:
         raise ValueError("warm-start noises must be nonnegative")
     if args.n_threads < 1 or args.n_mkl_threads < 1:
         raise ValueError("n_threads and n_mkl_threads must be positive")
+    if args.n_threads > 4:
+        raise ValueError(
+            "this benchmark caps every Block2 DMRG process at four threads; "
+            "use --n-threads 4 or fewer"
+        )
     if args.bliss_tolerance < 0:
         raise ValueError("bliss tolerance must be nonnegative")
     if args.worker_mode and args.stage != "dmrg":
@@ -1785,6 +2142,19 @@ def preparation_settings_from_saved(payload: dict) -> dict:
     preparation.setdefault("energy_reference_bond_dim", 200)
     preparation.setdefault("energy_reference_bond_increment", 10)
     preparation.setdefault("bliss_tolerance", 1e-10)
+    if preparation.get("symmetry_scoring_state") is None:
+        # Old CommL1 data use different filenames and therefore cannot be
+        # mistaken for the v2 CISD-commutator checkpoints. This migration only
+        # prevents the shared root settings file from blocking their creation.
+        preparation["symmetry_scoring_state"] = "determinant-sparse CISD"
+    preparation.setdefault(
+        "symmetry_score_metric",
+        "<CISD|[H,S]^dagger[H,S]|CISD>",
+    )
+    preparation.setdefault(
+        "symmetry_score_backend", "grouped sparse Pauli action"
+    )
+    preparation.setdefault("hct_implementation", "hct_mod")
     return preparation
 
 
@@ -1838,7 +2208,12 @@ def main() -> None:
             "n_qubits": data["n_qubits"],
             "probe_manifest": str(data["manifest_path"]),
             "fci_used": False,
-            "symmetry_scoring_state": None,
+            "symmetry_scoring_state": "determinant-sparse CISD",
+            "symmetry_score_metric": (
+                "<CISD|[H,S]^dagger[H,S]|CISD>"
+            ),
+            "symmetry_score_backend": "grouped sparse Pauli action",
+            "hct_implementation": "hct_mod",
             "frames_processed_sequentially": not args.worker_mode,
         }
     )
@@ -1886,10 +2261,12 @@ def main() -> None:
                     args.output_dir / "reference" / "reference_validation.json"
                 ),
                 "symmetries": load_json(
-                    args.output_dir / "prepared" / "symmetries.json"
+                    args.output_dir
+                    / "prepared"
+                    / "symmetries_cisd_comm_sq.json"
                 ),
                 "frames": load_json(
-                    args.output_dir / "prepared" / "frames.json"
+                    args.output_dir / "prepared" / "frames_cisd_comm_sq.json"
                 ),
                 "dmrg_summaries": summaries,
                 "dmrg_rows": len(rows),
@@ -1903,7 +2280,14 @@ def main() -> None:
     reference_tensors = reference_validation = None
     symmetry_data = frame_data = None
 
-    if args.stage in {"cisd", "reference", "frames", "dmrg", "all"}:
+    if args.stage in {
+        "cisd",
+        "reference",
+        "symmetries",
+        "frames",
+        "dmrg",
+        "all",
+    }:
         cisd_energy, cisd_state, cisd_metadata = prepare_cisd(data, args)
     if args.stage == "cisd":
         return
@@ -1940,13 +2324,15 @@ def main() -> None:
     if args.stage == "symmetries" or (
         args.stage in {"frames", "dmrg", "all"} and needs_symmetries
     ):
-        symmetry_data = prepare_symmetries(data, args)
+        symmetry_data = prepare_symmetries(data, cisd_state, args)
     if args.stage == "symmetries":
         return
 
     if args.stage in {"frames", "dmrg", "all"}:
         if args.worker_mode:
-            frames_path = args.output_dir / "prepared" / "frames.json"
+            frames_path = (
+                args.output_dir / "prepared" / "frames_cisd_comm_sq.json"
+            )
             if not frames_path.exists():
                 raise FileNotFoundError(
                     "parallel DMRG worker requires completed preparation: "
