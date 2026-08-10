@@ -1,0 +1,88 @@
+{
+  "status": "hamiltonian_ready",
+  "system": "N2",
+  "geometry_angstrom": [
+    [
+      "N",
+      [
+        0.0,
+        0.0,
+        -1.1
+      ]
+    ],
+    [
+      "N",
+      [
+        0.0,
+        0.0,
+        1.1
+      ]
+    ]
+  ],
+  "bond_length_angstrom": 2.2,
+  "basis": "6-31g",
+  "multiplicity": 1,
+  "charge": 0,
+  "molecular_data": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/n2_631g_beam_geometries/N2_diss/probe/molecule/N2_2.2000_6-31g.hdf5",
+  "hartree_fock_energy": -108.21646279058994,
+  "full_spatial_orbitals": 18,
+  "full_electrons": 14,
+  "active_space": {
+    "frozen_core_orbitals": [],
+    "active_orbitals": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17
+    ],
+    "active_electrons": 14,
+    "active_spatial_orbitals": 18,
+    "n_qubits": 36
+  },
+  "fermion_term_count": 98485,
+  "pauli_stream": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/n2_631g_beam_geometries/N2_diss/probe/raw_jordan_wigner_fc0_pauli_stream.json",
+  "pauli_statistics": {
+    "term_count": 35895,
+    "nonidentity_term_count": 35894,
+    "identity_coefficient": -65.55376652786362,
+    "pauli_l1_norm": 342.58167709861925,
+    "largest_coefficient": 65.55376652786362,
+    "largest_imaginary_coefficient": 0.0,
+    "maximum_pauli_weight": 36,
+    "mean_pauli_weight": 16.212397269814737
+  },
+  "settings": {
+    "pauli_tolerance": 1e-12,
+    "mpo_builder": "blocked_sum",
+    "mpo_cutoff": 1e-10,
+    "sum_mpo_mod": 10,
+    "threads": 4,
+    "n_mkl_threads": 1,
+    "stack_mem_gb": 0.25
+  },
+  "timings_seconds": {
+    "scf_or_molecule_reload": 0.06471524998778477,
+    "fermion_hamiltonian": 0.5075705829658546,
+    "jordan_wigner": 2.507986750046257,
+    "pauli_stream_load": null
+  },
+  "memory_gib": {
+    "current_after_hamiltonian": 0.337677001953125,
+    "peak_after_hamiltonian": 0.348419189453125
+  },
+  "molecule_generated_this_run": true
+}

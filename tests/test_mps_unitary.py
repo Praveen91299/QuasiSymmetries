@@ -8,14 +8,17 @@ from quasisymmetries.clifford_symmetry_optimized import Clifford
 from quasisymmetries.mps_unitary import (
     OrbitalRotationUnitary,
     PermutationUnitary,
+    can_transform_sparse_state_without_support_growth,
     compose_mps_unitaries,
     mps_configuration_probabilities,
     mps_prefix_configurations_for_probability_mass,
     mps_prefix_configurations_above_probability,
     mps_reduced_density_matrix,
     project_mps_onto_prefix_configurations,
+    transform_sparse_state_without_support_growth,
     transform_qubit_mps_arrays,
 )
+from quasisymmetries.state_utils import SparseQubitState
 
 
 def _statevector_to_mps(state, n_qubits):
@@ -86,6 +89,45 @@ def test_composed_cliffords_match_sequential_state_application():
     assert metadata["number_of_composed_gates"] == len(
         composed.parsed_gates
     )
+
+
+def test_support_preserving_sparse_transform_matches_dense_application():
+    first = Clifford(4, ["X(1)", "Sdg(2)", "CNOT(1->3)"], [2, 0, 3, 1])
+    second = PermutationUnitary([1, 3, 0, 2])
+    unitaries = (first, second)
+    state = SparseQubitState(
+        [0, 3, 9, 14],
+        np.array([0.5, -0.5j, 0.5j, -0.5]),
+        n_qubits=4,
+    )
+
+    assert can_transform_sparse_state_without_support_growth(
+        unitaries, n_qubits=4
+    )
+    transformed, metadata = transform_sparse_state_without_support_growth(
+        state, unitaries=unitaries
+    )
+
+    expected = first.transform_state(state.to_dense())
+    expected = np.transpose(
+        expected.reshape((2,) * 4), axes=np.argsort(second.permutation)
+    ).reshape(-1)
+    assert np.allclose(transformed.to_dense(), expected)
+    assert transformed.nnz == state.nnz
+    assert metadata["input_determinants"] == 4
+    assert metadata["output_determinants"] == 4
+
+
+def test_sparse_transform_route_rejects_support_growing_hadamard():
+    unitary = Clifford(2, ["H(0)"])
+    assert not can_transform_sparse_state_without_support_growth(
+        (unitary,), n_qubits=2
+    )
+    state = SparseQubitState([0], [1.0], n_qubits=2)
+    with pytest.raises(ValueError, match="does not support H"):
+        transform_sparse_state_without_support_growth(
+            state, unitaries=(unitary,)
+        )
 
 
 def test_orbital_rotation_is_an_mps_unitary():

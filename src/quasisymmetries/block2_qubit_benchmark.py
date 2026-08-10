@@ -14,9 +14,13 @@ from openfermion import QubitOperator
 
 from .mps_unitary import (
     _standard_mps_arrays,
+    can_transform_sparse_state_without_support_growth,
     compose_mps_unitaries,
     project_mps_onto_prefix_configurations,
+    transform_sparse_state_without_support_growth,
 )
+from .linalg_utils import robust_svd
+from .state_utils import SparseQubitState
 from .bs.utils import PauliTermStream, as_pauli_term_stream
 
 
@@ -619,7 +623,9 @@ def _dense_mps_arrays(state, n_qubits: int, cutoff: float):
     left_dim = 1
     for site in range(n_qubits - 1):
         matrix = work.reshape(left_dim * 2, -1)
-        u, singular_values, vh = np.linalg.svd(matrix, full_matrices=False)
+        u, singular_values, vh, _used_fallback = robust_svd(
+            matrix, full_matrices=False
+        )
         if cutoff > 0:
             keep = singular_values > cutoff
             if not np.any(keep):
@@ -825,13 +831,39 @@ def sparse_state_to_pyblock_pauli_mps(
     *,
     batch_size: int = 32,
     compression_cutoff: float = 1e-13,
+    max_bond: int | None = None,
 ):
     """Construct a selected-CI pyblock MPS without a dense-state SVD.
 
-    Every supplied determinant is retained. Determinants are added in
-    descending coefficient magnitude and the growing direct-sum MPS is
-    compressed after bounded batches. Compression removes numerically null
-    Schmidt directions; it is not a coefficient/determinant selection.
+    Parameters
+    ----------
+    driver
+        Initialized Pauli-mode Block2 driver supplying the vacuum label.
+    basis_indices, coefficients
+        Unique computational-basis indices and their normalized amplitudes.
+    n_qubits
+        Number of qubit sites in the state.
+    batch_size
+        Number of determinants added between MPS compression passes.
+    compression_cutoff
+        Singular-value cutoff used after each batch.
+    max_bond
+        Optional MPS bond cap used after each batch. ``None`` retains every
+        singular direction above ``compression_cutoff``.
+
+    Returns
+    -------
+    py_mps, metadata
+        The constructed ``pyblock2.algebra.core.MPS`` and a dictionary with
+        construction, compression, norm, and bond-dimension diagnostics.
+
+    Notes
+    -----
+    Determinants are added in descending coefficient magnitude. With no bond
+    cap, compression only removes numerically null Schmidt directions and is
+    not a coefficient/determinant selection. With ``max_bond`` set, this is a
+    deliberately compressed warm start; the retained MPS is normalized before
+    it is returned.
     """
     _require_block2()
     indices = np.asarray(basis_indices, dtype=np.int64).reshape(-1)
@@ -847,6 +879,8 @@ def sparse_state_to_pyblock_pauli_mps(
         raise ValueError(f"sparse warm-start state has norm {norm}, expected 1")
     if batch_size < 1:
         raise ValueError("batch_size must be positive")
+    if max_bond is not None and int(max_bond) < 1:
+        raise ValueError("max_bond must be positive")
 
     order = np.argsort(-np.abs(coeffs), kind="stable")
     if np.linalg.norm(coeffs.imag) <= 1e-12:
@@ -871,7 +905,7 @@ def sparse_state_to_pyblock_pauli_mps(
             compression_error, fallbacks = (
                 _compress_pyblock_mps_with_svd_fallback(
                     py_mps,
-                    k=-1,
+                    k=-1 if max_bond is None else int(max_bond),
                     cutoff=float(compression_cutoff),
                     left=True,
                 )
@@ -883,23 +917,35 @@ def sparse_state_to_pyblock_pauli_mps(
         int(sum(counter.values())) for counter in py_mps.get_bond_dims()
     ]
     constructed_norm = _pyblock_mps_norm(py_mps)
-    if not np.isclose(constructed_norm, 1.0, atol=1e-10):
+    if constructed_norm == 0.0:
+        raise RuntimeError("sparse MPS construction produced a zero state")
+    if max_bond is None and not np.isclose(
+        constructed_norm, 1.0, atol=1e-10
+    ):
         raise RuntimeError(
             "sparse MPS construction changed the state norm: "
             f"{constructed_norm}"
         )
+    if not np.isclose(constructed_norm, 1.0, atol=1e-14):
+        first = _mps_site_array(py_mps, 0) / constructed_norm
+        _set_mps_site_array(py_mps, 0, first)
     metadata = {
         "method": "coefficient_ordered_determinant_sum",
         "determinants": int(len(indices)),
         "batch_size": int(batch_size),
         "compression_cutoff": float(compression_cutoff),
+        "max_bond_cap": max_bond,
         "largest_reported_compression_error": max(
             compression_errors, default=0.0
+        ),
+        "root_sum_squared_reported_compression_error": float(
+            np.linalg.norm(compression_errors)
         ),
         "svd_fallback_count": int(svd_fallback_count),
         "svd_fallback": "rescaled_scipy_gesvd_after_numpy_failure",
         "max_constructed_mps_bond": max(bond_dimensions, default=1),
-        "constructed_state_norm": constructed_norm,
+        "norm_before_final_normalization": constructed_norm,
+        "constructed_state_norm": _pyblock_mps_norm(py_mps),
     }
     return py_mps, metadata
 
@@ -932,7 +978,63 @@ def sparse_state_to_block2_pauli_mps(
     transform_max_bond: int | None = None,
     transform_cutoff: float = 1e-13,
 ):
-    """Build a sparse-CI MPS and apply optional composable unitary objects."""
+    """Build a sparse-CI Block2 MPS and apply optional unitary objects.
+
+    Parameters
+    ----------
+    driver
+        Initialized Pauli-mode Block2 driver.
+    basis_indices, coefficients
+        Sparse computational-basis state to use as the warm start.
+    n_qubits
+        Number of qubit sites.
+    tag
+        Block2 MPS tag used for scratch and restart files.
+    batch_size, compression_cutoff
+        Batch size and numerical cutoff for determinant-sum construction.
+    unitaries
+        Unitary objects in application order. Basis-support-preserving
+        Clifford/permutation circuits are applied to the sparse determinants
+        before MPS construction. Other circuits are applied tensor by tensor.
+    transform_max_bond, transform_cutoff
+        Bond cap and cutoff for the transformed warm start.
+
+    Returns
+    -------
+    block2_mps, metadata
+        The Pauli-mode Block2 MPS and diagnostics identifying the sparse-state
+        or tensor-circuit transformation route and its compression behavior.
+    """
+    sparse_transform = bool(unitaries) and (
+        can_transform_sparse_state_without_support_growth(
+            unitaries, n_qubits=n_qubits
+        )
+    )
+    if sparse_transform:
+        input_state = SparseQubitState(
+            basis_indices, coefficients, n_qubits=n_qubits
+        )
+        transformed_state, transform_metadata = (
+            transform_sparse_state_without_support_growth(
+                input_state, unitaries=unitaries, drop_tol=0.0
+            )
+        )
+        py_mps, metadata = sparse_state_to_pyblock_pauli_mps(
+            driver,
+            transformed_state.indices,
+            transformed_state.coeffs,
+            n_qubits,
+            batch_size=batch_size,
+            compression_cutoff=transform_cutoff,
+            max_bond=transform_max_bond,
+        )
+        metadata["sparse_unitary_transform"] = transform_metadata
+        metadata["unitary_application_route"] = "sparse_state_then_mps"
+        block2_mps = pyblock_pauli_mps_to_block2(
+            driver, py_mps, n_qubits, tag=tag
+        )
+        return block2_mps, metadata
+
     py_mps, metadata = sparse_state_to_pyblock_pauli_mps(
         driver,
         basis_indices,
@@ -940,6 +1042,9 @@ def sparse_state_to_block2_pauli_mps(
         n_qubits,
         batch_size=batch_size,
         compression_cutoff=compression_cutoff,
+    )
+    metadata["unitary_application_route"] = (
+        "mps_tensor_circuit" if unitaries else "none"
     )
     composed = None
     if unitaries:
@@ -1013,8 +1118,12 @@ def _apply_two_site_gate(
     *,
     max_bond: int | None,
     cutoff: float,
-) -> tuple[float, int]:
-    """Apply a nearest-neighbour gate and split it with a capped SVD."""
+) -> tuple[float, int, bool]:
+    """Apply a nearest-neighbour gate and split it with a robust capped SVD.
+
+    Returns the discarded singular-value norm, retained bond dimension, and a
+    flag saying whether NumPy's failed SVD required the SciPy ``gesvd`` retry.
+    """
     if left < 0 or left + 1 >= len(py_mps.tensors):
         raise IndexError(f"invalid two-site gate location {left}")
     # Put the orthogonality center on the acted pair. Only in this gauge are
@@ -1028,7 +1137,9 @@ def _apply_two_site_gate(
     theta = np.einsum("abij,lijr->labr", gate4, theta, optimize=True)
     left_dim, _, _, right_dim = theta.shape
     matrix = theta.reshape(left_dim * 2, 2 * right_dim)
-    u, singular_values, vh = np.linalg.svd(matrix, full_matrices=False)
+    u, singular_values, vh, used_fallback = robust_svd(
+        matrix, full_matrices=False
+    )
     keep = len(singular_values)
     if cutoff > 0:
         keep = max(1, int(np.count_nonzero(singular_values > cutoff)))
@@ -1044,7 +1155,7 @@ def _apply_two_site_gate(
         left + 1,
         (singular_values[:, None] * vh).reshape(keep, 2, right_dim),
     )
-    return discarded, keep
+    return discarded, keep, used_fallback
 
 
 def _cnot_gate(control_left: bool) -> np.ndarray:
@@ -1083,14 +1194,17 @@ def transform_pyblock_pauli_mps(
     truncation_errors: list[float] = []
     largest_bond = 1
     gate_counts = Counter()
+    svd_fallback_count = 0
 
     def apply_two(left, gate, kind):
-        nonlocal largest_bond
-        error, bond = _apply_two_site_gate(
+        nonlocal largest_bond, svd_fallback_count
+        error, bond, used_fallback = _apply_two_site_gate(
             py_mps, left, gate, max_bond=max_bond, cutoff=cutoff
         )
         truncation_errors.append(error)
         largest_bond = max(largest_bond, bond)
+        if used_fallback:
+            svd_fallback_count += 1
         gate_counts[kind] += 1
 
     def apply_nonlocal_two(qubit_a, qubit_b, gate, kind):
@@ -1205,6 +1319,8 @@ def transform_pyblock_pauli_mps(
         "svd_cutoff": float(cutoff),
         "gate_counts": dict(gate_counts),
         "number_of_svd_splits": len(truncation_errors),
+        "svd_fallback_count": int(svd_fallback_count),
+        "svd_fallback": "rescaled_scipy_gesvd_after_numpy_failure",
         "root_sum_squared_discarded_singular_values": float(
             np.linalg.norm(truncation_errors)
         ),
@@ -1766,7 +1882,7 @@ def run_block2_qubit_dmrg_curve(
     hamiltonian: QubitOperator,
     exact_state=None,
     sparse_state=None,
-    exact_energy: float,
+    exact_energy: float | None,
     warm_start_energy: float | None = None,
     n_qubits: int,
     bond_dims,
@@ -1794,14 +1910,26 @@ def run_block2_qubit_dmrg_curve(
     scratch: str | Path | None = None,
     artifact_dir: str | Path | None = None,
     bond_result_callback=None,
+    bond_dim_selector=None,
 ) -> tuple[list[dict], dict]:
     """Benchmark Pauli-mode Block2 DMRG with a selected-CI warm start.
 
     Parameters
     ----------
+    exact_energy
+        Optional external reference energy. When omitted, DMRG sweep
+        convergence is still measured and saved, but absolute energy errors,
+        chemical-accuracy flags, and early stopping on chemical accuracy are
+        reported as unavailable.
     bond_result_callback
         Optional callable invoked with a copy of each completed per-bond row.
         It can persist incremental checkpoints before the full curve returns.
+    bond_dim_selector
+        Optional callable receiving a tuple of rows completed during this
+        invocation and returning the next bond dimension, or ``None`` to stop.
+        This supports adaptive searches without rebuilding the MPO or warm
+        start. When supplied, the static iteration order in ``bond_dims`` is
+        ignored; callers may close over previously checkpointed rows.
 
     A fresh copy of the imported warm-start MPS is used at every tested bond
     dimension. Random initialization remains available for control runs.
@@ -1828,6 +1956,11 @@ def run_block2_qubit_dmrg_curve(
             "mpo_builder must be 'blocked_sum' or 'expression'"
         )
     _validate_hermitian_pauli_coefficients(hamiltonian)
+    reference_energy = (
+        None if exact_energy is None else float(exact_energy)
+    )
+    if reference_energy is not None and not np.isfinite(reference_energy):
+        raise ValueError("exact_energy must be finite when supplied")
 
     sparse_coefficients = None if sparse_state is None else sparse_state[1]
     state_for_dtype = (
@@ -1938,6 +2071,15 @@ def run_block2_qubit_dmrg_curve(
                     transform_max_bond=transform_max_bond,
                     transform_cutoff=transform_cutoff,
                 )
+                route = construction.get("unitary_application_route", "none")
+                print(
+                    f"{label}: warm-start unitary route={route}; "
+                    f"max constructed bond="
+                    f"{construction.get('max_constructed_mps_bond', 'unknown')}; "
+                    f"SVD fallbacks="
+                    f"{construction.get('svd_fallback_count', 0) + construction.get('tensor_circuit', {}).get('svd_fallback_count', 0)}.",
+                    flush=True,
+                )
             elif exact_state is not None:
                 warm_mps = dense_state_to_block2_pauli_mps(
                     driver,
@@ -1959,10 +2101,12 @@ def run_block2_qubit_dmrg_curve(
             )
             imported_energy = float(np.real_if_close(imported_energy))
             expected_warm_energy = (
-                exact_energy
+                reference_energy
                 if warm_start_energy is None
                 else float(warm_start_energy)
             )
+            if expected_warm_energy is None:
+                expected_warm_energy = imported_energy
             warm_energy_delta = imported_energy - expected_warm_energy
             tensor_circuit = (
                 construction.get("tensor_circuit", {})
@@ -1974,8 +2118,17 @@ def run_block2_qubit_dmrg_curve(
                     "root_sum_squared_discarded_singular_values", 0.0
                 )
             )
+            construction_discarded = float(
+                construction.get(
+                    "root_sum_squared_reported_compression_error", 0.0
+                )
+                if construction is not None
+                else 0.0
+            )
             effective_energy_validation = (
-                validate_warm_start_energy and circuit_discarded <= 1e-12
+                validate_warm_start_energy
+                and circuit_discarded <= 1e-12
+                and construction_discarded <= 1e-12
             )
             print(
                 f"{label}: imported warm-start E={imported_energy:.12f}, "
@@ -2005,7 +2158,26 @@ def run_block2_qubit_dmrg_curve(
         rows = []
         first_converged_bd = None
         thresholds = [float(davidson_threshold)] * dmrg_sweeps
-        for bond_dim in bond_dims:
+        static_bond_dims = tuple(int(value) for value in bond_dims)
+        selected_bond_dims: set[int] = set()
+        while True:
+            if bond_dim_selector is None:
+                if len(rows) >= len(static_bond_dims):
+                    break
+                bond_dim = static_bond_dims[len(rows)]
+            else:
+                selected = bond_dim_selector(tuple(dict(row) for row in rows))
+                if selected is None:
+                    break
+                bond_dim = int(selected)
+                if bond_dim < 1:
+                    raise ValueError("bond_dim_selector returned a nonpositive value")
+                if bond_dim in selected_bond_dims:
+                    raise RuntimeError(
+                        "bond_dim_selector returned an already completed bond "
+                        f"dimension: {bond_dim}"
+                    )
+            selected_bond_dims.add(int(bond_dim))
             bond_dim = int(bond_dim)
             tag = f"KET-{label}-BD{bond_dim}"
             if warm_mps is not None:
@@ -2045,9 +2217,15 @@ def run_block2_qubit_dmrg_curve(
                 sweep_seconds=sweep_timer.sweep_seconds,
             )
             energy = float(np.real_if_close(energy))
-            error = abs(energy - exact_energy)
-            converged = error <= dmrg_tolerance
-            if converged and first_converged_bd is None:
+            error = (
+                None
+                if reference_energy is None
+                else abs(energy - reference_energy)
+            )
+            converged = (
+                None if error is None else error <= dmrg_tolerance
+            )
+            if converged is True and first_converged_bd is None:
                 first_converged_bd = bond_dim
                 if artifact_dir is not None:
                     artifacts["first_chemically_accurate_mps"] = (
@@ -2077,7 +2255,8 @@ def run_block2_qubit_dmrg_curve(
                 bond_result_callback(dict(row))
             print(
                 f"{label:26s} bond_dim={bond_dim:3d} "
-                f"E={energy:.12f} |dE|={error:.3e} "
+                f"E={energy:.12f} |dE|="
+                f"{'unavailable' if error is None else f'{error:.3e}'} "
                 f"seconds={seconds:.1f}",
                 flush=True,
             )
@@ -2091,7 +2270,7 @@ def run_block2_qubit_dmrg_curve(
                     f"tolerance={sweep_tolerance:.3e}.",
                     flush=True,
                 )
-            if converged and not full_curve:
+            if converged is True and not full_curve:
                 print(
                     f"{label}: reached chemical accuracy at "
                     f"bond_dim={bond_dim}; stopping this frame.",
@@ -2103,7 +2282,7 @@ def run_block2_qubit_dmrg_curve(
             (
                 row
                 for row in rows
-                if row["within_dmrg_tolerance"]
+                if row["within_dmrg_tolerance"] is True
             ),
             None,
         )
@@ -2116,7 +2295,13 @@ def run_block2_qubit_dmrg_curve(
                 else "openfermion_qubit_operator"
             ),
             "first_converged_bond_dim": first_converged_bd,
-            "converged_within_grid": first_converged_bd is not None,
+            "chemical_accuracy_assessed": reference_energy is not None,
+            "reference_energy": reference_energy,
+            "converged_within_grid": (
+                None
+                if reference_energy is None
+                else first_converged_bd is not None
+            ),
             "first_converged_dmrg_optimization_seconds": (
                 None
                 if first_converged_row is None

@@ -9,6 +9,8 @@ from typing import Protocol, Sequence, runtime_checkable
 
 import numpy as np
 
+from .linalg_utils import robust_svd
+
 ParsedMPSGate = tuple
 
 
@@ -62,6 +64,159 @@ class PermutationUnitary:
 
     def get_permutation(self) -> tuple[int, ...]:
         return self.permutation
+
+
+_SPARSE_SUPPORT_PRESERVING_GATES = {
+    "X",
+    "S",
+    "Sdg",
+    "PHASE",
+    "CNOT",
+    "SWAP",
+    "FSWAP",
+}
+
+
+def can_transform_sparse_state_without_support_growth(
+    unitaries: Sequence[MPSUnitary], *, n_qubits: int
+) -> bool:
+    """Return whether a unitary list maps every basis string to one string.
+
+    Parameters
+    ----------
+    unitaries
+        Unitary objects in application order. Each must implement the
+        :class:`MPSUnitary` gate/permutation interface.
+    n_qubits
+        Number of qubits in both the state and every unitary.
+
+    Returns
+    -------
+    bool
+        ``True`` when all compiled gates only permute basis strings and add
+        phases, so applying them cannot increase the sparse determinant count.
+        Hadamard and fermionic Givens gates therefore return ``False``.
+    """
+    composed = compose_mps_unitaries(unitaries, n_qubits=int(n_qubits))
+    return all(
+        str(gate[0]) in _SPARSE_SUPPORT_PRESERVING_GATES
+        for gate in composed.parsed_gates
+    )
+
+
+def transform_sparse_state_without_support_growth(
+    state,
+    *,
+    unitaries: Sequence[MPSUnitary],
+    drop_tol: float = 0.0,
+):
+    """Apply basis-preserving unitary objects directly to a sparse state.
+
+    Parameters
+    ----------
+    state
+        :class:`~quasisymmetries.state_utils.SparseQubitState` in the
+        computational basis. Qubit zero is the most-significant index bit.
+    unitaries
+        Unitary objects in first-applied to last-applied order. Their compiled
+        gates may contain X, S, Sdg, PHASE, CNOT, SWAP, and FSWAP, followed by
+        arbitrary qubit permutations. Gates such as H and FGIVENS are rejected
+        because they can increase the number of determinants.
+    drop_tol
+        Absolute coefficient threshold passed to the returned sparse state.
+        The default zero performs no coefficient truncation.
+
+    Returns
+    -------
+    transformed_state, metadata
+        The transformed ``SparseQubitState`` and a dictionary recording the
+        route, gate counts, determinant counts, and composed permutation.
+
+    Raises
+    ------
+    ValueError
+        If a compiled gate can create a superposition of basis strings.
+    """
+    from .state_utils import SparseQubitState
+
+    if not isinstance(state, SparseQubitState):
+        raise TypeError("state must be a SparseQubitState")
+    if drop_tol < 0:
+        raise ValueError("drop_tol must be non-negative")
+    composed = compose_mps_unitaries(
+        unitaries, n_qubits=int(state.n_qubits)
+    )
+    unsupported = sorted(
+        {
+            str(gate[0])
+            for gate in composed.parsed_gates
+            if str(gate[0]) not in _SPARSE_SUPPORT_PRESERVING_GATES
+        }
+    )
+    if unsupported:
+        raise ValueError(
+            "sparse support-preserving transformation does not support "
+            + ", ".join(unsupported)
+        )
+
+    indices = state.indices.copy()
+    coefficients = state.coeffs.copy()
+    n_qubits = int(state.n_qubits)
+    gate_counts: dict[str, int] = {}
+
+    def bit_mask(qubit: int) -> int:
+        if qubit < 0 or qubit >= n_qubits:
+            raise IndexError(f"qubit {qubit} is outside [0, {n_qubits})")
+        return 1 << (n_qubits - 1 - qubit)
+
+    for gate in composed.parsed_gates:
+        name = str(gate[0])
+        gate_counts[name] = gate_counts.get(name, 0) + 1
+        if name == "X":
+            indices ^= bit_mask(int(gate[1]))
+        elif name in {"S", "Sdg", "PHASE"}:
+            occupied = (indices & bit_mask(int(gate[1]))) != 0
+            if name == "S":
+                phase = 1j
+            elif name == "Sdg":
+                phase = -1j
+            else:
+                phase = np.exp(complex(gate[2]))
+            coefficients[occupied] *= phase
+        elif name == "CNOT":
+            control = bit_mask(int(gate[1]))
+            target = bit_mask(int(gate[2]))
+            indices[(indices & control) != 0] ^= target
+        elif name in {"SWAP", "FSWAP"}:
+            first = bit_mask(int(gate[1]))
+            second = bit_mask(int(gate[2]))
+            first_set = (indices & first) != 0
+            second_set = (indices & second) != 0
+            different = first_set != second_set
+            indices[different] ^= first | second
+            if name == "FSWAP":
+                coefficients[first_set & second_set] *= -1
+
+    transformed = SparseQubitState(
+        indices,
+        coefficients,
+        n_qubits=n_qubits,
+        drop_tol=float(drop_tol),
+    )
+    # SparseQubitState.reorder_qubits uses new-position -> old-qubit, while
+    # MPSUnitary permutations use old-qubit -> new-position.
+    ordering = np.argsort(np.asarray(composed.permutation)).tolist()
+    transformed = transformed.reorder_qubits(ordering)
+    return transformed, {
+        "method": "support_preserving_sparse_state_transform",
+        "component_types": list(composed.component_types),
+        "number_of_composed_gates": len(composed.parsed_gates),
+        "gate_counts": gate_counts,
+        "composed_permutation": list(composed.permutation),
+        "input_determinants": int(state.nnz),
+        "output_determinants": int(transformed.nnz),
+        "drop_tolerance": float(drop_tol),
+    }
 
 
 def decompose_real_orbital_rotation(
@@ -316,6 +471,7 @@ def transform_qubit_mps_arrays(
     fermionic_swap[3, 3] = -1
     errors = []
     gate_counts: dict[str, int] = {}
+    svd_fallback_count = 0
     largest_bond = max(
         (tensor.shape[2] for tensor in arrays[:-1]), default=1
     )
@@ -330,7 +486,7 @@ def transform_qubit_mps_arrays(
         record(name)
 
     def apply_adjacent(left_site, gate, name):
-        nonlocal largest_bond
+        nonlocal largest_bond, svd_fallback_count
         _canonicalize_mps_arrays(arrays, left_site)
         theta = np.tensordot(
             arrays[left_site], arrays[left_site + 1], axes=(-1, 0)
@@ -343,7 +499,9 @@ def transform_qubit_mps_arrays(
         )
         left_dim, _, _, right_dim = theta.shape
         matrix = theta.reshape(left_dim * 2, 2 * right_dim)
-        u, singular_values, vh = np.linalg.svd(matrix, full_matrices=False)
+        u, singular_values, vh, used_fallback = robust_svd(
+            matrix, full_matrices=False
+        )
         keep = len(singular_values)
         if cutoff > 0:
             keep = max(1, int(np.count_nonzero(singular_values > cutoff)))
@@ -355,6 +513,8 @@ def transform_qubit_mps_arrays(
             singular_values[:keep, None] * vh[:keep]
         ).reshape(keep, 2, right_dim)
         largest_bond = max(largest_bond, keep)
+        if used_fallback:
+            svd_fallback_count += 1
         record(name)
 
     def apply_nonlocal(first, second, gate, name):
@@ -454,6 +614,8 @@ def transform_qubit_mps_arrays(
         "max_bond_cap": max_bond,
         "svd_cutoff": float(cutoff),
         "gate_counts": gate_counts,
+        "svd_fallback_count": int(svd_fallback_count),
+        "svd_fallback": "rescaled_scipy_gesvd_after_numpy_failure",
         "root_sum_squared_discarded_singular_values": float(
             np.linalg.norm(errors)
         ),

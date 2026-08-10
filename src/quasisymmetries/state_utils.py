@@ -396,6 +396,35 @@ class SparseQubitState:
         "Z": np.array([[1, 0], [0, -1]], dtype=np.complex128),
     }
 
+    def __str__(self):
+        """Return a readable summary containing up to 20 determinants.
+
+        Determinants are ordered by decreasing coefficient magnitude and
+        displayed as fixed-width computational-basis bit strings. If the
+        state contains more than 20 determinants, the final line is an
+        ellipsis. This method only formats existing sparse data and does not
+        construct a dense state vector.
+        """
+        header = (
+            f"SparseQubitState over {self.n_qubits} qubits with {self.nnz} "
+            "determinants, determinants:"
+        )
+        order = np.argsort(-np.abs(self.coeffs), kind="stable")[:20]
+        lines = [header]
+        for position in order:
+            bit_string = format(
+                int(self.indices[position]), f"0{self.n_qubits}b"
+            )
+            coefficient = format(complex(self.coeffs[position]), ".12g")
+            lines.append(f"  |{bit_string}>: {coefficient}")
+        if self.nnz > 20:
+            lines.append("  ...")
+        return "\n".join(lines)
+
+    def __repr__(self):
+        """Return the same concise determinant summary as :meth:`__str__`."""
+        return str(self)
+
     def __init__(self, indices, coeffs, n_qubits=None, *, copy=True, drop_tol=0.0):
         indices = np.asarray(indices, dtype=np.int64)
         coeffs = np.asarray(coeffs, dtype=np.complex128)

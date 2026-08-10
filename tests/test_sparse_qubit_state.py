@@ -48,6 +48,26 @@ def test_sparse_qubit_state_round_trip_and_normalization():
     assert np.isclose(unnormalized.norm(), np.sqrt(8.0))
 
 
+def test_sparse_qubit_state_string_shows_largest_twenty_determinants():
+    coefficients = np.arange(1, 23, dtype=float)
+    sparse = SparseQubitState(
+        np.arange(22), coefficients, n_qubits=5
+    )
+
+    rendered = str(sparse)
+    lines = rendered.splitlines()
+
+    assert lines[0] == (
+        "SparseQubitState over 5 qubits with 22 determinants, determinants:"
+    )
+    assert lines[1] == "  |10101>: 22+0j"
+    assert lines[20] == "  |00010>: 3+0j"
+    assert lines[21] == "  ..."
+    assert "|00000>" not in rendered
+    assert "|00001>" not in rendered
+    assert repr(sparse) == rendered
+
+
 def test_sparse_qubit_state_qubit_operator_expectation_and_apply():
     dense = _sample_state()
     sparse = SparseQubitState.from_dense(dense)

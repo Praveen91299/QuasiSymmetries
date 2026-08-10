@@ -1,8 +1,8 @@
 {
   "method": "pyscf_restricted_cisd_sparse_expansion",
   "converged": true,
-  "correlation_energy": -0.2312666045652887,
-  "energy": -109.06704081449432,
+  "correlation_energy": -0.41557128969973817,
+  "energy": -108.63203408028969,
   "full_spatial_orbitals": 18,
   "frozen_core_orbitals": 0,
   "active_spatial_orbitals": 18,
@@ -11,11 +11,11 @@
   "n_qubits": 36,
   "packed_cisd_vector_size": 6007,
   "sparse_determinants": 8394,
-  "expanded_norm_before_normalization": 1.0000000000000007,
+  "expanded_norm_before_normalization": 1.0,
   "coefficient_tolerance": 0.0,
   "jw_phase_convention": "interleaved_spin_orbital_v1",
   "fci_layout_materialized": false,
-  "seconds": 0.24134070897707716,
-  "rss_gib_after": 0.26318359375,
-  "state_path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/n2_631g_benchmark/prepared/cisd_state.npz"
+  "seconds": 0.20605787500971928,
+  "rss_gib_after": 0.2623291015625,
+  "state_path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/n2_631g_beam_geometries/N2_diss/benchmark/prepared/cisd_state.npz"
 }

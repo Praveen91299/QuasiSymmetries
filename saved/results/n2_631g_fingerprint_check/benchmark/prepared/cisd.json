@@ -15,7 +15,7 @@
   "coefficient_tolerance": 0.0,
   "jw_phase_convention": "interleaved_spin_orbital_v1",
   "fci_layout_materialized": false,
-  "seconds": 0.24134070897707716,
-  "rss_gib_after": 0.26318359375,
-  "state_path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/n2_631g_benchmark/prepared/cisd_state.npz"
+  "seconds": 0.1939682080410421,
+  "rss_gib_after": 0.2601470947265625,
+  "state_path": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/n2_631g_fingerprint_check/benchmark/prepared/cisd_state.npz"
 }

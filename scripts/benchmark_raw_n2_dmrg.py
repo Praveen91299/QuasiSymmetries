@@ -151,10 +151,31 @@ def run_fermionic_dmrg_curve(
     molecule: MolecularData,
     warm_start_state,
     warm_start_energy: float,
-    fci_energy: float,
+    fci_energy: float | None,
     args: argparse.Namespace,
 ) -> tuple[list[dict], dict]:
-    """Run SU(2)-adapted quantum-chemistry DMRG directly on the integrals."""
+    """Run SU(2)-adapted quantum-chemistry DMRG directly on the integrals.
+
+    Parameters
+    ----------
+    molecule
+        OpenFermion molecular integral container.
+    warm_start_state, warm_start_energy
+        Selected-CI state and its variational energy, used to construct and
+        validate the initial SU(2) MPS.
+    fci_energy
+        Optional external reference energy. When absent, sweep convergence is
+        still reported, while absolute-error and chemical-accuracy fields are
+        returned as ``None``.
+    args
+        DMRG bond grid, convergence, noise, execution, and output settings.
+
+    Returns
+    -------
+    rows, summary
+        Per-bond measurements and curve-level MPO, warm-start, timing, and
+        convergence metadata.
+    """
     try:
         from pyblock2.driver.core import SymmetryTypes
         from quasisymmetries.mpo import (
@@ -320,9 +341,13 @@ def run_fermionic_dmrg_curve(
                 noises=noises,
                 sweep_seconds=sweep_timer.sweep_seconds,
             )
-            error = abs(energy - fci_energy)
-            converged = error <= args.dmrg_tol
-            if converged and first_converged_bd is None:
+            error = (
+                None if fci_energy is None else abs(energy - fci_energy)
+            )
+            converged = (
+                None if error is None else error <= args.dmrg_tol
+            )
+            if converged is True and first_converged_bd is None:
                 first_converged_bd = int(bond_dim)
                 if args.save_tensor_networks:
                     artifacts["first_chemically_accurate_mps"] = (
@@ -348,7 +373,8 @@ def run_fermionic_dmrg_curve(
             rows.append(row)
             print(
                 f"{'raw_fermionic_su2':18s} bond_dim={bond_dim:3d} "
-                f"E={energy:.12f} |dE|={error:.3e} "
+                f"E={energy:.12f} |dE|="
+                f"{'unavailable' if error is None else f'{error:.3e}'} "
                 f"seconds={seconds:.1f}",
                 flush=True,
             )
@@ -363,7 +389,7 @@ def run_fermionic_dmrg_curve(
                     f"tolerance={args.sweep_tol:.3e}.",
                     flush=True,
                 )
-            if converged and not args.full_curve:
+            if converged is True and not args.full_curve:
                 print(
                     "raw_fermionic_su2: reached chemical accuracy at "
                     f"bond_dim={bond_dim}; stopping this frame.",
@@ -375,14 +401,18 @@ def run_fermionic_dmrg_curve(
             (
                 row
                 for row in rows
-                if row["within_dmrg_tolerance"]
+                if row["within_dmrg_tolerance"] is True
             ),
             None,
         )
         summary = {
             "frame": "raw_fermionic_su2",
+            "chemical_accuracy_assessed": fci_energy is not None,
+            "reference_energy": fci_energy,
             "first_converged_bond_dim": first_converged_bd,
-            "converged_within_grid": first_converged_bd is not None,
+            "converged_within_grid": (
+                None if fci_energy is None else first_converged_bd is not None
+            ),
             "first_converged_dmrg_optimization_seconds": (
                 None
                 if first_converged_row is None

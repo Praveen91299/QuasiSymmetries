@@ -3,6 +3,7 @@ import numpy as np
 from quasisymmetries.block2_qubit_benchmark import (
     _compress_pyblock_mps_with_svd_fallback,
 )
+from quasisymmetries.linalg_utils import robust_svd
 
 
 class _FakePyblockMPS:
@@ -38,3 +39,17 @@ def test_compression_retries_failed_numpy_svd_with_gesvd(monkeypatch):
     assert error == 0.0
     assert fallback_count == 1
     np.testing.assert_allclose(mps.singular_values, [0.95, 1e-23])
+
+
+def test_shared_robust_svd_retries_numpy_nonconvergence(monkeypatch):
+    def fail(_matrix, *args, **kwargs):
+        raise np.linalg.LinAlgError("synthetic nonconvergence")
+
+    monkeypatch.setattr(np.linalg, "svd", fail)
+    matrix = np.array([[1e-25, 0.0], [0.0, 2.0]])
+    u, singular_values, vh, used_fallback = robust_svd(matrix)
+
+    assert used_fallback is True
+    np.testing.assert_allclose(
+        u @ np.diag(singular_values) @ vh, matrix, atol=1e-14
+    )

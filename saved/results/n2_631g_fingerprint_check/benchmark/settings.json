@@ -1,8 +1,8 @@
 {
   "format": "n2_631g_benchmark_settings_v2",
   "preparation": {
-    "probe_dir": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/n2_631g_mpo_probe",
-    "output_dir": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/n2_631g_benchmark",
+    "probe_dir": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/n2_631g_fingerprint_check/probe",
+    "output_dir": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/n2_631g_fingerprint_check/benchmark",
     "frozen_core_orbitals": 0,
     "cisd_tolerance": 1e-10,
     "cisd_max_cycle": 100,
@@ -59,7 +59,7 @@
     "full_curve": false,
     "system": "N2_631g",
     "n_qubits": 36,
-    "probe_manifest": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/n2_631g_mpo_probe/probe_fc0.json",
+    "probe_manifest": "/Users/praveenjayakumar/Jay Family Dropbox/praveen jayakumar/6.To-Fro Praveen/UToronto/codes backup/seniority/QuasiSymmetries/saved/results/n2_631g_fingerprint_check/probe/probe_fc0.json",
     "fci_used": false,
     "symmetry_scoring_state": "determinant-sparse CISD",
     "symmetry_score_metric": "<CISD|[H,S]^dagger[H,S]|CISD>",
@@ -67,20 +67,20 @@
     "hct_implementation": "hct_mod"
   },
   "execution": {
-    "stack_mem_gb": 0.5,
-    "n_processes": 1,
-    "frames_processed_sequentially": true,
-    "require_reference_validation": true,
-    "n_threads": 4,
-    "mp_start_method": null,
     "worker_mode": false,
+    "skip_reference_bond_dims": [
+      150
+    ],
+    "require_reference_validation": true,
+    "n_processes": 1,
+    "n_mkl_threads": 1,
+    "stack_mem_gb": 0.5,
+    "mp_start_method": null,
     "verbose": false,
     "frames": [
       "Beam_N_CommSqCISD"
     ],
-    "skip_reference_bond_dims": [
-      150
-    ],
-    "n_mkl_threads": 1
+    "n_threads": 4,
+    "frames_processed_sequentially": true
   }
 }

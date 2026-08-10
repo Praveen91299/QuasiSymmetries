@@ -180,10 +180,33 @@ def load_probe_input(probe_dir: Path, frozen_core_orbitals: int) -> dict:
     manifest = load_json(manifest_path)
     if manifest.get("status") not in {"hamiltonian_ready", "mpo_ready"}:
         raise ValueError(f"Probe is not ready: status={manifest.get('status')}")
-    pauli_path = Path(manifest["pauli_stream"]).expanduser().resolve()
+    pauli_path = Path(manifest["pauli_stream"]).expanduser()
+    if not pauli_path.exists():
+        relocated = manifest_path.parent / pauli_path.name
+        if not relocated.exists():
+            raise FileNotFoundError(
+                "Pauli stream is absent at both its saved and relocated "
+                f"paths: {pauli_path}, {relocated}"
+            )
+        pauli_path = relocated
+    pauli_path = pauli_path.resolve()
     n_qubits = int(manifest["active_space"]["n_qubits"])
     hamiltonian = load_pauli_term_stream(pauli_path, n_qubits=n_qubits)
-    molecular_path = Path(manifest["molecular_data"]).expanduser().resolve()
+    molecular_path = Path(manifest["molecular_data"]).expanduser()
+    if not molecular_path.exists():
+        relocated_candidates = (
+            manifest_path.parent / "molecule" / molecular_path.name,
+            manifest_path.parent / molecular_path.name,
+        )
+        molecular_path = next(
+            (path for path in relocated_candidates if path.exists()), None
+        )
+        if molecular_path is None:
+            raise FileNotFoundError(
+                "MolecularData file is absent at its saved path and beside "
+                f"the relocated probe manifest: {manifest['molecular_data']}"
+            )
+    molecular_path = molecular_path.resolve()
     molecule = MolecularData(filename=str(molecular_path.with_suffix("")))
     molecule.load()
     return {
