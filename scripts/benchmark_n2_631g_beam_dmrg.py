@@ -983,8 +983,97 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--force-reference", action="store_true")
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
+    execution_mode = parser.add_mutually_exclusive_group()
+    execution_mode.add_argument(
+        "--worker-mode",
+        action="store_true",
+        help=(
+            "Run requested geometries and save only geometry-local files; "
+            "defer combined-table writes to a separate aggregation process."
+        ),
+    )
+    execution_mode.add_argument(
+        "--aggregate-only",
+        action="store_true",
+        help="Regenerate combined result files without running DMRG.",
+    )
     parser.add_argument("--verbose", action="store_true")
     return parser
+
+
+def aggregate_saved_results(output_dir: Path) -> tuple[list[dict], dict[str, dict]]:
+    """Load completed geometry checkpoints and rewrite combined result files.
+
+    Parameters
+    ----------
+    output_dir
+        Root containing ``N2_eqm``, ``N2_corr``, and ``N2_diss`` result
+        directories produced by independent worker processes.
+
+    Returns
+    -------
+    rows, summaries
+        Concatenated per-bond rows and geometry-keyed result summaries. Only
+        geometries with both a curve and completed ``result.json`` are
+        included. Combined CSV/JSON files are written atomically where the
+        persistence helper supports it.
+    """
+    all_rows: list[dict] = []
+    summaries: dict[str, dict] = {}
+    for geometry in GEOMETRIES:
+        geometry_dir = output_dir / f"N2_{geometry}"
+        curve_path = geometry_dir / "dmrg_curve.json"
+        result_path = geometry_dir / "result.json"
+        if curve_path.exists() and result_path.exists():
+            all_rows.extend(load_json(curve_path))
+            summaries[geometry] = load_json(result_path)
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    if all_rows:
+        write_csv(output_dir / "dmrg_curves.csv", all_rows)
+    compact_summaries = []
+    for geometry, summary in summaries.items():
+        compact_summaries.append(
+            {
+                "system": "N2_6-31G",
+                "geometry": geometry,
+                "bond_length_angstrom": summary["bond_length_angstrom"],
+                "frame": FRAME,
+                "symmetry_score": summary["beam_search_result"].get("score"),
+                "reference_energy": summary["reference_energy"],
+                "chemical_accuracy_assessed": summary[
+                    "chemical_accuracy_assessed"
+                ],
+                "first_chemically_accurate_bond_dim": summary[
+                    "first_chemically_accurate_bond_dim"
+                ],
+                "best_energy_in_curve": summary["best_energy_in_curve"],
+                "bond_dims_without_sweep_convergence": summary[
+                    "bond_dims_without_sweep_convergence"
+                ],
+                "total_dmrg_seconds_across_curve": summary[
+                    "total_dmrg_seconds_across_curve"
+                ],
+                "total_recorded_sweep_seconds_across_curve": summary[
+                    "total_recorded_sweep_seconds_across_curve"
+                ],
+            }
+        )
+    if compact_summaries:
+        write_csv(output_dir / "dmrg_summary.csv", compact_summaries)
+    save_json(
+        output_dir / "benchmark.json",
+        {
+            "format": "n2_631g_beam_dmrg_v2",
+            "frame": FRAME,
+            "systems": list(summaries),
+            "incomplete_systems": [
+                geometry for geometry in GEOMETRIES if geometry not in summaries
+            ],
+            "summaries": summaries,
+        },
+    )
+    return all_rows, summaries
 
 
 def main() -> None:
@@ -1016,6 +1105,15 @@ def main() -> None:
         raise ValueError("reference validation tolerance must be nonnegative")
     explicit_references = parse_reference_energies(args.reference_energy)
 
+    if args.aggregate_only:
+        rows, summaries = aggregate_saved_results(args.output_dir)
+        print(
+            f"Aggregated {len(rows)} bond results from "
+            f"{len(summaries)} completed geometries in "
+            f"{args.output_dir.resolve()}."
+        )
+        return
+
     all_rows: list[dict] = []
     summaries: dict[str, dict] = {}
     for geometry in args.systems:
@@ -1033,59 +1131,18 @@ def main() -> None:
             )
         return
 
-    # Preserve completed geometries when separate jobs/invocations target one
-    # geometry at a time. Per-geometry checkpoints remain the source of truth.
-    for geometry in GEOMETRIES:
-        if geometry in summaries:
-            continue
-        geometry_dir = args.output_dir / f"N2_{geometry}"
-        curve_path = geometry_dir / "dmrg_curve.json"
-        result_path = geometry_dir / "result.json"
-        if curve_path.exists() and result_path.exists():
-            all_rows.extend(load_json(curve_path))
-            summaries[geometry] = load_json(result_path)
-
-    args.output_dir.mkdir(parents=True, exist_ok=True)
-    write_csv(args.output_dir / "dmrg_curves.csv", all_rows)
-    compact_summaries = []
-    for geometry, summary in summaries.items():
-        compact_summaries.append(
-            {
-                "system": "N2_6-31G",
-                "geometry": geometry,
-                "bond_length_angstrom": summary["bond_length_angstrom"],
-                "frame": FRAME,
-                "symmetry_score": summary["beam_search_result"].get("score"),
-                "reference_energy": summary["reference_energy"],
-                "chemical_accuracy_assessed": summary[
-                    "chemical_accuracy_assessed"
-                ],
-                "first_chemically_accurate_bond_dim": summary[
-                    "first_chemically_accurate_bond_dim"
-                ],
-                "best_energy_in_curve": summary["best_energy_in_curve"],
-                "bond_dims_without_sweep_convergence": summary[
-                    "bond_dims_without_sweep_convergence"
-                ],
-                "total_dmrg_seconds_across_curve": summary[
-                    "total_dmrg_seconds_across_curve"
-                ],
-                "total_recorded_sweep_seconds_across_curve": summary[
-                    "total_recorded_sweep_seconds_across_curve"
-                ],
-            }
+    if args.worker_mode:
+        print(
+            "\nWorker completed its geometry-local checkpoints; combined "
+            "tables were intentionally deferred."
         )
-    write_csv(args.output_dir / "dmrg_summary.csv", compact_summaries)
-    save_json(
-        args.output_dir / "benchmark.json",
-        {
-            "format": "n2_631g_beam_dmrg_v2",
-            "frame": FRAME,
-            "systems": list(summaries),
-            "summaries": summaries,
-        },
+        return
+
+    rows, completed = aggregate_saved_results(args.output_dir)
+    print(
+        f"\nSaved {len(rows)} aggregate bond results for "
+        f"{len(completed)} geometries to {args.output_dir.resolve()}"
     )
-    print(f"\nSaved aggregate results to {args.output_dir.resolve()}")
 
 
 if __name__ == "__main__":
