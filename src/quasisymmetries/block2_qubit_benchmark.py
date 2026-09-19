@@ -79,6 +79,70 @@ def save_block2_mps(mps, destination: str | Path) -> dict:
     }
 
 
+def load_block2_mps(driver, source: str | Path):
+    """Load an MPS restart directory written by :func:`save_block2_mps`.
+
+    Parameters
+    ----------
+    driver
+        Initialized ``DMRGDriver`` whose symmetry type and number of sites
+        match the saved MPS. The MPS files are copied into this driver's
+        scratch directory because Block2 resolves tensor filenames through
+        its active global frame.
+    source
+        Directory containing ``manifest.json``, ``mps_info.bin``, and the
+        native Block2 tensor files produced by :func:`save_block2_mps`.
+
+    Returns
+    -------
+    mps
+        Native Block2 MPS owned by ``driver`` and ready for contractions.
+
+    Notes
+    -----
+    The returned object depends on the driver's scratch files. Keep the
+    driver and its scratch directory alive while using the MPS.
+    """
+    source = Path(source)
+    manifest_path = source / "manifest.json"
+    info_path = source / "mps_info.bin"
+    if not manifest_path.is_file() or not info_path.is_file():
+        raise FileNotFoundError(
+            f"Incomplete Block2 MPS restart directory: {source}"
+        )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if manifest.get("format") != "block2_mps_restart_directory":
+        raise ValueError(f"Unsupported MPS restart format in {manifest_path}")
+
+    mps_info = driver.bw.bs.MPSInfo(0)
+    mps_info.load_data(str(info_path))
+    if int(mps_info.n_sites) != int(manifest["n_sites"]):
+        raise ValueError(
+            "MPS site count differs between mps_info.bin and manifest.json"
+        )
+
+    def copy_saved_file(target_filename: str) -> None:
+        target = Path(target_filename)
+        source_file = source / target.name
+        if not source_file.is_file():
+            raise FileNotFoundError(source_file)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source_file, target)
+
+    for site in range(mps_info.n_sites + 1):
+        copy_saved_file(mps_info.get_filename(False, site))
+        copy_saved_file(mps_info.get_filename(True, site))
+    mps_info.load_mutable()
+
+    mps = driver.bw.bs.MPS(mps_info)
+    for site in range(-1, mps_info.n_sites):
+        copy_saved_file(mps.get_filename(site))
+    mps.load_data()
+    mps.load_mutable()
+    mps_info.bond_dim = mps.info.get_max_bond_dimension()
+    return mps
+
+
 def save_block2_mpo(mpo, destination: str | Path) -> dict:
     """Save a constructed Block2 MPO using its native serialization."""
     destination = Path(destination)
@@ -1911,6 +1975,7 @@ def run_block2_qubit_dmrg_curve(
     artifact_dir: str | Path | None = None,
     bond_result_callback=None,
     bond_dim_selector=None,
+    require_sweep_convergence_for_accuracy: bool = False,
 ) -> tuple[list[dict], dict]:
     """Benchmark Pauli-mode Block2 DMRG with a selected-CI warm start.
 
@@ -1930,6 +1995,10 @@ def run_block2_qubit_dmrg_curve(
         This supports adaptive searches without rebuilding the MPO or warm
         start. When supplied, the static iteration order in ``bond_dims`` is
         ignored; callers may close over previously checkpointed rows.
+    require_sweep_convergence_for_accuracy
+        If true, a bond dimension is accepted only when its energy is within
+        ``dmrg_tolerance`` and the sweep-energy stopping criterion is met.
+        The default preserves the historical energy-only acceptance rule.
 
     A fresh copy of the imported warm-start MPS is used at every tested bond
     dimension. Random initialization remains available for control runs.
@@ -2222,10 +2291,24 @@ def run_block2_qubit_dmrg_curve(
                 if reference_energy is None
                 else abs(energy - reference_energy)
             )
-            converged = (
+            within_energy_tolerance = (
                 None if error is None else error <= dmrg_tolerance
             )
-            if converged is True and first_converged_bd is None:
+            accepted = (
+                within_energy_tolerance
+                if not require_sweep_convergence_for_accuracy
+                else (
+                    None
+                    if within_energy_tolerance is None
+                    else bool(
+                        within_energy_tolerance
+                        and sweep_status["sweep_converged"]
+                    )
+                )
+            )
+            if accepted is True and (
+                first_converged_bd is None or bond_dim < first_converged_bd
+            ):
                 first_converged_bd = bond_dim
                 if artifact_dir is not None:
                     artifacts["first_chemically_accurate_mps"] = (
@@ -2245,7 +2328,8 @@ def run_block2_qubit_dmrg_curve(
                 "bond_dim": bond_dim,
                 "energy": energy,
                 "abs_energy_error": error,
-                "within_dmrg_tolerance": converged,
+                "within_dmrg_tolerance": within_energy_tolerance,
+                "accepted_converged_bond_dimension": accepted,
                 "dmrg_seconds": seconds,
                 "max_result_mps_bond": bond_dim,
                 **sweep_status,
@@ -2270,7 +2354,7 @@ def run_block2_qubit_dmrg_curve(
                     f"tolerance={sweep_tolerance:.3e}.",
                     flush=True,
                 )
-            if converged is True and not full_curve:
+            if accepted is True and not full_curve:
                 print(
                     f"{label}: reached chemical accuracy at "
                     f"bond_dim={bond_dim}; stopping this frame.",
@@ -2278,13 +2362,20 @@ def run_block2_qubit_dmrg_curve(
                 )
                 break
 
-        first_converged_row = next(
-            (
-                row
-                for row in rows
-                if row["within_dmrg_tolerance"] is True
-            ),
-            None,
+        accepted_rows = [
+            row
+            for row in rows
+            if row["accepted_converged_bond_dimension"] is True
+        ]
+        first_converged_row = min(
+            accepted_rows,
+            key=lambda row: int(row["bond_dim"]),
+            default=None,
+        )
+        first_converged_bd = (
+            None
+            if first_converged_row is None
+            else int(first_converged_row["bond_dim"])
         )
         summary = {
             "frame": label,
@@ -2351,6 +2442,9 @@ def run_block2_qubit_dmrg_curve(
             "davidson_threshold": davidson_threshold,
             "warm_start_noises": list(warm_start_noises),
             "sweep_energy_tolerance": sweep_tolerance,
+            "require_sweep_convergence_for_accuracy": bool(
+                require_sweep_convergence_for_accuracy
+            ),
             "bond_dims_without_sweep_convergence": [
                 row["bond_dim"]
                 for row in rows

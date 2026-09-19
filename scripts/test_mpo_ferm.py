@@ -26,6 +26,7 @@ def statevector_to_sz_determinants(
     n_electrons=None,
     spin=None,
     cutoff=1e-12,
+    include_orbital_reordering_phase=False,
 ):
     """Convert a dense or sparse JW state to Block2 SZ determinants.
 
@@ -47,6 +48,13 @@ def statevector_to_sz_determinants(
         Optional required active spin projection ``N_alpha - N_beta``.
     cutoff
         Input amplitudes at or below this magnitude are ignored.
+    include_orbital_reordering_phase
+        If true, multiply each coefficient by the fermionic sign induced by
+        interpreting ``active_orbitals`` as a new spatial-orbital ordering.
+        This is valid only when ``active_orbitals`` is a permutation of every
+        input spatial orbital and ``core_orbitals`` is empty. The sign is the
+        parity of the occupied spin-orbital permutation; it is required when
+        both the integral tensors and determinant basis are reordered.
 
     Returns
     -------
@@ -85,6 +93,22 @@ def statevector_to_sz_determinants(
         - set(active_orbitals)
     )
     occ_chars = {(0, 0): "0", (1, 0): "a", (0, 1): "b", (1, 1): "2"}
+    if include_orbital_reordering_phase:
+        if core_orbitals or omitted_orbitals:
+            raise ValueError(
+                "fermionic orbital-reordering phases require a full active "
+                "space with no frozen or omitted orbitals"
+            )
+        if sorted(active_orbitals) != list(range(n_spatial_orbitals)):
+            raise ValueError(
+                "active_orbitals must be a permutation of all spatial "
+                "orbitals when orbital-reordering phases are requested"
+            )
+        reordered_modes = [
+            2 * orbital + spin_index
+            for orbital in active_orbitals
+            for spin_index in (0, 1)
+        ]
     dets, coeffs = [], []
 
     for basis_index, amplitude in zip(basis_indices, amplitudes):
@@ -121,6 +145,17 @@ def statevector_to_sz_determinants(
                 for p in active_orbitals
             )
         )
+        if include_orbital_reordering_phase:
+            occupied_modes_in_new_order = [
+                mode for mode in reordered_modes if bits[mode]
+            ]
+            inversion_count = sum(
+                occupied_modes_in_new_order[left]
+                > occupied_modes_in_new_order[right]
+                for left in range(len(occupied_modes_in_new_order))
+                for right in range(left + 1, len(occupied_modes_in_new_order))
+            )
+            amplitude = amplitude * (-1 if inversion_count % 2 else 1)
         coeffs.append(amplitude)
 
     if not coeffs:

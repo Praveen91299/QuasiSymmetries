@@ -1,0 +1,509 @@
+\documentclass[a4paper,onecolumn,10pt]{article}
+
+\usepackage[margin=2cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{microtype}
+\usepackage[hidelinks]{hyperref}
+
+\newcommand{\HCT}{\mathrm{HCT}}
+\newcommand{\Beam}{\mathrm{Beam}}
+\newcommand{\CISD}{\mathrm{CISD}}
+\newcommand{\FCI}{\mathrm{FCI}}
+\newcommand{\MPS}{\mathrm{MPS}}
+\newcommand{\MPO}{\mathrm{MPO}}
+\newcommand{\Ha}{\mathrm{Ha}}
+
+\title{Orbital Localization, Clifford Frames, and Fiedler Ordering\\
+in DMRG Benchmarks for N$_2$ and Linear H$_8$}
+\author{}
+\date{September 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We compare fermionic spin-adapted and qubit-space density matrix
+renormalization group (DMRG) calculations for correlated N$_2$ and linear
+H$_8$ in the STO-3G basis.  The qubit Hamiltonians are considered before and
+after Clifford transformations determined by two approximate-symmetry
+selection procedures: Hamiltonian coefficient thresholding (HCT) and Beam
+search.  Four spatial-orbital bases---canonical, split Pipek--Mezey, split
+Pipek--Mezey restricted by point-group irrep, and CISD natural
+orbitals---are tested with their original ordering and with a Fiedler ordering
+derived from CISD mutual information.  Clifford transformation substantially
+reduces the qubit-MPS bond dimension needed for chemical accuracy.  For N$_2$,
+the best transformed calculations require bond dimension 8, compared with 39
+for the canonical raw-qubit Hamiltonian.  For linear H$_8$, split
+Pipek--Mezey localization and Fiedler ordering act cooperatively: the required
+bond dimensions are 8, 57, 30, and 19 for fermionic, raw-qubit, HCT, and Beam
+calculations, respectively.  The specialized fermionic SU(2) implementation
+remains faster than all qubit calculations.  The results also show that a
+smaller state bond dimension need not imply a shorter calculation when the
+Clifford transformation substantially increases the MPO bond dimension.
+\end{abstract}
+
+\section{Scope of the comparison}
+
+For each molecular system and orbital basis, we benchmark four Hamiltonian
+frames:
+\begin{enumerate}
+    \item a fermionic quantum-chemistry Hamiltonian treated with SU(2)-adapted
+          DMRG;
+    \item the untransformed Jordan--Wigner qubit Hamiltonian;
+    \item the qubit Hamiltonian transformed by a Clifford circuit synthesized
+          from HCT approximate symmetries; and
+    \item the qubit Hamiltonian transformed by a Clifford circuit synthesized
+          from Beam-search approximate symmetries.
+\end{enumerate}
+Every frame is tested in its standard site order and in a Fiedler order
+obtained from the corresponding CISD state.  The primary outcome is the
+smallest tested maximum MPS bond dimension that simultaneously reaches
+chemical accuracy and satisfies the DMRG sweep-energy convergence criterion.
+The fermionic and qubit bond dimensions characterize different tensor-network
+representations and should not be interpreted as equal computational
+resources: the fermionic calculation uses four-state spatial-orbital sites and
+SU(2) block sparsity, whereas the qubit calculation uses two-state
+spin-orbital sites without particle-number or spin adaptation.
+
+\section{Computational methods}
+
+\subsection{Molecules and electronic-structure calculations}
+
+All calculations use the STO-3G basis and retain all spatial orbitals and
+electrons.  N$_2$ is evaluated at an N--N distance of 1.4~\AA; it contains 14
+electrons in 10 spatial orbitals, corresponding to 20 qubits.  H$_8$ is a
+linear, equally spaced chain with adjacent H--H separation 2.0~\AA; it
+contains 8 electrons in 8 spatial orbitals, corresponding to 16 qubits.  The
+chains are centered on the Cartesian $z$ axis.  Restricted Hartree--Fock
+(RHF) calculations are performed in the Abelian $D_{2h}$ subgroup with an SCF
+energy tolerance of $10^{-12}$ and a maximum of 100 cycles.  Spin orbitals are
+interleaved as $(\alpha_0,\beta_0,\alpha_1,\beta_1,\ldots)$ before the
+Jordan--Wigner transformation.
+
+For every orbital basis, the one- and two-electron integrals, CISD state, and
+FCI reference energy are recomputed.  FCI invariance under the orbital
+rotations is verified to $10^{-8}$~Ha, and the FCI state is required to satisfy
+$\langle \hat S^2\rangle<10^{-7}$.  The canonical reference energies are
+listed in Table~\ref{tab:electronic-structure}.  CISD is not invariant to the
+occupied--virtual mixing used to define the natural orbitals; its energy is
+therefore recomputed rather than copied from the canonical calculation.
+
+\begin{table}[htbp]
+\centering
+\caption{Electronic-structure dimensions and canonical-orbital reference
+energies.  All energies are in Hartree.}
+\label{tab:electronic-structure}
+\begin{tabular}{lrrrrrr}
+\toprule
+System & $N_e$ & $N_{\rm orb}$ & $N_q$ & $E_{\rm RHF}$ & $E_{\rm CISD}$ & $E_{\rm FCI}$ \\
+\midrule
+N$_2$ & 14 & 10 & 20 & $-107.3578154453$ & $-107.5832737773$ & $-107.6231741781$ \\
+H$_8$ &  8 &  8 & 16 & $  -3.1614329658$ & $  -3.5542953056$ & $  -3.7966934506$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Orbital bases}
+
+Four spatial-orbital bases are compared.
+\begin{description}
+    \item[Canonical:] symmetry-adapted RHF molecular orbitals.
+    \item[Split PM:] Pipek--Mezey localization is applied separately to the
+          canonical occupied and virtual subspaces.  The occupied--virtual
+          partition is not mixed.
+    \item[Split PM, irrep-restricted:] each occupied or virtual block is
+          divided further according to its canonical $D_{2h}$ irrep, and
+          Pipek--Mezey localization is performed independently in every
+          nontrivial block.
+    \item[Natural:] the spin-summed spatial one-particle density matrix of the
+          canonical CISD state is diagonalized globally.  The resulting
+          orbitals are sorted by decreasing occupation.  This transformation
+          may mix canonical occupied and virtual orbitals; the CISD state is
+          consequently recomputed in the natural-orbital basis.
+\end{description}
+The Pipek--Mezey convergence tolerance is $10^{-10}$ with at most 1000
+localization cycles.  Orbital signs are fixed deterministically from the
+largest-magnitude AO coefficient.  Orthonormality is verified to $10^{-9}$;
+for the split localizations, preservation of the occupied projector is
+verified to $10^{-8}$.
+
+\subsection{Pauli Hamiltonians and approximate symmetries}
+
+The fermionic Hamiltonian is mapped directly to a packed Pauli representation
+with the repository's streamed Jordan--Wigner implementation.  Equal Pauli
+words are combined, and combined coefficients with magnitude at most
+$10^{-12}$ are discarded.  A Pauli word is stored as its binary $X$ and $Z$
+masks, avoiding construction of an intermediate OpenFermion
+\texttt{QubitOperator}.  The stream retains the first-occurrence order induced
+by the fermionic-term order and its Jordan--Wigner expansion.  No subsequent
+sorting by coefficient magnitude, Pauli weight, or spatial support is used.
+
+For a Pauli product $S$, both symmetry searches use the CISD squared-commutator
+cost
+\begin{equation}
+    c(S)=
+    \langle\Psi_{\CISD}|[H,S]^\dagger[H,S]|\Psi_{\CISD}\rangle.
+    \label{eq:symmetry-cost}
+\end{equation}
+Each search returns $N_q$ linearly independent, mutually commuting Pauli
+generators.  HCT progressively removes Hamiltonian terms by increasing a
+coefficient threshold over the distinct coefficient magnitudes above
+$10^{-5}$.  At each threshold, the symplectic null space is reduced to a
+maximal commuting subspace, with candidate generators ordered first by
+Eq.~\eqref{eq:symmetry-cost}, then by Pauli weight, and finally by their packed
+binary representation.  Previously selected generators are retained as the
+threshold increases.
+
+The Beam candidate pool contains the HCT generators, generators obtained from
+at most 256 Hamiltonian terms, and pairwise products seeded by the 50 leading
+Hamiltonian terms.  The pool is sorted by increasing singleton cost and capped
+at 1000 candidates; no maximum Pauli weight is imposed.  Beam search has width
+16 and selects a full-rank commuting set by maximizing the negative sum of the
+singleton costs, equivalently minimizing $\sum_S c(S)$.  The configured
+heavy-core fraction is 0.95.  The resulting total costs are reported in
+Table~\ref{tab:symmetry-costs}; Fiedler reordering does not alter the selected
+symmetry set or its cost.
+
+\begin{table}[htbp]
+\centering
+\caption{Total CISD squared-commutator cost $\sum_S c(S)$ of the selected
+full-rank symmetry sets.}
+\label{tab:symmetry-costs}
+\begin{tabular}{llrr}
+\toprule
+System & Orbital basis & HCT & Beam \\
+\midrule
+\multirow{4}{*}{N$_2$}
+ & Canonical                  & 2.724 & 2.090 \\
+ & Split PM                   & 3.602 & 2.779 \\
+ & Split PM, irrep-restricted & 2.691 & 2.091 \\
+ & Natural                    & 2.643 & 2.070 \\
+\midrule
+\multirow{4}{*}{H$_8$}
+ & Canonical                  & 6.224 & 3.409 \\
+ & Split PM                   & 1.253 & 0.617 \\
+ & Split PM, irrep-restricted & 4.425 & 2.987 \\
+ & Natural                    & 5.968 & 3.514 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+For each selected set, a Clifford circuit maps the generators to positive
+single-qubit $Z$ operators.  The same circuit is applied to the Hamiltonian and
+the CISD state, so the spectrum and the warm-start expectation value are
+preserved.  Clifford action on the sparse state is evaluated exactly by
+bit-string and coefficient updates before conversion to an MPS; no determinant
+truncation is applied during the transformation.
+
+\subsection{Fiedler ordering}
+
+Fiedler orderings are derived from the CISD state separately for every
+Hamiltonian frame.  For raw-qubit calculations, the graph vertices are
+individual spin-orbital qubits.  For the fermionic calculation, each vertex is
+a four-state spatial orbital containing its paired $\alpha$ and $\beta$ modes.
+For HCT and Beam frames, the CISD state is first transformed by the
+corresponding Clifford circuit and the mutual information is then evaluated in
+that frame.  One- and two-site reduced density matrices are contracted from the
+sparse state, entropies are evaluated in base 2, and the standard mutual
+information convention is used.  Edges below $10^{-12}$ are omitted.  Sites
+are ordered by the Fiedler vector of the weighted graph Laplacian, with index
+tie-breaking and disconnected components ordered by total edge weight.  The
+resulting permutation is applied identically to the Hamiltonian, symmetry
+operators, and CISD state.
+
+\subsection{MPO and MPS construction}
+
+Fermionic MPOs are built directly from the spatial one- and two-electron
+integrals with the SU(2)-adapted quantum-chemistry MPO builder in
+\texttt{pyblock2}; no nontrivial point-group labels are supplied to Block2.
+Qubit MPOs are built from the Pauli stream with Block2's
+\texttt{FastBlockedSumBipartite} algorithm, using a block parameter of 10 and
+an MPO compression cutoff of $10^{-10}$, without an explicit MPO bond cap.
+Pauli products are supplied in their deterministic stream order with symbolic
+reordering disabled.
+
+The sparse CISD state is converted to an MPS by adding determinants in
+decreasing coefficient magnitude in batches of 32 and compressing with an SVD
+cutoff of $10^{-13}$.  The temporary bond cap during construction and Clifford
+transformation equals the largest bond dimension in the corresponding DMRG
+search.  The constructed MPS is normalized, and its expectation value with
+the final MPO must agree with the independently computed CISD energy within
+$10^{-7}$~Ha when the accumulated construction loss is below $10^{-12}$.
+
+\subsection{DMRG convergence search}
+
+All fermionic and qubit-space DMRG calculations use two-site updates in
+\texttt{pyblock2}.  Each tested maximum bond dimension $\chi$ starts from a
+fresh copy of the same CISD warm-start MPS rather than from the result at a
+neighboring bond dimension.  DMRG is run for at most 100 sweeps with fixed
+maximum bond dimension $\chi$.  The noise schedule is
+\begin{equation}
+    (10^{-4},10^{-4},10^{-5},10^{-5},10^{-6},10^{-6},0,\ldots).
+\end{equation}
+The local Davidson threshold is $10^{-10}$, with at most 50 Davidson
+iterations per local optimization.  Sweep convergence requires that the
+absolute change between the final two sweep energies be below $10^{-6}$~Ha
+after the noise has been removed.  A bond dimension is accepted only if this
+condition and chemical accuracy both hold:
+\begin{equation}
+    |E_{\rm DMRG}(\chi)-E_{\FCI}|
+    \leq 1.6\times10^{-3}\ \Ha.
+    \label{eq:chemical-accuracy}
+\end{equation}
+
+An integer bisection search locates the smallest accepted $\chi$ in
+$1\leq\chi\leq200$ for N$_2$ and $1\leq\chi\leq300$ for H$_8$.  The N$_2$
+run used the midpoint-first implementation; the completed H$_8$ data used the
+earlier endpoint-bracketed implementation.  In every successful frame the
+immediately lower integer was evaluated and failed, and no evaluated frame
+showed a successful smaller bond dimension followed by a failed larger one.
+This establishes the reported minimum within the individual searches, subject
+to the usual possibility of DMRG convergence to different local stationary
+states.
+
+The runtime reported in the result tables is the wall time of the DMRG
+optimization at the accepted bond dimension, summed over all completed sweeps.
+It excludes electronic-structure calculations, symmetry search, Fiedler
+ordering, MPO construction, initial-MPS construction, and DMRG calculations
+at other bond dimensions.  Per-sweep and complete search timings are retained
+in the saved JSON and CSV records.
+
+\subsection{Software and execution environment}
+
+The calculations used Python 3.13.5, NumPy 2.2.5, SciPy 1.15.3, PySCF 2.14.0,
+OpenFermion 1.7.1, OpenFermion-PySCF 0.5, and Block2/pyblock2 0.5.3.  DMRG
+used four Block2 threads and one BLAS/LAPACK thread.  The reported local timing
+data were obtained on an Apple M1 Pro MacBook Pro with eight CPU cores and
+16~GB memory; timings should therefore be interpreted as within-machine
+comparisons.  The benchmark does not explicitly set Block2's internal random
+seed.  The CISD warm start and all search tie-breaking are deterministic, but
+exact runtime and convergence near the chemical-accuracy boundary can still
+depend on the software build, threading, and internal random-number state.
+
+\section{Results}
+
+Tables~\ref{tab:n2-orbital-dmrg} and~\ref{tab:h8-orbital-dmrg} report the
+smallest accepted MPS bond dimension and the corresponding DMRG optimization
+time.  Boldface marks the smallest bond dimension within each Hamiltonian
+representation for a given molecule; ties are all shown in bold.
+
+\begin{table}[htbp]
+\centering
+\caption{N$_2$ at $R=1.4$~\AA.  Each entry is
+$\chi_{\min}$ [DMRG wall time in seconds].}
+\label{tab:n2-orbital-dmrg}
+\begin{tabular}{llcccc}
+\toprule
+Orbital basis & Ordering & Fermionic SU(2) & Raw qubit & HCT & Beam \\
+\midrule
+\multirow{2}{*}{Canonical}
+ & Standard & 23 [0.21] & 39 [11.49] & 12 [1.21] & 10 [2.69] \\
+ & Fiedler  & 31 [0.42] & 32 [16.37] & 13 [1.89] & \textbf{8 [1.81]} \\
+\midrule
+\multirow{2}{*}{Split PM}
+ & Standard & 23 [0.36] & 50 [13.19] & 27 [19.52] & 22 [169.73] \\
+ & Fiedler  & \textbf{12 [0.47]} & 33 [17.46] & 21 [8.03] & 19 [40.65] \\
+\midrule
+\multirow{2}{*}{Split PM, irrep-restricted}
+ & Standard & 23 [0.23] & 38 [14.60] & 10 [1.78] & 10 [1.76] \\
+ & Fiedler  & 33 [0.37] & 31 [5.90] & 12 [1.76] & \textbf{8 [1.85]} \\
+\midrule
+\multirow{2}{*}{Natural}
+ & Standard & 24 [0.22] & 35 [7.33] & \textbf{9 [1.33]} & 10 [1.91] \\
+ & Fiedler  & 33 [0.37] & \textbf{28 [8.32]} & 10 [1.92] & 11 [1.51] \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Linear H$_8$ at adjacent H--H separation 2.0~\AA.  Each entry is
+$\chi_{\min}$ [DMRG wall time in seconds].  A dagger marks a run that reached
+the sweep-energy tolerance but not chemical accuracy by $\chi=300$; its
+stationary higher-energy solution is consistent with optimization trapping
+and is not interpreted as a bond-dimension lower bound.}
+\label{tab:h8-orbital-dmrg}
+\begin{tabular}{llcccc}
+\toprule
+Orbital basis & Ordering & Fermionic SU(2) & Raw qubit & HCT & Beam \\
+\midrule
+\multirow{2}{*}{Canonical}
+ & Standard & 35 [0.37] & 123 [49.66] & ---$^\dagger$ & 47 [9.45] \\
+ & Fiedler  & 35 [0.40] & 122 [49.05] & 54 [11.56] & 49 [10.71] \\
+\midrule
+\multirow{2}{*}{Split PM}
+ & Standard & 32 [0.64] & 117 [54.96] & 37 [12.16] & 32 [16.73] \\
+ & Fiedler  & \textbf{8 [0.23]} & \textbf{57 [18.68]}
+             & \textbf{30 [8.63]} & \textbf{19 [6.34]} \\
+\midrule
+\multirow{2}{*}{Split PM, irrep-restricted}
+ & Standard & 35 [0.38] & 123 [45.39] & ---$^\dagger$ & 45 [8.33] \\
+ & Fiedler  & 33 [0.39] & 105 [38.36] & ---$^\dagger$ & 46 [9.50] \\
+\midrule
+\multirow{2}{*}{Natural}
+ & Standard & 35 [0.34] & 123 [48.96] & 52 [11.35] & ---$^\dagger$ \\
+ & Fiedler  & 35 [0.44] & 121 [85.95] & 51 [10.19] & 48 [7.32] \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{\texorpdfstring{N$_2$}{N2}: Clifford compression without a localization advantage}
+
+For N$_2$, both Clifford constructions substantially reduce the qubit-MPS
+bond dimension.  In canonical orbitals, the raw-qubit threshold is 39,
+compared with 12 for HCT and 10 for Beam.  Beam with Fiedler ordering reaches
+$\chi=8$, as does Beam in the irrep-restricted split-PM basis; the lowest HCT
+threshold is $\chi=9$ in standard-order natural orbitals.  The CISD natural
+orbitals also give the smallest raw-qubit threshold, 28, after Fiedler
+ordering.
+
+Unrestricted split-PM localization is unfavorable for the transformed N$_2$
+calculations.  Relative to canonical orbitals, its HCT and Beam costs increase
+by approximately 32--33\%, while the standard-order thresholds increase from
+12 to 27 and from 10 to 22, respectively.  The corresponding Pauli MPOs also
+grow sharply: the standard-order Beam MPO increases from bond dimension 832
+to 6097.  Consequently, its accepted $\chi=22$ calculation requires
+169.73~s, despite having a smaller state bond dimension than the raw-qubit
+calculation.  Restricting localization to occupied/virtual irrep blocks
+largely restores the canonical symmetry costs, MPO dimensions, and DMRG
+thresholds.
+
+Fiedler ordering is not uniformly beneficial for this compact diatomic.  It
+improves the canonical raw-qubit and Beam thresholds and strongly improves the
+split-PM fermionic result, but it increases several fermionic, HCT, or Beam
+thresholds in the canonical, irrep-restricted, and natural bases.  Orbital
+localization and ordering must therefore be evaluated together rather than
+treated as independently favorable transformations.
+
+\subsection{\texorpdfstring{H$_8$}{H8}: cooperative localization and ordering}
+
+The extended H$_8$ chain shows the expected real-space localization benefit.
+Split-PM localization lowers the HCT and Beam symmetry costs from 6.224 and
+3.409 in canonical orbitals to 1.253 and 0.617.  Combining this basis with
+Fiedler ordering gives the smallest threshold in every representation:
+$\chi=8$ for fermionic SU(2), 57 for raw qubits, 30 for HCT, and 19 for Beam.
+Thus Beam reduces the required qubit-MPS bond dimension by a factor of three
+relative to the raw-qubit calculation in the same orbital basis and ordering.
+
+The irrep-restricted localization yields much smaller improvements.  This
+contrast indicates that mixing canonical point-group blocks is important for
+forming orbitals localized along the hydrogen chain, whereas the same mixing
+is detrimental to N$_2$.  Natural orbitals also provide little reduction for
+raw H$_8$: the standard thresholds remain 123 in the canonical,
+irrep-restricted, and natural bases.
+
+Four transformed H$_8$ calculations satisfy the sweep-energy stopping
+criterion but fail Eq.~\eqref{eq:chemical-accuracy}: standard-order canonical
+HCT, both irrep-restricted HCT orderings, and standard-order natural Beam.  At
+$\chi=300$, these calculations remain near $-3.6711575235$~Ha, approximately
+125.5~mHa above FCI, and increasing the nominal bond cap does not lower the
+energy.  Standard-order canonical HCT and natural Beam both reach chemical
+accuracy after Fiedler reordering.  These observations identify local DMRG
+optimization behavior, rather than an insufficient representational bond
+dimension, as the likely origin of at least those two failures.
+
+\subsection{Operator complexity and runtime}
+
+Table~\ref{tab:mpo-dimensions} shows that Clifford compression of the state
+can increase the MPO bond dimension.  The effect is particularly large for
+unrestricted split-PM N$_2$, where the Beam MPO reaches 6097.  For split-PM
+H$_8$ with Fiedler ordering, Beam reduces the state threshold from 57 to 19
+while increasing the MPO bond dimension from 697 to 2200.  That tradeoff is
+still favorable for the accepted DMRG calculation: the Beam calculation takes
+6.34~s, compared with 18.68~s for raw qubits.  For N$_2$, however, the much
+larger Beam MPO dominates the smaller state bond dimension and increases the
+runtime.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Maximum MPO bond dimensions.  Each entry gives standard/Fiedler
+ordering.  The fermionic and qubit MPO bond dimensions refer to different
+local site spaces and should be compared primarily within a representation.}
+\label{tab:mpo-dimensions}
+\begin{tabular}{llrrrr}
+\toprule
+System & Orbital basis & Fermionic SU(2) & Raw qubit & HCT & Beam \\
+\midrule
+\multirow{4}{*}{N$_2$}
+ & Canonical                  & 63/87   & 291/575  & 539/861   & 832/730 \\
+ & Split PM                   & 123/123 & 643/3752 & 3046/2561 & 6097/4178 \\
+ & Split PM, irrep-restricted & 63/87   & 291/544  & 525/923   & 824/707 \\
+ & Natural                    & 63/87   & 291/586  & 655/979   & 824/1150 \\
+\midrule
+\multirow{4}{*}{H$_8$}
+ & Canonical                  & 83/83 & 349/690 & 2095/1855 & 1173/1226 \\
+ & Split PM                   & 83/83 & 411/697 & 2069/1903 & 3355/2200 \\
+ & Split PM, irrep-restricted & 83/83 & 349/846 & 1227/1532 & 1491/1382 \\
+ & Natural                    & 83/83 & 349/693 & 1678/1496 & 1189/1154 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The fermionic SU(2) implementation is the fastest method throughout the
+successful runs.  At the accepted bond dimension, fermionic optimization
+takes 0.21--0.47~s for N$_2$ and 0.23--0.64~s for H$_8$.  Successful Beam
+calculations take 1.51--169.73~s for N$_2$ and 6.34--16.73~s for H$_8$.
+This advantage reflects the specialized quantum-chemistry MPO, spatial-site
+representation, and SU(2) block sparsity.  The Clifford benchmarks therefore
+demonstrate reduced qubit-MPS entanglement requirements, not a wall-time
+advantage over spin-adapted fermionic DMRG.
+
+\section{Limitations and next steps}
+
+The benchmark establishes trends for two STO-3G systems and a single CISD
+warm start per frame.  The integer bisection assumes that DMRG acceptance is
+monotone with the allowed bond dimension; the implementation detects
+nonmonotone evaluated outcomes, but independent random seeds were not used to
+quantify optimizer variability near the threshold.  The stationary H$_8$
+failures show that sweep-energy convergence alone does not establish ground-
+state convergence.  Future comparisons should repeat marginal and failed
+frames with controlled seeds or alternative noise schedules.
+
+The current Pauli terms are supplied to the MPO builder in streamed
+Jordan--Wigner order.  Sorting by coefficient magnitude, spatial support, or
+an MPO-specific graph heuristic may reduce intermediate and final MPO bond
+dimensions without changing the Hamiltonian and is a direct target for
+follow-up tests.  Additional directions are orbital optimization against an
+entanglement- or MPO-aware objective, systematic Beam-pool and beam-width
+studies, iterative searches restricted to Pauli-$Z$ quasi-symmetries, and
+fermionic Gaussian transformations defined directly in Majorana space.
+
+\section{Reproduction and saved data}
+
+The authoritative driver is
+\texttt{scripts/benchmark\_sto3g\_orbital\_dmrg.py}.  The following commands
+specify the two calculations; all remaining parameters are the defaults
+reported above.
+
+\begin{verbatim}
+python -u scripts/benchmark_sto3g_orbital_dmrg.py \
+  --system N2_corr --orderings standard fiedler \
+  --min-bond-dim 1 --max-bond-dim 200
+
+python -u scripts/benchmark_sto3g_orbital_dmrg.py \
+  --system H8_corr --orderings standard fiedler \
+  --min-bond-dim 1 --max-bond-dim 300
+\end{verbatim}
+
+The complete result directories are
+\begin{verbatim}
+saved/results/n2_corr_sto3g_orbital_dmrg/
+saved/results/h8_corr_sto3g_orbital_dmrg/
+\end{verbatim}
+Each directory contains the exact configuration in \texttt{settings.json},
+aggregate thresholds in \texttt{dmrg\_summary.csv}, per-bond energies and
+timings in \texttt{dmrg\_curves.csv} and JSON form, and one subdirectory per
+orbital basis.  The basis subdirectories retain molecular integrals and
+orbitals, sparse CISD states, selected Pauli generators and their individual
+costs, Clifford/Fiedler metadata, MPO bond dimensions, per-sweep energies and
+runtimes, and native Block2 MPO/MPS restart artifacts.  Results are
+checkpointed after every completed bond-dimension calculation, and
+\texttt{--resume} continues an interrupted calculation only when its
+result-defining settings agree with the saved configuration.
+
+\end{document}

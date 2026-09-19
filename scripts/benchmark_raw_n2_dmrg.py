@@ -169,6 +169,12 @@ def run_fermionic_dmrg_curve(
         returned as ``None``.
     args
         DMRG bond grid, convergence, noise, execution, and output settings.
+        Optional ``orbital_ordering`` gives ``new_position -> old_spatial_orbital``
+        for a full active-space permutation. Optional ``frame_label`` controls
+        printed labels and artifact names; both default to the historical raw
+        fermionic behavior. Optional ``bond_dim_selector`` receives the rows
+        completed during this invocation and returns the next bond dimension;
+        ``bond_result_callback`` is called after every completed calculation.
 
     Returns
     -------
@@ -195,7 +201,16 @@ def run_fermionic_dmrg_curve(
     n_sites = int(molecule.n_orbitals)
     n_electrons = int(molecule.n_electrons)
     spin = int(molecule.multiplicity) - 1
-    active_orbitals = list(range(n_sites))
+    frame_label = str(getattr(args, "frame_label", "raw_fermionic_su2"))
+    active_orbitals = list(
+        getattr(args, "orbital_ordering", list(range(n_sites)))
+    )
+    if sorted(active_orbitals) != list(range(n_sites)):
+        raise ValueError(
+            "args.orbital_ordering must be a permutation of every spatial "
+            "orbital"
+        )
+    reordered_orbitals = active_orbitals != list(range(n_sites))
     orb_sym = [1] * n_sites
 
     determinants, coefficients, projection_norm = (
@@ -206,6 +221,7 @@ def run_fermionic_dmrg_curve(
             n_electrons=n_electrons,
             spin=spin,
             cutoff=0.0,
+            include_orbital_reordering_phase=reordered_orbitals,
         )
     )
     py_su2_warm_mps = determinants_to_su2_pyblock_mps(
@@ -245,7 +261,7 @@ def run_fermionic_dmrg_curve(
         warm_mps = pyblock_su2_to_block2_mps(
             py_su2_warm_mps,
             driver,
-            tag="WARM-SU2-N2-RAW",
+            tag=f"WARM-{frame_label}",
         )
         identity_mpo = driver.get_identity_mpo()
         exact_norm = driver.expectation(warm_mps, identity_mpo, warm_mps)
@@ -263,23 +279,23 @@ def run_fermionic_dmrg_curve(
             artifacts["mpo"] = save_block2_mpo(
                 mpo,
                 artifact_dir
-                / "raw_fermionic_su2_hamiltonian_mpo.block2.bin",
+                / f"{frame_label}_hamiltonian_mpo.block2.bin",
             )
             artifacts["warm_start_mps"] = save_block2_mps(
                 warm_mps,
                 artifact_dir
                 / (
-                    "raw_fermionic_su2_"
+                    f"{frame_label}_"
                     f"{args.initial_state}_warm_start_mps.block2"
                 ),
             )
             print(
-                "raw_fermionic_su2: saved Hamiltonian MPO to "
+                f"{frame_label}: saved Hamiltonian MPO to "
                 f"{artifacts['mpo']['path']}",
                 flush=True,
             )
             print(
-                "raw_fermionic_su2: saved "
+                f"{frame_label}: saved "
                 f"{args.initial_state} warm-start MPS to "
                 f"{artifacts['warm_start_mps']['path']}",
                 flush=True,
@@ -290,8 +306,33 @@ def run_fermionic_dmrg_curve(
         thresholds = [
             float(getattr(args, "davidson_threshold", 1e-10))
         ] * args.dmrg_sweeps
-        for bond_dim in args.bond_dims:
-            tag = f"N2-RAW-FERM-BD{bond_dim}"
+        static_bond_dims = tuple(int(value) for value in args.bond_dims)
+        bond_dim_selector = getattr(args, "bond_dim_selector", None)
+        bond_result_callback = getattr(args, "bond_result_callback", None)
+        selected_bond_dims: set[int] = set()
+        while True:
+            if bond_dim_selector is None:
+                if len(rows) >= len(static_bond_dims):
+                    break
+                bond_dim = static_bond_dims[len(rows)]
+            else:
+                selected = bond_dim_selector(
+                    tuple(dict(row) for row in rows)
+                )
+                if selected is None:
+                    break
+                bond_dim = int(selected)
+                if bond_dim < 1:
+                    raise ValueError(
+                        "bond_dim_selector returned a nonpositive value"
+                    )
+                if bond_dim in selected_bond_dims:
+                    raise RuntimeError(
+                        "bond_dim_selector returned an already completed "
+                        f"bond dimension: {bond_dim}"
+                    )
+            selected_bond_dims.add(int(bond_dim))
+            tag = f"{frame_label}-BD{bond_dim}"
             if args.initial_state != "random":
                 ket = driver.copy_mps(warm_mps, tag=tag)
                 warm_start_noises = tuple(
@@ -344,10 +385,28 @@ def run_fermionic_dmrg_curve(
             error = (
                 None if fci_energy is None else abs(energy - fci_energy)
             )
-            converged = (
+            within_energy_tolerance = (
                 None if error is None else error <= args.dmrg_tol
             )
-            if converged is True and first_converged_bd is None:
+            require_sweep_convergence = bool(
+                getattr(args, "require_sweep_convergence_for_accuracy", False)
+            )
+            accepted = (
+                within_energy_tolerance
+                if not require_sweep_convergence
+                else (
+                    None
+                    if within_energy_tolerance is None
+                    else bool(
+                        within_energy_tolerance
+                        and sweep_status["sweep_converged"]
+                    )
+                )
+            )
+            if accepted is True and (
+                first_converged_bd is None
+                or int(bond_dim) < first_converged_bd
+            ):
                 first_converged_bd = int(bond_dim)
                 if args.save_tensor_networks:
                     artifacts["first_chemically_accurate_mps"] = (
@@ -355,24 +414,27 @@ def run_fermionic_dmrg_curve(
                             ket,
                             artifact_dir
                             / (
-                                "raw_fermionic_su2_first_chemical_accuracy_"
+                                f"{frame_label}_first_chemical_accuracy_"
                                 f"bd{int(bond_dim)}_mps.block2"
                             ),
                         )
                     )
             row = {
-                "frame": "raw_fermionic_su2",
+                "frame": frame_label,
                 "bond_dim": int(bond_dim),
                 "energy": energy,
                 "abs_energy_error": error,
-                "within_dmrg_tolerance": converged,
+                "within_dmrg_tolerance": within_energy_tolerance,
+                "accepted_converged_bond_dimension": accepted,
                 "dmrg_seconds": seconds,
                 "max_result_mps_bond": int(bond_dim),
                 **sweep_status,
             }
             rows.append(row)
+            if bond_result_callback is not None:
+                bond_result_callback(dict(row))
             print(
-                f"{'raw_fermionic_su2':18s} bond_dim={bond_dim:3d} "
+                f"{frame_label:18s} bond_dim={bond_dim:3d} "
                 f"E={energy:.12f} |dE|="
                 f"{'unavailable' if error is None else f'{error:.3e}'} "
                 f"seconds={seconds:.1f}",
@@ -382,31 +444,38 @@ def run_fermionic_dmrg_curve(
                 delta = sweep_status["last_sweep_energy_change"]
                 delta_text = "unavailable" if delta is None else f"{delta:.3e}"
                 print(
-                    "WARNING: raw_fermionic_su2 "
+                    f"WARNING: {frame_label} "
                     f"bond_dim={bond_dim} exhausted {args.dmrg_sweeps} "
                     "sweeps without sweep-energy convergence; "
                     f"last |delta E_sweep|={delta_text}, "
                     f"tolerance={args.sweep_tol:.3e}.",
                     flush=True,
                 )
-            if converged is True and not args.full_curve:
+            if accepted is True and not args.full_curve:
                 print(
-                    "raw_fermionic_su2: reached chemical accuracy at "
+                    f"{frame_label}: reached chemical accuracy at "
                     f"bond_dim={bond_dim}; stopping this frame.",
                     flush=True,
                 )
                 break
 
-        first_converged_row = next(
-            (
-                row
-                for row in rows
-                if row["within_dmrg_tolerance"] is True
-            ),
-            None,
+        accepted_rows = [
+            row
+            for row in rows
+            if row["accepted_converged_bond_dimension"] is True
+        ]
+        first_converged_row = min(
+            accepted_rows,
+            key=lambda row: int(row["bond_dim"]),
+            default=None,
+        )
+        first_converged_bd = (
+            None
+            if first_converged_row is None
+            else int(first_converged_row["bond_dim"])
         )
         summary = {
-            "frame": "raw_fermionic_su2",
+            "frame": frame_label,
             "chemical_accuracy_assessed": fci_energy is not None,
             "reference_energy": fci_energy,
             "first_converged_bond_dim": first_converged_bd,
@@ -439,8 +508,15 @@ def run_fermionic_dmrg_curve(
             "symmetry_type": "SU2",
             "ncore": 0,
             "active_electrons": n_electrons,
-            "active_orbitals": n_sites,
+            "active_orbitals": active_orbitals,
+            "orbital_ordering_convention": (
+                "new_position_to_old_spatial_orbital"
+            ),
+            "fermionic_reordering_phase_applied": reordered_orbitals,
             "sweep_energy_tolerance": args.sweep_tol,
+            "require_sweep_convergence_for_accuracy": bool(
+                getattr(args, "require_sweep_convergence_for_accuracy", False)
+            ),
             "warm_start_noises": list(
                 getattr(args, "warm_start_noises", ())
             ),

@@ -4,9 +4,12 @@ from openfermion import QubitOperator, get_sparse_operator
 from quasisymmetries.fiedler import (
     do_fiedler_reordering,
     fiedler_order_from_state,
+    fiedler_order_spatial_orbitals_from_sparse_state,
     qubit_mutual_information_matrix,
     reorder_statevector_axes,
     reduced_density_matrix_statevector,
+    sparse_reduced_density_matrix,
+    spatial_orbital_mutual_information_matrix_sparse,
 )
 from quasisymmetries.metrics import get_entropies_at_cuts
 from quasisymmetries.state_utils import (
@@ -232,3 +235,32 @@ def test_do_fiedler_reordering_sparse_path_keeps_sparse_state_and_cut_entropies(
 
     assert np.allclose(ent_sparse, ent_dense)
     assert h_sparse.terms
+
+
+def test_sparse_reduced_density_matrix_matches_dense_partial_trace():
+    dense = _sample_state()
+    sparse = SparseQubitState.from_dense(dense)
+
+    expected = reduced_density_matrix_statevector(dense, [3, 0], 4)
+    actual = sparse_reduced_density_matrix(sparse, [3, 0])
+
+    np.testing.assert_allclose(actual, expected, atol=1e-13)
+
+
+def test_spatial_orbital_mutual_information_uses_four_state_sites():
+    dense = np.zeros(16, dtype=complex)
+    dense[int("1001", 2)] = 1.0 / np.sqrt(2.0)
+    dense[int("0110", 2)] = 1.0 / np.sqrt(2.0)
+    sparse = SparseQubitState.from_dense(dense)
+
+    mutual_information, one_site, two_site = (
+        spatial_orbital_mutual_information_matrix_sparse(sparse)
+    )
+
+    np.testing.assert_allclose(one_site, [1.0, 1.0], atol=1e-13)
+    np.testing.assert_allclose(two_site[0, 1], 0.0, atol=1e-13)
+    np.testing.assert_allclose(mutual_information[0, 1], 2.0, atol=1e-13)
+
+    info = fiedler_order_spatial_orbitals_from_sparse_state(sparse)
+    assert sorted(info["ordering"]) == [0, 1]
+    assert info["mutual_information_method"] == "sparse_spatial_orbital_rdm"

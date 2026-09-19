@@ -216,6 +216,7 @@ def run_restricted_cisd_from_molecular_data(
     convergence_tolerance: float = 1e-10,
     max_cycle: int = 100,
     coefficient_tolerance: float = 0.0,
+    include_spatial_one_rdm: bool = False,
     verbose: int = 0,
 ) -> tuple[float, SparseQubitState, dict]:
     """Run RHF-CISD and return its wavefunction without an FCI allocation.
@@ -235,6 +236,12 @@ def run_restricted_cisd_from_molecular_data(
     coefficient_tolerance
         Determinant amplitudes at or below this magnitude are omitted from the
         returned sparse state. The default retains every nonzero CISD term.
+    include_spatial_one_rdm
+        If true, include the spin-summed, unrelaxed CISD spatial one-particle
+        density matrix in the returned metadata. Its convention is
+        ``gamma[p,q] = sum_sigma <a^dagger[q,sigma] a[p,sigma]>`` and its
+        trace is the number of active electrons. This is useful for defining
+        CISD natural orbitals without changing the function's return shape.
     verbose
         PySCF output verbosity.
 
@@ -247,9 +254,12 @@ def run_restricted_cisd_from_molecular_data(
 
     Notes
     -----
-    The saved canonical molecular orbitals are installed into a reconstructed
-    PySCF RHF object. This keeps the CISD determinant basis aligned with the
-    OpenFermion Hamiltonian while avoiding a repeated orbital optimization.
+    The molecular orbitals saved in ``molecule`` are installed into a
+    reconstructed PySCF RHF object. The reference-determinant energy is
+    recomputed for those orbitals, which is essential when they mix the
+    original occupied and virtual spaces. This keeps the CISD determinant
+    basis and energy aligned with the OpenFermion Hamiltonian without a new
+    SCF orbital optimization.
     """
     from pyscf import ci, gto, scf
 
@@ -276,7 +286,17 @@ def run_restricted_cisd_from_molecular_data(
     mean_field.mo_energy = np.asarray(molecule.orbital_energies)
     mean_field.mo_occ = np.zeros(nmo_full)
     mean_field.mo_occ[: nelec_full // 2] = 2.0
-    mean_field.e_tot = float(molecule.hf_energy)
+    density_matrix = mean_field.make_rdm1(
+        mean_field.mo_coeff, mean_field.mo_occ
+    )
+    effective_potential = mean_field.get_veff(
+        pyscf_molecule, density_matrix
+    )
+    mean_field.e_tot = float(
+        mean_field.energy_tot(
+            dm=density_matrix, vhf=effective_potential
+        )
+    )
     mean_field.converged = True
 
     solver = ci.CISD(mean_field, frozen=(ncore if ncore else None))
@@ -297,7 +317,7 @@ def run_restricted_cisd_from_molecular_data(
     raw_norm = state.norm()
     state.normalize()
     energy = float(mean_field.e_tot + correlation_energy)
-    return energy, state, {
+    metadata = {
         "method": "pyscf_restricted_cisd_sparse_expansion",
         "converged": bool(solver.converged),
         "correlation_energy": float(correlation_energy),
@@ -315,3 +335,15 @@ def run_restricted_cisd_from_molecular_data(
         "jw_phase_convention": "interleaved_spin_orbital_v1",
         "fci_layout_materialized": False,
     }
+    if include_spatial_one_rdm:
+        spatial_one_rdm = np.asarray(
+            solver.make_rdm1(cisd_vector), dtype=float
+        )
+        metadata["spatial_one_rdm"] = spatial_one_rdm.tolist()
+        metadata["spatial_one_rdm_trace"] = float(
+            np.trace(spatial_one_rdm)
+        )
+        metadata["spatial_one_rdm_convention"] = (
+            "gamma[p,q] = sum_sigma <a^dagger[q,sigma] a[p,sigma]>"
+        )
+    return energy, state, metadata

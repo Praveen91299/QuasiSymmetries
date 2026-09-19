@@ -207,6 +207,208 @@ def qubit_mutual_information_matrix_sparse_bloch(
     )
 
 
+def sparse_reduced_density_matrix(state, keep: list[int]) -> np.ndarray:
+    """Return an exact reduced density matrix from a sparse pure state.
+
+    Parameters
+    ----------
+    state
+        Normalized or unnormalized
+        :class:`~quasisymmetries.state_utils.SparseQubitState`. Qubit zero is
+        the most-significant bit of each stored computational-basis index.
+    keep
+        Qubit indices retained in the reduced density matrix, in the desired
+        tensor-axis order.
+
+    Returns
+    -------
+    rho
+        Normalized reduced density matrix with shape
+        ``(2**len(keep), 2**len(keep))``. The calculation groups only the
+        environment bit patterns present in the sparse support and therefore
+        does not construct the full ``2**n_qubits`` statevector.
+    """
+    from .state_utils import SparseQubitState
+
+    if not isinstance(state, SparseQubitState):
+        raise TypeError("state must be a SparseQubitState")
+    keep = [int(qubit) for qubit in keep]
+    if len(set(keep)) != len(keep):
+        raise ValueError("keep contains duplicate qubit indices")
+    if any(qubit < 0 or qubit >= state.n_qubits for qubit in keep):
+        raise ValueError("keep contains a qubit outside the state register")
+    norm_squared = state.norm_squared()
+    if norm_squared <= 0.0:
+        raise ValueError("state has zero norm")
+
+    kept_codes = np.zeros(state.nnz, dtype=np.int64)
+    environment_codes = state.indices.copy()
+    for output_axis, qubit in enumerate(keep):
+        source_bit = 1 << (state.n_qubits - 1 - qubit)
+        bit_values = (state.indices & source_bit) != 0
+        kept_codes |= bit_values.astype(np.int64) << (len(keep) - 1 - output_axis)
+        environment_codes &= ~source_bit
+
+    _, environment_columns = np.unique(
+        environment_codes, return_inverse=True
+    )
+    coefficient_matrix = np.zeros(
+        (1 << len(keep), int(environment_columns.max()) + 1),
+        dtype=np.complex128,
+    )
+    np.add.at(
+        coefficient_matrix,
+        (kept_codes, environment_columns),
+        state.coeffs,
+    )
+    rho = coefficient_matrix @ coefficient_matrix.conj().T
+    rho = 0.5 * (rho + rho.conj().T) / norm_squared
+    return rho
+
+
+def spatial_orbital_mutual_information_matrix_sparse(
+    state,
+    *,
+    n_spatial_orbitals: int | None = None,
+    base: float = 2.0,
+    convention: str = "standard",
+    entropy_tol: float = 1e-12,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Compute spatial-orbital mutual information from a sparse JW state.
+
+    Spatial orbital ``p`` is the four-state site formed by interleaved
+    spin-orbital qubits ``(2*p, 2*p + 1)``. Thus one-orbital and two-orbital
+    reduced density matrices have dimensions 4 and 16, respectively. This is
+    the appropriate graph for ordering sites in a spatial-orbital fermionic
+    DMRG calculation.
+
+    Parameters
+    ----------
+    state
+        :class:`~quasisymmetries.state_utils.SparseQubitState` in interleaved
+        Jordan--Wigner order.
+    n_spatial_orbitals
+        Number of spatial orbitals. If omitted, half the qubit count is used.
+    base
+        Entropy logarithm base; two reports entropy in bits.
+    convention
+        ``"standard"`` gives ``I(p,q)=S(p)+S(q)-S(p,q)``. ``"half"``
+        multiplies this quantity by one half.
+    entropy_tol
+        Reduced-density-matrix eigenvalues at or below this numerical cutoff
+        are omitted from the entropy.
+
+    Returns
+    -------
+    mutual_information, one_orbital_entropies, two_orbital_entropies
+        Arrays with shapes ``(norb,norb)``, ``(norb,)``, and ``(norb,norb)``.
+    """
+    if convention not in {"standard", "half"}:
+        raise ValueError("convention must be 'standard' or 'half'")
+    if n_spatial_orbitals is None:
+        if state.n_qubits % 2:
+            raise ValueError("the state must contain an even number of qubits")
+        n_spatial_orbitals = state.n_qubits // 2
+    n_spatial_orbitals = int(n_spatial_orbitals)
+    if state.n_qubits != 2 * n_spatial_orbitals:
+        raise ValueError(
+            "state.n_qubits must equal 2 * n_spatial_orbitals"
+        )
+
+    factor = 0.5 if convention == "half" else 1.0
+    one_orbital_entropies = np.zeros(n_spatial_orbitals, dtype=float)
+    for orbital in range(n_spatial_orbitals):
+        rho = sparse_reduced_density_matrix(
+            state, [2 * orbital, 2 * orbital + 1]
+        )
+        one_orbital_entropies[orbital] = von_neumann_entropy(
+            rho, base=base, tol=entropy_tol
+        )
+
+    two_orbital_entropies = np.zeros(
+        (n_spatial_orbitals, n_spatial_orbitals), dtype=float
+    )
+    mutual_information = np.zeros_like(two_orbital_entropies)
+    for first in range(n_spatial_orbitals):
+        for second in range(first + 1, n_spatial_orbitals):
+            rho = sparse_reduced_density_matrix(
+                state,
+                [
+                    2 * first,
+                    2 * first + 1,
+                    2 * second,
+                    2 * second + 1,
+                ],
+            )
+            entropy = von_neumann_entropy(
+                rho, base=base, tol=entropy_tol
+            )
+            two_orbital_entropies[first, second] = entropy
+            two_orbital_entropies[second, first] = entropy
+            value = factor * (
+                one_orbital_entropies[first]
+                + one_orbital_entropies[second]
+                - entropy
+            )
+            if value < 0.0 and abs(value) < 1e-10:
+                value = 0.0
+            mutual_information[first, second] = max(0.0, float(value))
+            mutual_information[second, first] = mutual_information[
+                first, second
+            ]
+    return (
+        mutual_information,
+        one_orbital_entropies,
+        two_orbital_entropies,
+    )
+
+
+def fiedler_order_spatial_orbitals_from_sparse_state(
+    state,
+    *,
+    n_spatial_orbitals: int | None = None,
+    base: float = 2.0,
+    mutual_info_convention: str = "standard",
+    entropy_tol: float = 1e-12,
+    edge_tol: float = 1e-12,
+    eig_tol: float = 1e-10,
+    tie_break: str = "index",
+    component_order: str = "total_weight",
+) -> dict:
+    """Return a Fiedler ordering of four-state spatial-orbital sites.
+
+    The input and entropy conventions are those of
+    :func:`spatial_orbital_mutual_information_matrix_sparse`. The returned
+    ``ordering`` maps ``new_position -> old_spatial_orbital`` and
+    ``old_to_new`` is its inverse. Mutual-information and entropy arrays are
+    included in the returned diagnostics dictionary.
+    """
+    mutual_information, one_site, two_site = (
+        spatial_orbital_mutual_information_matrix_sparse(
+            state,
+            n_spatial_orbitals=n_spatial_orbitals,
+            base=base,
+            convention=mutual_info_convention,
+            entropy_tol=entropy_tol,
+        )
+    )
+    info = fiedler_order_from_weights(
+        mutual_information,
+        edge_tol=edge_tol,
+        eig_tol=eig_tol,
+        tie_break=tie_break,
+        component_order=component_order,
+    )
+    info["mutual_information"] = mutual_information
+    info["one_orbital_entropies"] = one_site
+    info["two_orbital_entropies"] = two_site
+    info["n_spatial_orbitals"] = len(one_site)
+    info["mutual_info_convention"] = mutual_info_convention
+    info["mutual_information_method"] = "sparse_spatial_orbital_rdm"
+    info["entropy_base"] = base
+    return info
+
+
 def _standardize_qubit_mps_tensors(tensors) -> list[np.ndarray]:
     """Return open-boundary MPS tensors with shape ``(left, 2, right)``."""
     arrays = [np.asarray(tensor, dtype=complex) for tensor in tensors]
